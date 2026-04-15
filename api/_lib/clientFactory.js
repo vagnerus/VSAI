@@ -11,17 +11,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CONFIG_PATH = path.join(__dirname, '../../nexus.config.json');
 
-let _client = null;
-
 export function getApiClient() {
-  if (_client) return _client;
-
+  // Começa com defaults do config file (se existir)
   let cfg = {
-    geminiApiKey: process.env.GEMINI_API_KEY || '',
-    anthropicApiKey: process.env.ANTHROPIC_API_KEY || '',
-    defaultProvider: process.env.DEFAULT_PROVIDER || 'gemini',
-    googleModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-    anthropicModel: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+    geminiApiKey: '',
+    anthropicApiKey: '',
+    defaultProvider: 'gemini',
+    googleModel: 'gemini-2.5-flash',
+    anthropicModel: 'claude-sonnet-4-20250514',
   };
 
   if (fs.existsSync(CONFIG_PATH)) {
@@ -31,15 +28,19 @@ export function getApiClient() {
     } catch {}
   }
 
-  if (cfg.defaultProvider === 'anthropic' && cfg.anthropicApiKey) {
-    _client = new AnthropicClient({ apiKey: cfg.anthropicApiKey, model: cfg.anthropicModel });
-  } else {
-    _client = new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel });
-  }
+  // ENV VARS sempre tem prioridade (essencial no Vercel onde filesystem é read-only)
+  if (process.env.GEMINI_API_KEY) cfg.geminiApiKey = process.env.GEMINI_API_KEY;
+  if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  if (process.env.DEFAULT_PROVIDER) cfg.defaultProvider = process.env.DEFAULT_PROVIDER;
+  if (process.env.GEMINI_MODEL) cfg.googleModel = process.env.GEMINI_MODEL;
+  if (process.env.ANTHROPIC_MODEL) cfg.anthropicModel = process.env.ANTHROPIC_MODEL;
 
-  return _client;
+  if (cfg.defaultProvider === 'anthropic' && cfg.anthropicApiKey) {
+    return new AnthropicClient({ apiKey: cfg.anthropicApiKey, model: cfg.anthropicModel });
+  }
+  return new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel });
 }
 
 export function resetClient() {
-  _client = null;
+  // No-op on Vercel (each invocation is a fresh start)
 }
