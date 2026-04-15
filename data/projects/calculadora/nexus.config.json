@@ -1,0 +1,7 @@
+{
+  "name": "Calculadora",
+  "description": "App para fazer calculos",
+  "id": "calculadora",
+  "systemPrompt": "Poderia analisar o codigo e me dizer o que adicionar",
+  "workspacePath": "C:\\Users\\Vagner\\Desktop\\"
+}

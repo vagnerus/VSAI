@@ -1,0 +1,71 @@
+{
+  "name": "nexus-ai",
+  "version": "1.0.0",
+  "description": "NexusAI — Plataforma de IA Completa com Painel Web",
+  "type": "module",
+  "main": "src/main/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "node --watch src/server/index.js",
+    "dev:client": "vite",
+    "build": "vite build",
+    "start": "node src/server/index.js",
+    "start:prod": "NODE_ENV=production node src/server/index.js",
+    "pm2:start": "pm2 start ecosystem.config.cjs --env production",
+    "pm2:stop": "pm2 stop nexus-server",
+    "pm2:restart": "pm2 restart nexus-server",
+    "pm2:logs": "pm2 logs nexus-server",
+    "dist": "npm run build && electron-builder",
+    "electron:dev": "concurrently \"npm run dev:server\" \"npm run dev:client\" \"wait-on http://localhost:5173 && electron .\""
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "better-sqlite3": "^11.7.0",
+    "concurrently": "^9.1.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.1",
+    "marked": "^15.0.4",
+    "multer": "^1.4.5-lts.1",
+    "uuid": "^11.0.3",
+    "ws": "^8.18.0",
+    "zod": "^3.24.1",
+    "electron-is-dev": "^3.0.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "vite": "^6.0.5",
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.nexus.ai",
+    "productName": "NexusAI",
+    "directories": {
+      "output": "dist_electron"
+    },
+    "win": {
+      "target": "portable",
+      "icon": "public/icon.ico"
+    },
+    "files": [
+      "dist/**/*",
+      "src/server/**/*",
+      "src/engine/**/*",
+      "src/tools/**/*",
+      "src/session/**/*",
+      "src/permissions/**/*",
+      "src/hooks/**/*",
+      "src/api/**/*",
+      "src/main/**/*",
+      "data/**/*",
+      "package.json",
+      "nexus.config.json",
+      ".env"
+    ],
+    "asar": true
+  }
+}
