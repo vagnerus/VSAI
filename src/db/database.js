@@ -9,7 +9,13 @@
  *   hooks     — Hooks registrados persistentes
  */
 
-import Database from 'better-sqlite3';
+let Database;
+try {
+  Database = (await import('better-sqlite3')).default;
+} catch {
+  // better-sqlite3 não disponível neste ambiente (ex: Vercel serverless)
+  Database = null;
+}
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -27,6 +33,11 @@ export class NexusDB {
    * Inicializa o banco e executa as migrations.
    */
   init() {
+    if (!Database) {
+      console.warn('[NexusDB] better-sqlite3 not available in this environment. SQLite disabled.');
+      return null;
+    }
+
     const dir = path.dirname(this.dbPath);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
