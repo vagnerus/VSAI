@@ -1,6 +1,15 @@
 {
-  "installCommand": "npm install --ignore-scripts",
-  "buildCommand": "vite build",
+  "version": 2,
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite"
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ],
+  "functions": {
+    "api/chat.js": { "maxDuration": 60 },
+    "api/health.js": { "maxDuration": 10 },
+    "api/tools.js": { "maxDuration": 10 },
+    "api/config.js": { "maxDuration": 10 },
+    "api/dashboard.js": { "maxDuration": 10 }
+  }
 }

@@ -5,7 +5,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 // ═══════════════════════════════════════════════════════════════
 
 const API_BASE = '/api';
-const WS_URL = `ws://${window.location.hostname}:3777/ws`;
 
 // ─── API Helper ──────────────────────────────────────────────
 async function api(path, options = {}) {
@@ -417,7 +416,7 @@ function ChatPage({ projectId }) {
   const [usage, setUsage] = useState(null);
   const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [agentLogs, setAgentLogs] = useState([]);
-  const wsRef = useRef(null);
+  const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -435,154 +434,125 @@ function ChatPage({ projectId }) {
     scrollToBottom();
   }, [messages, streamText, scrollToBottom]);
 
-  const connectWS = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+  const abortControllerRef = useRef(null);
 
-    const ws = new WebSocket(WS_URL);
-    wsRef.current = ws;
-
-    ws.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-
-      switch (msg.type) {
-        case 'swarm_event':
-          setMessages(prev => [...prev, {
-            role: 'system',
-            agent: msg.agent,
-            type: 'swarm',
-            content: msg.content,
-            timestamp: Date.now(),
-          }]);
-          break;
-
-        case 'session':
-          setSessionId(msg.sessionId);
-          break;
-
-        case 'stream':
-          setStreamText(prev => prev + msg.text);
-          break;
-
-        case 'assistant':
-          setStreamText('');
-          setMessages(prev => [...prev, {
-            role: 'assistant',
-            content: msg.content,
-            toolCalls: msg.toolCalls,
-            timestamp: Date.now(),
-          }]);
-          break;
-
-        case 'tool_use':
-          setToolUses(prev => [...prev, { name: msg.toolName, input: msg.toolInput }]);
-          break;
-
-        case 'tool_propose':
-          setToolUses(prev => [...prev, { 
-            name: msg.toolName, 
-            status: 'proposed', 
-            path: msg.path, 
-            proposal: msg.proposal, 
-            original: msg.original,
-            toolUseId: msg.toolUseId
-          }]);
-          break;
-
-        case 'tool_result':
-          setToolUses(prev => prev.map(t => 
-            (t.name === msg.toolName || t.toolUseId === msg.toolUseId) ? { ...t, result: msg.content, isError: msg.isError, status: 'completed' } : t
-          ));
-          break;
-
-        case 'usage':
-          setUsage(msg.usage);
-          break;
-
-        case 'done':
-          setIsStreaming(false);
-          setStreamText('');
-          setToolUses([]);
-          break;
-
-        case 'quota_warning':
-          setMessages(prev => [...prev, {
-            role: 'system',
-            content: `⚠️ ${msg.message}`,
-            timestamp: Date.now(),
-          }]);
-          break;
-
-        case 'status':
-          setAgentLogs(prev => [...prev, {
-            message: msg.message,
-            toolName: msg.toolName,
-            timestamp: msg.timestamp || Date.now()
-          }].slice(-50)); // Keep last 50 logs
-          setStatusText(msg.message);
-          break;
-
-        case 'error':
-          setIsStreaming(false);
-          setStreamText('');
-          setMessages(prev => [...prev, {
-            role: 'system',
-            content: `Error: ${msg.message}`,
-            timestamp: Date.now(),
-          }]);
-          break;
-      }
-    };
-
-    ws.onclose = () => {
-      setTimeout(connectWS, 2000);
-    };
-
-    return ws;
-  }, []);
-
-  useEffect(() => {
-    const ws = connectWS();
-    return () => ws?.close();
-  }, [connectWS]);
-
-  const sendMessage = useCallback(() => {
+  // ─── SSE-based sendMessage (substitui WebSocket) ─────────────────
+  const sendMessage = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
 
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      connectWS();
-      return;
-    }
+    const userContent = input.trim();
+    setInput('');
+    setIsStreaming(true);
+    setStreamText('');
+    setToolUses([]);
+    setStatusText('');
 
     setMessages(prev => [...prev, {
       role: 'user',
-      content: input.trim(),
+      content: userContent,
       timestamp: Date.now(),
     }]);
 
-    ws.send(JSON.stringify({
-      type: 'chat',
-      content: input.trim(),
-      projectId: projectId,
-      model: selectedModel,
-      sessionId: sessionId
-    }));
+    // Abort controller para cancelar
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-    setInput('');
-    setIsStreaming(true);
-  }, [input, isStreaming, sessionId, connectWS]);
+    try {
+      const response = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          content: userContent,
+          messages: messages
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .map(m => ({ role: m.role, content: m.content })),
+          model: selectedModel,
+          projectId,
+        }),
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const msg = JSON.parse(line.slice(6));
+
+            switch (msg.type) {
+              case 'session':
+                setSessionId(msg.sessionId);
+                break;
+              case 'stream':
+                setStreamText(prev => prev + msg.text);
+                break;
+              case 'assistant':
+                setStreamText('');
+                setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  content: msg.content,
+                  toolCalls: msg.toolCalls,
+                  timestamp: Date.now(),
+                }]);
+                break;
+              case 'tool_result':
+                setToolUses(prev => prev.map(t =>
+                  t.name === msg.toolName ? { ...t, result: msg.content, isError: msg.isError, status: 'completed' } : t
+                ));
+                break;
+              case 'status':
+                setAgentLogs(prev => [...prev, { message: msg.message, toolName: msg.toolName, timestamp: Date.now() }].slice(-50));
+                setStatusText(msg.message || '');
+                break;
+              case 'usage':
+                setUsage(msg.usage);
+                break;
+              case 'done':
+                setIsStreaming(false);
+                setStreamText('');
+                setToolUses([]);
+                break;
+              case 'error':
+                setIsStreaming(false);
+                setStreamText('');
+                setMessages(prev => [...prev, { role: 'system', content: `Erro: ${msg.message}`, timestamp: Date.now() }]);
+                break;
+            }
+          } catch {}
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setMessages(prev => [...prev, { role: 'system', content: `Erro de conexão: ${err.message}`, timestamp: Date.now() }]);
+      }
+      setIsStreaming(false);
+      setStreamText('');
+    }
+  }, [input, isStreaming, messages, sessionId, projectId, selectedModel]);
+
+  const handleAbort = () => {
+    abortControllerRef.current?.abort();
+    setIsStreaming(false);
+    setStreamText('');
+  };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
     }
-  };
-
-  const handleAbort = () => {
-    wsRef.current?.send(JSON.stringify({ type: 'abort' }));
-    setIsStreaming(false);
-    setStreamText('');
   };
 
   const handleTextareaInput = (e) => {
@@ -1195,7 +1165,8 @@ function ProjectsPage({ onStartChat }) {
     });
   };
 
-  const createProject = async () => {
+  const createProject = async (e) => {
+    e?.preventDefault();
     if (!name.trim()) return;
     await api('/projects', { method: 'POST', body: { name, description: desc } });
     setName('');
