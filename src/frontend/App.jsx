@@ -434,8 +434,6 @@ function ChatPage({ projectId }) {
     scrollToBottom();
   }, [messages, streamText, scrollToBottom]);
 
-  const abortControllerRef = useRef(null);
-
   // ─── SSE-based sendMessage (substitui WebSocket) ─────────────────
   const sendMessage = useCallback(async () => {
     if (!input.trim() || isStreaming) return;
