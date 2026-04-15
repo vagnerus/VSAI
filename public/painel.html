@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NexusAI — Assistente Inteligente</title>
+  <meta name="description" content="Assistente de IA avançado com Gemini. Faça perguntas, gere código, traduza textos e muito mais.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0a0a0f;
+      --bg-secondary: #12121a;
+      --bg-card: rgba(255,255,255,0.04);
+      --bg-user-msg: linear-gradient(135deg, #6c3bef 0%, #8b5cf6 100%);
+      --bg-ai-msg: rgba(255,255,255,0.06);
+      --text-primary: #f0f0f5;
+      --text-secondary: #9090a8;
+      --accent: #8b5cf6;
+      --accent-glow: rgba(139,92,246,0.25);
+      --border: rgba(255,255,255,0.08);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-logo {
+      width: 38px; height: 38px;
+      background: var(--bg-user-msg);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .header-name { font-weight: 800; font-size: 18px; letter-spacing: -0.5px; }
+    .header-sub { font-size: 11px; color: var(--text-secondary); }
+    .header-actions { display: flex; gap: 8px; }
+    .btn-new {
+      background: var(--accent);
+      color: white; border: none;
+      padding: 8px 16px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-new:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--accent-glow); }
+
+    .model-badge {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 6px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 500;
+    }
+
+    /* ── Messages ──────────────────────────────────────────── */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+    .messages::-webkit-scrollbar { width: 6px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+    .welcome {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      gap: 16px;
+      animation: fadeIn 0.6s ease;
+    }
+    .welcome-icon {
+      font-size: 52px;
+      filter: drop-shadow(0 0 30px var(--accent-glow));
+    }
+    .welcome h2 { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+    .welcome p { color: var(--text-secondary); font-size: 15px; max-width: 440px; line-height: 1.6; }
+
+    .suggestions {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      justify-content: center; margin-top: 8px;
+    }
+    .suggestion {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 10px 16px; border-radius: 12px;
+      font-size: 13px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .suggestion:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+      background: var(--accent-glow);
+    }
+
+    .msg {
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+      animation: slideUp 0.3s ease;
+    }
+    .msg-user .msg-bubble {
+      background: var(--bg-user-msg);
+      border-radius: var(--radius) var(--radius) 4px var(--radius);
+      padding: 14px 20px;
+      font-size: 14px; line-height: 1.65;
+      box-shadow: 0 4px 24px rgba(139,92,246,0.2);
+    }
+    .msg-ai .msg-bubble {
+      background: var(--bg-ai-msg);
+      border: 1px solid var(--border);
+      border-radius: 4px var(--radius) var(--radius) var(--radius);
+      padding: 16px 20px;
+      font-size: 14px; line-height: 1.75;
+    }
+    .msg-system .msg-bubble {
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 13px; color: #fca5a5;
+    }
+    .msg-meta {
+      font-size: 11px; color: var(--text-secondary);
+      margin-top: 6px; display: flex; gap: 8px;
+    }
+
+    /* Markdown inside messages */
+    .msg-bubble h1, .msg-bubble h2, .msg-bubble h3 { margin: 12px 0 6px; }
+    .msg-bubble h1 { font-size: 18px; }
+    .msg-bubble h2 { font-size: 16px; }
+    .msg-bubble h3 { font-size: 14px; }
+    .msg-bubble code {
+      background: rgba(0,0,0,0.3);
+      padding: 2px 6px; border-radius: 4px;
+      font-size: 13px; font-family: 'Fira Code', monospace;
+    }
+    .msg-bubble pre {
+      background: rgba(0,0,0,0.4);
+      padding: 14px; border-radius: 8px;
+      overflow-x: auto; margin: 10px 0;
+    }
+    .msg-bubble pre code { background: none; padding: 0; }
+    .msg-bubble a { color: var(--accent); text-decoration: underline; }
+    .msg-bubble ul, .msg-bubble ol { padding-left: 20px; margin: 8px 0; }
+    .msg-bubble li { margin-bottom: 4px; }
+    .msg-bubble blockquote {
+      border-left: 3px solid var(--accent);
+      padding-left: 12px; margin: 8px 0;
+      color: var(--text-secondary); font-style: italic;
+    }
+    .msg-bubble strong { color: #d4bfff; }
+    .msg-bubble hr { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+
+    /* Streaming */
+    .streaming-indicator {
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 20px; font-size: 13px;
+      color: var(--text-secondary);
+      max-width: 780px; margin: 0 auto;
+    }
+    .dot-pulse { display: flex; gap: 4px; }
+    .dot-pulse span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.2s infinite ease-in-out;
+    }
+    .dot-pulse span:nth-child(2) { animation-delay: 0.15s; }
+    .dot-pulse span:nth-child(3) { animation-delay: 0.3s; }
+
+    /* ── Input ─────────────────────────────────────────────── */
+    .input-area {
+      padding: 16px 24px 20px;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .input-wrapper {
+      max-width: 780px;
+      margin: 0 auto;
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      transition: border-color 0.2s;
+    }
+    .input-wrapper:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px var(--accent-glow);
+    }
+    .input-wrapper textarea {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text-primary);
+      font-family: var(--font);
+      font-size: 14px;
+      resize: none;
+      outline: none;
+      max-height: 150px;
+      line-height: 1.5;
+      padding: 6px 0;
+    }
+    .input-wrapper textarea::placeholder { color: var(--text-secondary); }
+    .send-btn {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .send-btn:hover { transform: scale(1.08); box-shadow: 0 0 16px var(--accent-glow); }
+    .send-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
+    .send-btn.abort { background: #ef4444; }
+
+    .input-footer {
+      max-width: 780px;
+      margin: 6px auto 0;
+      font-size: 11px;
+      color: var(--text-secondary);
+      text-align: center;
+    }
+
+    /* ── Animations ────────────────────────────────────────── */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulse {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+
+    /* ── Responsive ────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .header { padding: 10px 16px; }
+      .messages { padding: 16px; }
+      .input-area { padding: 12px 16px 16px; }
+      .suggestions { flex-direction: column; }
+      .welcome h2 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-brand">
+      <div class="header-logo">🧠</div>
+      <div>
+        <div class="header-name">NexusAI</div>
+        <div class="header-sub">Assistente Inteligente</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="model-badge" id="modelBadge">⚡ Gemini 2.5 Flash</span>
+      <button class="btn-new" onclick="newChat()">+ Nova</button>
+    </div>
+  </div>
+
+  <!-- Messages -->
+  <div class="messages" id="messages">
+    <div class="welcome" id="welcome">
+      <div class="welcome-icon">🧠</div>
+      <h2>Olá! Sou o NexusAI</h2>
+      <p>Posso ajudar com perguntas, gerar código, traduzir textos, criar conteúdo, analisar dados e muito mais.</p>
+      <div class="suggestions">
+        <div class="suggestion" onclick="useSuggestion('Gere um código HTML de uma landing page moderna')">💻 Gerar código</div>
+        <div class="suggestion" onclick="useSuggestion('Traduza este texto para inglês: Olá mundo')">🌍 Traduzir</div>
+        <div class="suggestion" onclick="useSuggestion('Explique como funciona uma API REST')">📚 Explicar</div>
+        <div class="suggestion" onclick="useSuggestion('Escreva um email profissional pedindo orçamento')">✉️ Escrever</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <div class="input-wrapper">
+      <textarea id="input" rows="1" placeholder="Digite sua mensagem..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="send-btn" id="sendBtn" onclick="send()" disabled>➤</button>
+    </div>
+    <div class="input-footer">NexusAI pode cometer erros. Verifique informações importantes.</div>
+  </div>
+
+  <script>
+    const API_BASE = '/api';
+    let messages = [];
+    let isStreaming = false;
+    let abortController = null;
+
+    const $messages = document.getElementById('messages');
+    const $input = document.getElementById('input');
+    const $sendBtn = document.getElementById('sendBtn');
+    const $welcome = document.getElementById('welcome');
+
+    $input.addEventListener('input', () => {
+      $sendBtn.disabled = !$input.value.trim();
+    });
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 150) + 'px';
+    }
+
+    function handleKey(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
+    }
+
+    function useSuggestion(text) {
+      $input.value = text;
+      $sendBtn.disabled = false;
+      $input.focus();
+      send();
+    }
+
+    function newChat() {
+      messages = [];
+      $messages.innerHTML = '';
+      $messages.appendChild(createWelcome());
+      $input.value = '';
+      $sendBtn.disabled = true;
+      isStreaming = false;
+      abortController?.abort();
+    }
+
+    function createWelcome() {
+      const div = document.createElement('div');
+      div.className = 'welcome';
+      div.id = 'welcome';
+      div.innerHTML = `
+        <div class="welcome-icon">🧠</div>
+        <h2>Olá! Sou o NexusAI</h2>
+        <p>Posso ajudar com perguntas, gerar código, traduzir textos, criar conteúdo, analisar dados e muito mais.</p>
+        <div class="suggestions">
+          <div class="suggestion" onclick="useSuggestion('Gere um código HTML de uma landing page moderna')">💻 Gerar código</div>
+          <div class="suggestion" onclick="useSuggestion('Traduza este texto para inglês: Olá mundo')">🌍 Traduzir</div>
+          <div class="suggestion" onclick="useSuggestion('Explique como funciona uma API REST')">📚 Explicar</div>
+          <div class="suggestion" onclick="useSuggestion('Escreva um email profissional pedindo orçamento')">✉️ Escrever</div>
+        </div>
+      `;
+      return div;
+    }
+
+    function parseMarkdown(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="lang-$1">$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+        .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+        .replace(/^---$/gm, '<hr/>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br/>');
+    }
+
+    function addMessage(role, content) {
+      if ($welcome) $welcome.remove();
+      const div = document.createElement('div');
+      div.className = `msg msg-${role}`;
+      const time = new Date().toLocaleTimeString('pt-BR');
+      const label = role === 'user' ? '👤 Você' : role === 'ai' ? '🧠 NexusAI' : '⚠️ Sistema';
+      div.innerHTML = `
+        <div class="msg-bubble">${role === 'user' ? content : parseMarkdown(content)}</div>
+        <div class="msg-meta"><span>${label}</span><span>•</span><span>${time}</span></div>
+      `;
+      $messages.appendChild(div);
+      $messages.scrollTop = $messages.scrollHeight;
+      return div;
+    }
+
+    function showStreaming() {
+      const div = document.createElement('div');
+      div.id = 'streamingMsg';
+      div.className = 'msg msg-ai';
+      div.innerHTML = '<div class="msg-bubble" id="streamContent"></div>';
+      $messages.appendChild(div);
+      $messages.scrollTop = $messages.scrollHeight;
+    }
+
+    function updateStream(text) {
+      const el = document.getElementById('streamContent');
+      if (el) {
+        el.innerHTML = parseMarkdown(text);
+        $messages.scrollTop = $messages.scrollHeight;
+      }
+    }
+
+    function finalizeStream(content) {
+      const el = document.getElementById('streamingMsg');
+      if (el) el.remove();
+      addMessage('ai', content);
+    }
+
+    async function send() {
+      const content = $input.value.trim();
+      if (!content || isStreaming) return;
+
+      $input.value = '';
+      $input.style.height = 'auto';
+      $sendBtn.disabled = true;
+      isStreaming = true;
+      $sendBtn.innerHTML = '⏹';
+      $sendBtn.className = 'send-btn abort';
+      $sendBtn.disabled = false;
+      $sendBtn.onclick = abort;
+
+      addMessage('user', content);
+      messages.push({ role: 'user', content });
+
+      showStreaming();
+
+      abortController = new AbortController();
+      let fullText = '';
+
+      try {
+        const res = await fetch(`${API_BASE}/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: abortController.signal,
+          body: JSON.stringify({
+            content,
+            messages: messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content })),
+            model: 'gemini-2.5-flash',
+          }),
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const msg = JSON.parse(line.slice(6));
+              switch (msg.type) {
+                case 'stream':
+                  fullText += msg.text;
+                  updateStream(fullText);
+                  break;
+                case 'assistant':
+                  fullText = msg.content || fullText;
+                  break;
+                case 'done':
+                  break;
+                case 'error':
+                  finalizeStream(fullText || '');
+                  addMessage('system', msg.message);
+                  break;
+              }
+            } catch {}
+          }
+        }
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          addMessage('system', 'Erro de conexão: ' + err.message);
+        }
+      }
+
+      finalizeStream(fullText);
+      messages.push({ role: 'assistant', content: fullText });
+
+      isStreaming = false;
+      $sendBtn.innerHTML = '➤';
+      $sendBtn.className = 'send-btn';
+      $sendBtn.disabled = true;
+      $sendBtn.onclick = send;
+      $input.focus();
+    }
+
+    function abort() {
+      abortController?.abort();
+      isStreaming = false;
+      $sendBtn.innerHTML = '➤';
+      $sendBtn.className = 'send-btn';
+      $sendBtn.disabled = !$input.value.trim();
+      $sendBtn.onclick = send;
+    }
+
+    $input.focus();
+  </script>
+</body>
+</html>

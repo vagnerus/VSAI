@@ -3,13 +3,12 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/$1" }
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/painel", "destination": "/painel.html" },
+    { "source": "/((?!api|assets|painel).*)", "destination": "/index.html" }
   ],
   "functions": {
     "api/chat.js": { "maxDuration": 60 },
-    "api/health.js": { "maxDuration": 10 },
-    "api/tools.js": { "maxDuration": 10 },
-    "api/config.js": { "maxDuration": 10 },
-    "api/dashboard.js": { "maxDuration": 10 }
+    "api/**/*.js": { "maxDuration": 10 }
   }
 }

@@ -321,6 +321,24 @@ function DashboardPage({ stats, recentSessions }) {
       <div className="welcome-banner">
         <h1>👋 Bem-vindo ao NexusAI</h1>
         <p>Sua plataforma de IA completa com 20+ ferramentas, multi-agentes, hooks e muito mais. Baseada na arquitetura do Claude Code.</p>
+        <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          <a
+            href="/painel"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none', borderRadius: 12, background: 'linear-gradient(135deg, #6c3bef, #8b5cf6)', color: 'white', boxShadow: '0 4px 24px rgba(139,92,246,0.3)', transition: 'all 0.2s' }}
+          >
+            🚀 Abrir Painel do Usuário
+          </a>
+          <button
+            className="btn btn-secondary"
+            onClick={() => { navigator.clipboard.writeText(window.location.origin + '/painel'); alert('Link copiado!'); }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '12px 20px', fontSize: 13, fontWeight: 600, border: '1px solid var(--glass-border)', borderRadius: 12, background: 'var(--glass-bg)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+          >
+            📋 Copiar Link do Painel
+          </button>
+        </div>
       </div>
 
       <div style={{ height: 24 }} />
@@ -737,11 +755,11 @@ function ToolsPage() {
   }, []);
 
   const toolIcons = {
-    bash: '🖥️', file_read: '📖', file_write: '📝', web_search: '🔍', web_fetch: '🌐',
-    code_generate: '💻', analyze_image: '🖼️', process_document: '📄', translate: '🌍',
-    summarize: '📋', analyze_sentiment: '🎭', seo_analyze: '📊', compose_email: '✉️',
-    format_data: '🗃️', calculate: '🧮', create_diagram: '📐', regex: '🔣',
-    sql_query: '🗄️', spawn_agent: '🤖', calculate_tokens: '🔢',
+    bash: '🖥️', file_read: '📖', file_write: '📝', file_patch: '🔧',
+    web_search: '🔍', web_fetch: '🌐', code_generate: '💻',
+    translate: '🌍', summarize: '📋', analyze_sentiment: '🎭',
+    seo_analyze: '📊', compose_email: '✉️', format_data: '🗃️',
+    calculate: '🧮', regex: '🔣', calculate_tokens: '🔢',
   };
 
   return (
