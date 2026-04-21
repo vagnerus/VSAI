@@ -1,0 +1,7 @@
+{
+  "name": "OpemHome",
+  "description": "Abre site",
+  "id": "opemhome",
+  "systemPrompt": "quero um app em python que abre uma janela que tenha um botão que abra o site do google",
+  "workspacePath": "C:\\Users\\Vagner\\Desktop\\opem site"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Manutenção de impressora",
+  "description": "Reinicia o spoller",
+  "id": "manuten-o-de-impressora",
+  "systemPrompt": "Atue como um desenvolvedor de software senior crie um execultavel que reinicia o spoller",
+  "workspacePath": "C:\\Users\\Vagner\\Desktop\\"
+}
