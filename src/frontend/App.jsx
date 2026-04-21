@@ -1229,11 +1229,11 @@ function PluginsPage() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  Page
+// Projects Page
 // ═══════════════════════════════════════════════════════════════
 
-function Page({ onStartChat }) {
-  const [, set] = useState([]);
+function ProjectsPage({ onStartChat }) {
+  const [projects, setProjects] = useState([]);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [selectedProject, setSelectedProject] = useState(null);
@@ -1245,10 +1245,10 @@ function Page({ onStartChat }) {
   }, []);
 
   const load = () => {
-    api('/').then(data => {
-      set(data. || []);
+    api('/projects').then(data => {
+      setProjects(data.projects || []);
       if (selectedProject) {
-        const updated = (data. || []).find(p => p.id === selectedProject.id);
+        const updated = (data.projects || []).find(p => p.id === selectedProject.id);
         if (updated) setSelectedProject(updated);
       }
     });
@@ -1257,7 +1257,7 @@ function Page({ onStartChat }) {
   const createProject = async (e) => {
     e?.preventDefault();
     if (!name.trim()) return;
-    await api('/', { method: 'POST', body: { name, description: desc } });
+    await api('/projects', { method: 'POST', body: { name, description: desc } });
     setName('');
     setDesc('');
     load();
@@ -1270,7 +1270,7 @@ function Page({ onStartChat }) {
   };
 
   const saveProjectConfig = async () => {
-    await api(`//${selectedProject.id}`, { method: 'PUT', body: { systemPrompt, workspacePath } });
+    await api(`/projects/${selectedProject.id}`, { method: 'PUT', body: { systemPrompt, workspacePath } });
     alert('Configuração salva!');
     load();
   };
@@ -1281,7 +1281,7 @@ function Page({ onStartChat }) {
     const formData = new FormData();
     for (let f of files) formData.append('files', f);
 
-    await fetch(`/api//${selectedProject.id}/knowledge`, {
+    await fetch(`/api/projects/${selectedProject.id}/knowledge`, {
       method: 'POST', body: formData
     });
     alert('Upload concluído com sucesso!');
@@ -1380,10 +1380,10 @@ function Page({ onStartChat }) {
       </div>
 
       <div className="tools-grid">
-        {.length === 0 ? (
+        {projects.length === 0 ? (
           <div style={{ color: 'var(--text-secondary)' }}>Nenhum projeto encontrado.</div>
         ) : (
-          .map(p => (
+          projects.map(p => (
           <div key={p.id} className="tool-card" style={{ cursor: 'pointer' }} onClick={() => selectProject(p)}>
             <div className="tool-card-icon">📂</div>
             <div className="tool-card-name" style={{ fontSize: 16 }}>{p.name}</div>
@@ -1579,7 +1579,7 @@ function DashboardShell({ onSignOut, userProfile }) {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard': return <DashboardPage stats={dashboardData.stats} recentSessions={dashboardData.recentSessions} />;
-      case '': return <Page onStartChat={startChat} />;
+      case 'projects': return <ProjectsPage onStartChat={startChat} />;
       case 'chat': return <ChatPage projectId={activeProjectId} />;
       case 'tools': return <ToolsPage />;
       case 'agents': return <AgentsPage />;

@@ -189,7 +189,7 @@ export default function AdminLayout() {
         <div style={{ display: 'flex', gap: 10 }}>
           <select className="admin-select" value={dbTable} onChange={e => setDbTable(e.target.value)}>
             <option value="profiles">Profiles (Usuários)</option>
-            <option value=""> (Projetos)</option>
+            <option value="projects">Projects (Projetos)</option>
             <option value="sessions">Sessions (Sessões)</option>
             <option value="messages">Messages (Mensagens)</option>
             <option value="usage_logs">Usage Logs (Logs de Uso)</option>
