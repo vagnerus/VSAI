@@ -21,11 +21,11 @@ import { HookEngine } from '../hooks/hookEngine.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const _DIR = path.join(__dirname, '../../data/');
+const PROJECTS_DIR = path.join(__dirname, '../../data/projects');
 const TMP_DIR = path.join(__dirname, '../../data/tmp');
 const CONFIG_PATH = path.join(__dirname, '../../nexus.config.json');
 
-if (!fs.existsSync(_DIR)) fs.mkdirSync(_DIR, { recursive: true });
+if (!fs.existsSync(PROJECTS_DIR)) fs.mkdirSync(PROJECTS_DIR, { recursive: true });
 if (!fs.existsSync(TMP_DIR)) fs.mkdirSync(TMP_DIR, { recursive: true });
 
 const upload = multer({ dest: TMP_DIR });
@@ -298,15 +298,15 @@ app.post('/api/settings', async (req, res) => {
   res.json({ status: 'updated', provider: apiClient.constructor.name });
 });
 
-// ───  API ──────────────────────────────────────────────────
+// ─── Projects API ──────────────────────────────────────────────────
 
-// List 
-app.get('/api/', (req, res) => {
+// List projects
+app.get('/api/projects', (req, res) => {
   try {
-    const  = fs.readdirSync(_DIR, { withFileTypes: true })
+    const projects = fs.readdirSync(PROJECTS_DIR, { withFileTypes: true })
       .filter(dirent => dirent.isDirectory())
       .map(dirent => {
-        const projDir = path.join(_DIR, dirent.name);
+        const projDir = path.join(PROJECTS_DIR, dirent.name);
         const stats = fs.statSync(projDir);
         let cfg = {};
         const cfgPath = path.join(projDir, 'nexus.config.json');
@@ -332,19 +332,19 @@ app.get('/api/', (req, res) => {
           knowledgeCount: knowledgeFiles.length,
         };
       });
-    res.json({});
+    res.json({ projects });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // Create project
-app.post('/api/', (req, res) => {
+app.post('/api/projects', (req, res) => {
   const { name, description, language } = req.body;
   if (!name) return res.status(400).json({ error: 'Name is required' });
 
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const projDir = path.join(_DIR, id);
+  const projDir = path.join(PROJECTS_DIR, id);
 
   if (fs.existsSync(projDir)) {
     return res.status(400).json({ error: 'Project already exists' });
@@ -364,8 +364,8 @@ app.post('/api/', (req, res) => {
 });
 
 // Update project (Custom Instructions & Workspace)
-app.put('/api//:id', (req, res) => {
-  const projDir = path.join(_DIR, req.params.id);
+app.put('/api/projects/:id', (req, res) => {
+  const projDir = path.join(PROJECTS_DIR, req.params.id);
   if (!fs.existsSync(projDir)) return res.status(404).json({ error: 'Project not found' });
 
   const cfgPath = path.join(projDir, 'nexus.config.json');
@@ -399,8 +399,8 @@ function getWorkspaceTree(dir, rootDir) {
   });
 }
 
-app.get('/api//:id/workspace', (req, res) => {
-  const projDir = path.join(_DIR, req.params.id);
+app.get('/api/projects/:id/workspace', (req, res) => {
+  const projDir = path.join(PROJECTS_DIR, req.params.id);
   const cfgPath = path.join(projDir, 'nexus.config.json');
   if (!fs.existsSync(cfgPath)) return res.status(404).json({ error: 'Project not found' });
 
@@ -422,7 +422,7 @@ app.get('/api//:id/workspace', (req, res) => {
 // ─── Workspace Staging System ──────────────────────────────────
 const stagedChanges = new Map(); // Store: projectId -> { [filePath]: content }
 
-app.post('/api//:id/workspace/propose', (req, res) => {
+app.post('/api/projects/:id/workspace/propose', (req, res) => {
   const { id } = req.params;
   const { filePath, content } = req.body;
   if (!filePath) return res.status(400).json({ error: 'filePath is required' });
@@ -433,7 +433,7 @@ app.post('/api//:id/workspace/propose', (req, res) => {
   res.json({ status: 'proposed', path: filePath });
 });
 
-app.post('/api//:id/workspace/commit', (req, res) => {
+app.post('/api/projects/:id/workspace/commit', (req, res) => {
   const { id } = req.params;
   const { filePath } = req.body;
   const taging = stagedChanges.get(id);
@@ -456,7 +456,7 @@ app.post('/api//:id/workspace/commit', (req, res) => {
   }
 });
 
-app.post('/api//:id/workspace/reject', (req, res) => {
+app.post('/api/projects/:id/workspace/reject', (req, res) => {
   const { id } = req.params;
   const { filePath } = req.body;
   const taging = stagedChanges.get(id);
@@ -468,7 +468,7 @@ app.post('/api//:id/workspace/reject', (req, res) => {
 });
 
 // Direct file write
-app.post('/api//:id/workspace/file', (req, res) => {
+app.post('/api/projects/:id/workspace/file', (req, res) => {
   const { filePath, content } = req.body;
   if (!filePath) return res.status(400).json({ error: 'filePath is required' });
 
@@ -482,7 +482,7 @@ app.post('/api//:id/workspace/file', (req, res) => {
   }
 });
 
-app.delete('/api//:id/workspace/file', (req, res) => {
+app.delete('/api/projects/:id/workspace/file', (req, res) => {
   const { filePath } = req.body;
   if (!filePath || !fs.existsSync(filePath)) return res.status(404).json({ error: 'File not found' });
 
@@ -500,8 +500,8 @@ app.delete('/api//:id/workspace/file', (req, res) => {
 });
 
 // Upload Knowledge Files
-app.post('/api//:id/knowledge', upload.array('files'), (req, res) => {
-  const projDir = path.join(_DIR, req.params.id);
+app.post('/api/projects/:id/knowledge', upload.array('files'), (req, res) => {
+  const projDir = path.join(PROJECTS_DIR, req.params.id);
   if (!fs.existsSync(projDir)) return res.status(404).json({ error: 'Project not found' });
 
   const knowledgeDir = path.join(projDir, 'knowledge');
@@ -515,8 +515,8 @@ app.post('/api//:id/knowledge', upload.array('files'), (req, res) => {
   res.json({ status: 'uploaded', count: files.length });
 });
 
-app.delete('/api//:id/knowledge/:filename', (req, res) => {
-  const filePath = path.join(_DIR, req.params.id, 'knowledge', req.params.filename);
+app.delete('/api/projects/:id/knowledge/:filename', (req, res) => {
+  const filePath = path.join(PROJECTS_DIR, req.params.id, 'knowledge', req.params.filename);
   if (fs.existsSync(filePath)) {
     fs.unlinkSync(filePath);
     res.json({ status: 'deleted' });
@@ -705,7 +705,7 @@ wss.on('connection', (ws) => {
 app.all('/api/*', async (req, res, next) => {
   try {
     // Exclude paths already handled by Express
-    const handledRoutes = ['/api/config', '/api/keys', '/api/', '/api/sessions', '/api/chat'];
+    const handledRoutes = ['/api/config', '/api/keys', '/api/projects', '/api/sessions', '/api/chat'];
     if (handledRoutes.some(r => req.path.startsWith(r))) return next();
 
     // Map /api/admin/users -> ../../api/admin/users.js

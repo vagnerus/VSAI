@@ -1,6 +1,6 @@
 /**
- * GET/POST /api/
- * Lists or creates  for the authenticated user.
+ * GET/POST /api/projects
+ * Lists or creates projects for the authenticated user.
  * Uses Supabase if configured, falls back to in-memory for local dev.
  */
 
@@ -8,7 +8,7 @@ import { requireAuth } from './_lib/authMiddleware.js';
 import { getSupabaseClient } from './_lib/supabaseAdmin.js';
 
 // In-memory fallback for local dev
-let local = [];
+let localProjects = [];
 
 export default async function handler(req, res) {
   // Try auth (optional for local dev)
@@ -21,14 +21,14 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     if (supabase) {
       const { data, error } = await supabase
-        .from('')
+        .from('projects')
         .select('*')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false });
 
       if (error) return res.status(500).json({ error: error.message });
 
-      const  = (data || []).map(p => ({
+      const projects = (data || []).map(p => ({
         id: p.id,
         name: p.name,
         description: p.description || '',
@@ -38,11 +38,11 @@ export default async function handler(req, res) {
         createdAt: p.created_at,
         knowledgeCount: 0,
       }));
-      return res.json({});
+      return res.json({ projects });
     }
 
     // Fallback: local
-    return res.json({ : local.filter(p => p.userId === userId) });
+    return res.json({ projects: localProjects.filter(p => p.userId === userId) });
   }
 
   if (req.method === 'POST') {
@@ -51,7 +51,7 @@ export default async function handler(req, res) {
 
     if (supabase) {
       const { data, error } = await supabase
-        .from('')
+        .from('projects')
         .insert({
           user_id: userId,
           name,
@@ -75,7 +75,7 @@ export default async function handler(req, res) {
       createdAt: new Date().toISOString(),
       knowledgeCount: 0,
     };
-    local.push(project);
+    localProjects.push(project);
     return res.json({ status: 'created', project });
   }
 

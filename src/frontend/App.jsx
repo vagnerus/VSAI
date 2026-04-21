@@ -73,10 +73,10 @@ function parseMarkdown(text) {
     // Line breaks
     .replace(/\n\n/g, '</p><p>')
     .replace(/\n/g, '<br/>');
-  
+
   // Wrap list items
   html = html.replace(/(<li>.*?<\/li>(\s*<br\/>)?)+/g, (match) => `<ul>${match.replace(/<br\/>/g, '')}</ul>`);
-  
+
   return `<p>${html}</p>`;
 }
 
@@ -130,7 +130,7 @@ function WorkspaceExplorer({ projectId, onFileSelect }) {
     if (!projectId) return;
     setLoading(true);
     try {
-      const data = await api(`/projects/${projectId}/workspace`);
+      const data = await api(`//${projectId}/workspace`);
       setTree(data.tree || []);
       setWorkspacePath(data.workspacePath || '');
       setExists(data.exists);
@@ -158,7 +158,7 @@ function WorkspaceExplorer({ projectId, onFileSelect }) {
       <ul className="workspace-list">
         {items.map(item => (
           <li key={item.path} className="workspace-item">
-            <div 
+            <div
               className={`workspace-item-header ${item.isDirectory ? 'directory' : 'file'}`}
               onClick={() => item.isDirectory ? toggleCollapse(item.path) : onFileSelect?.(item)}
             >
@@ -186,7 +186,7 @@ function WorkspaceExplorer({ projectId, onFileSelect }) {
         <div className="workspace-title">📁 Workspace Local</div>
         <button className="workspace-refresh" onClick={loadTree} title="Atualizar">🔄</button>
       </div>
-      
+
       {loading && tree.length === 0 ? (
         <div className="workspace-loading">Carregando...</div>
       ) : !exists ? (
@@ -199,7 +199,7 @@ function WorkspaceExplorer({ projectId, onFileSelect }) {
           {renderTree(tree)}
         </div>
       )}
-      
+
       <div className="workspace-footer">
         <div className="workspace-path-mini" title={workspacePath}>
           {workspacePath}
@@ -215,7 +215,7 @@ function DiffViewer({ original, proposal, path }) {
     const oldLines = (oldStr || '').split('\n');
     const newLines = (newStr || '').split('\n');
     const result = [];
-    
+
     // Simple line-by-line diff (for visualization)
     let i = 0, j = 0;
     while (i < oldLines.length || j < newLines.length) {
@@ -280,10 +280,10 @@ function WindowControls() {
 
 function Sidebar({ currentPage, onNavigate, stats, collapsed, onToggle }) {
   const { isAdmin } = useAuth();
-  
+
   const navItems = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
-    { id: 'projects', icon: '📁', label: 'Projetos' },
+    { id: '', icon: '📁', label: 'Projetos' },
     { id: 'chat', icon: '💬', label: 'Chat AI', badge: null },
     { id: 'tools', icon: '🛠️', label: 'Ferramentas', badge: stats?.totalTools },
     { id: 'agents', icon: '🤖', label: 'Agentes' },
@@ -598,7 +598,7 @@ function ChatPage({ projectId }) {
                 setMessages(prev => [...prev, { role: 'system', content: `Erro: ${msg.message}`, timestamp: Date.now() }]);
                 break;
             }
-          } catch {}
+          } catch { }
         }
       }
     } catch (err) {
@@ -641,7 +641,7 @@ function ChatPage({ projectId }) {
     <div className={`chat-layout-wrapper ${showArtifacts ? 'with-artifacts' : ''}`}>
       {projectId && (
         <div className="chat-sidebar-workspace">
-           <WorkspaceExplorer projectId={projectId} />
+          <WorkspaceExplorer projectId={projectId} />
         </div>
       )}
       <div className="chat-container">
@@ -1229,11 +1229,11 @@ function PluginsPage() {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// Projects Page
+//  Page
 // ═══════════════════════════════════════════════════════════════
 
-function ProjectsPage({ onStartChat }) {
-  const [projects, setProjects] = useState([]);
+function Page({ onStartChat }) {
+  const [, set] = useState([]);
   const [name, setName] = useState('');
   const [desc, setDesc] = useState('');
   const [selectedProject, setSelectedProject] = useState(null);
@@ -1241,14 +1241,14 @@ function ProjectsPage({ onStartChat }) {
   const [workspacePath, setWorkspacePath] = useState('');
 
   useEffect(() => {
-    loadProjects();
+    load();
   }, []);
 
-  const loadProjects = () => {
-    api('/projects').then(data => {
-      setProjects(data.projects || []);
+  const load = () => {
+    api('/').then(data => {
+      set(data. || []);
       if (selectedProject) {
-        const updated = (data.projects || []).find(p => p.id === selectedProject.id);
+        const updated = (data. || []).find(p => p.id === selectedProject.id);
         if (updated) setSelectedProject(updated);
       }
     });
@@ -1257,10 +1257,10 @@ function ProjectsPage({ onStartChat }) {
   const createProject = async (e) => {
     e?.preventDefault();
     if (!name.trim()) return;
-    await api('/projects', { method: 'POST', body: { name, description: desc } });
+    await api('/', { method: 'POST', body: { name, description: desc } });
     setName('');
     setDesc('');
-    loadProjects();
+    load();
   };
 
   const selectProject = (p) => {
@@ -1270,9 +1270,9 @@ function ProjectsPage({ onStartChat }) {
   };
 
   const saveProjectConfig = async () => {
-    await api(`/projects/${selectedProject.id}`, { method: 'PUT', body: { systemPrompt, workspacePath } });
+    await api(`//${selectedProject.id}`, { method: 'PUT', body: { systemPrompt, workspacePath } });
     alert('Configuração salva!');
-    loadProjects();
+    load();
   };
 
   const uploadFile = async (e) => {
@@ -1280,12 +1280,12 @@ function ProjectsPage({ onStartChat }) {
     if (!files.length) return;
     const formData = new FormData();
     for (let f of files) formData.append('files', f);
-    
-    await fetch(`/api/projects/${selectedProject.id}/knowledge`, {
+
+    await fetch(`/api//${selectedProject.id}/knowledge`, {
       method: 'POST', body: formData
     });
     alert('Upload concluído com sucesso!');
-    loadProjects();
+    load();
   };
 
   if (selectedProject) {
@@ -1293,12 +1293,12 @@ function ProjectsPage({ onStartChat }) {
       <div className="animate-in">
         <button className="btn btn-secondary btn-sm" onClick={() => setSelectedProject(null)}>← Voltar para Projetos</button>
         <h2 style={{ fontSize: 22, fontWeight: 800, margin: '20px 0' }}>📂 Projeto: {selectedProject.name}</h2>
-        
+
         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
           <div className="card">
             <div className="card-header"><div className="card-title">📜 Instruções Customizadas (System Prompt)</div></div>
-            <textarea 
-              value={systemPrompt} 
+            <textarea
+              value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
               placeholder="Ex: Atue como um engenheiro de software sênior... Só responda com código documentado em Markdown."
               style={{ width: '100%', height: 200, background: 'var(--glass-bg)', color: 'white', padding: 12, border: '1px solid var(--glass-border)', borderRadius: 4, fontFamily: 'monospace' }}
@@ -1310,8 +1310,8 @@ function ProjectsPage({ onStartChat }) {
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="card-title">🏠 Workspace Local</div>
               {selectedProject.workspacePath && (
-                <button 
-                  className="btn btn-success btn-sm" 
+                <button
+                  className="btn btn-success btn-sm"
                   onClick={() => onStartChat(selectedProject.id)}
                 >
                   💬 Iniciar Chat
@@ -1320,19 +1320,19 @@ function ProjectsPage({ onStartChat }) {
             </div>
             <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 10 }}>Vincule uma pasta do seu computador para a IA salvar os arquivos.</p>
             <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-              <input 
-                type="text" 
-                value={workspacePath} 
+              <input
+                type="text"
+                value={workspacePath}
                 onChange={e => setWorkspacePath(e.target.value)}
                 placeholder="Ex: C:\Users\Nome\Documents\MeuProjeto"
                 style={{ flex: 1, background: 'var(--glass-bg)', color: 'white', padding: '8px 12px', border: '1px solid var(--glass-border)', borderRadius: 4, fontSize: 13 }}
               />
               <button className="btn btn-purple btn-sm" onClick={saveProjectConfig}>Vincular</button>
             </div>
-            
+
             {selectedProject.workspacePath && (
               <div style={{ marginTop: 10, borderTop: '1px solid var(--glass-border)', paddingTop: 10 }}>
-                 <WorkspaceExplorer projectId={selectedProject.id} />
+                <WorkspaceExplorer projectId={selectedProject.id} />
               </div>
             )}
           </div>
@@ -1357,21 +1357,21 @@ function ProjectsPage({ onStartChat }) {
     <div className="animate-in">
       <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20 }}>📁 Projetos Isolados</h2>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>Crie ambientes de Inteligência Artificial pré-configurados com instruções e Conhecimento (RAG Limit). As sessões dentro do projeto não misturam contexto.</p>
-      
+
       <div className="card" style={{ marginBottom: 24 }}>
         <div className="card-header"><div className="card-title">✨ Novo Projeto</div></div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <input 
-            type="text" 
-            placeholder="Nome (ex: meu-app)" 
-            value={name} 
+          <input
+            type="text"
+            placeholder="Nome (ex: meu-app)"
+            value={name}
             onChange={(e) => setName(e.target.value)}
             style={{ flex: 1, padding: '8px 12px', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '4px' }}
           />
-          <input 
-            type="text" 
-            placeholder="Descrição" 
-            value={desc} 
+          <input
+            type="text"
+            placeholder="Descrição"
+            value={desc}
             onChange={(e) => setDesc(e.target.value)}
             style={{ flex: 2, padding: '8px 12px', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', color: 'white', borderRadius: '4px' }}
           />
@@ -1380,20 +1380,20 @@ function ProjectsPage({ onStartChat }) {
       </div>
 
       <div className="tools-grid">
-        {projects.length === 0 ? (
+        {.length === 0 ? (
           <div style={{ color: 'var(--text-secondary)' }}>Nenhum projeto encontrado.</div>
         ) : (
-          projects.map(p => (
-            <div key={p.id} className="tool-card" style={{ cursor: 'pointer' }} onClick={() => selectProject(p)}>
-              <div className="tool-card-icon">📂</div>
-              <div className="tool-card-name" style={{ fontSize: 16 }}>{p.name}</div>
-              <div className="tool-card-desc" style={{ marginTop: 8 }}>{p.description || 'Sem descrição'}</div>
-              <div className="tool-card-flags">
-                <span className="badge badge-purple">Conhecimento: {p.knowledgeCount || 0}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(p.createdAt).toLocaleDateString('pt-BR')}</span>
-              </div>
+          .map(p => (
+          <div key={p.id} className="tool-card" style={{ cursor: 'pointer' }} onClick={() => selectProject(p)}>
+            <div className="tool-card-icon">📂</div>
+            <div className="tool-card-name" style={{ fontSize: 16 }}>{p.name}</div>
+            <div className="tool-card-desc" style={{ marginTop: 8 }}>{p.description || 'Sem descrição'}</div>
+            <div className="tool-card-flags">
+              <span className="badge badge-purple">Conhecimento: {p.knowledgeCount || 0}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(p.createdAt).toLocaleDateString('pt-BR')}</span>
             </div>
-          ))
+          </div>
+        ))
         )}
       </div>
     </div>
@@ -1435,7 +1435,7 @@ function SettingsPage() {
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header"><div className="card-title">🤖 Provedor de IA Ativo</div></div>
         <div style={{ display: 'flex', gap: 12, padding: 10 }}>
-          <div 
+          <div
             className={`tool-card ${config.defaultProvider === 'gemini' ? 'active' : ''}`}
             style={{ flex: 1, padding: 15, cursor: 'pointer', border: config.defaultProvider === 'gemini' ? '2px solid var(--purple-main)' : '1px solid var(--glass-border)' }}
             onClick={() => setConfig({ ...config, defaultProvider: 'gemini' })}
@@ -1444,7 +1444,7 @@ function SettingsPage() {
             <div style={{ fontWeight: 600 }}>Google Gemini</div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Plano Gratuito/Pago via Google Cloud</div>
           </div>
-          <div 
+          <div
             className={`tool-card ${config.defaultProvider === 'anthropic' ? 'active' : ''}`}
             style={{ flex: 1, padding: 15, cursor: 'pointer', border: config.defaultProvider === 'anthropic' ? '2px solid var(--purple-main)' : '1px solid var(--glass-border)' }}
             onClick={() => setConfig({ ...config, defaultProvider: 'anthropic' })}
@@ -1462,19 +1462,19 @@ function SettingsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
               <label className="label">API Key (Google Studio)</label>
-              <input 
-                type="password" 
-                className="input" 
-                value={config.geminiApiKey} 
+              <input
+                type="password"
+                className="input"
+                value={config.geminiApiKey}
                 onChange={e => setConfig({ ...config, geminiApiKey: e.target.value })}
                 placeholder="AIzaSy..."
               />
             </div>
             <div>
               <label className="label">Modelo Gemini</label>
-              <select 
-                className="input" 
-                value={config.googleModel} 
+              <select
+                className="input"
+                value={config.googleModel}
                 onChange={e => setConfig({ ...config, googleModel: e.target.value })}
               >
                 <option value="gemini-2.5-flash">Gemini 2.5 Flash (Otimizado)</option>
@@ -1490,19 +1490,19 @@ function SettingsPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div>
               <label className="label">API Key (Console Anthropic)</label>
-              <input 
-                type="password" 
-                className="input" 
-                value={config.anthropicApiKey} 
+              <input
+                type="password"
+                className="input"
+                value={config.anthropicApiKey}
                 onChange={e => setConfig({ ...config, anthropicApiKey: e.target.value })}
                 placeholder="sk-ant-..."
               />
             </div>
             <div>
               <label className="label">Modelo Claude</label>
-              <select 
-                className="input" 
-                value={config.anthropicModel} 
+              <select
+                className="input"
+                value={config.anthropicModel}
                 onChange={e => setConfig({ ...config, anthropicModel: e.target.value })}
               >
                 <option value="claude-sonnet-4-20250514">Claude 3.5 Sonnet (Recomendado)</option>
@@ -1557,7 +1557,7 @@ function DashboardShell({ onSignOut, userProfile }) {
 
   useEffect(() => {
     const fetchData = () => {
-      api('/dashboard').then(setDashboardData).catch(() => {});
+      api('/dashboard').then(setDashboardData).catch(() => { });
     };
     fetchData();
     const interval = setInterval(fetchData, 15000);
@@ -1579,7 +1579,7 @@ function DashboardShell({ onSignOut, userProfile }) {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard': return <DashboardPage stats={dashboardData.stats} recentSessions={dashboardData.recentSessions} />;
-      case 'projects': return <ProjectsPage onStartChat={startChat} />;
+      case '': return <Page onStartChat={startChat} />;
       case 'chat': return <ChatPage projectId={activeProjectId} />;
       case 'tools': return <ToolsPage />;
       case 'agents': return <AgentsPage />;
@@ -1598,10 +1598,10 @@ function DashboardShell({ onSignOut, userProfile }) {
   return (
     <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${isElectron ? 'is-electron' : ''}`}>
       <WindowControls />
-      
-      <Sidebar 
-        currentPage={currentPage} 
-        onNavigate={setCurrentPage} 
+
+      <Sidebar
+        currentPage={currentPage}
+        onNavigate={setCurrentPage}
         stats={dashboardData.stats}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}

@@ -1400,7 +1400,7 @@ tr:hover td {
   font-size: 13px;
 }
 
-vsai-eg7tg91on-vagnerus-projects.vercel.app.workspace-error code {
+vsai-eg7tg91on-vagnerus-.vercel.app.workspace-error code {
   color: var(--accent-danger);
   word-break: break-all;
 }
@@ -1411,7 +1411,7 @@ vsai-eg7tg91on-vagnerus-projects.vercel.app.workspace-error code {
   border: 1px solid hsla(265, 85%, 62%, 0.2);
 }
 
-/* ─── Projects Detail View Fixes ───────────────────────── */
+/* ───  Detail View Fixes ───────────────────────── */
 
 .btn-purple {
   background: var(--accent-primary);
@@ -2794,8 +2794,6 @@ vsai-eg7tg91on-vagnerus-projects.vercel.app.workspace-error code {
 /* ═══════════════════════════════════════════════════════════════
    Artifacts Panel (Claude-like)
    ═══════════════════════════════════════════════════════════════ */
-
-.chat-layout-wrapper.with-artifacts {}
 
 .chat-layout-wrapper.with-artifacts .chat-sidebar-activity {
   display: none;
