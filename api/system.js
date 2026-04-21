@@ -68,8 +68,8 @@ async function handleDashboard(req, res) {
       stats: {
         totalSessions: sessionCount || 0, activeSessions: 0, totalMessages: messageCount || 0,
         totalTools: 20, totalHooks: 0, apiConfigured: true, uptime: 0,
-        model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-        provider: process.env.DEFAULT_PROVIDER === 'anthropic' ? 'Anthropic' : 'Gemini',
+        model: process.env.GEMINI_MODEL || process.env.ANTHROPIC_MODEL || 'gemini-2.5-flash',
+        provider: apiClient.constructor.name.replace('Client', ''),
         plan: profile?.plan || 'free', tokensUsed: profile?.tokens_used_month || 0,
         tokensLimit: profile?.tokens_limit || 50000,
       },
