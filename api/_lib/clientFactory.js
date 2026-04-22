@@ -1,6 +1,7 @@
 import { config } from 'dotenv';
 import { GeminiClient } from '../../src/api/geminiClient.js';
 import { AnthropicClient } from '../../src/api/anthropicClient.js';
+import { OpenAIClient } from '../../src/api/openaiClient.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -55,13 +56,15 @@ class GatewayClient {
   }
 }
 
-export function getApiClient() {
+export function getApiClient(requestedProvider) {
   let cfg = {
     geminiApiKey: '',
     anthropicApiKey: '',
+    openaiApiKey: '',
     defaultProvider: 'gemini',
     googleModel: 'gemini-2.5-flash',
-    anthropicModel: 'claude-sonnet-4-20250514',
+    anthropicModel: 'claude-3-5-sonnet-20240620',
+    openaiModel: 'gpt-4o',
   };
 
   if (fs.existsSync(CONFIG_PATH)) {
@@ -74,17 +77,24 @@ export function getApiClient() {
   // ENV VARS sempre tem prioridade (Vercel)
   if (process.env.GEMINI_API_KEY) cfg.geminiApiKey = process.env.GEMINI_API_KEY;
   if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+  if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;
   if (process.env.DEFAULT_PROVIDER) cfg.defaultProvider = process.env.DEFAULT_PROVIDER;
-  if (process.env.GEMINI_MODEL) cfg.googleModel = process.env.GEMINI_MODEL;
-  if (process.env.ANTHROPIC_MODEL) cfg.anthropicModel = process.env.ANTHROPIC_MODEL;
 
-  const gemini = new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel });
-  const anthropic = new AnthropicClient({ apiKey: cfg.anthropicApiKey, model: cfg.anthropicModel });
+  const clients = {
+    google: new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel }),
+    anthropic: new AnthropicClient({ apiKey: cfg.anthropicApiKey, model: cfg.anthropicModel }),
+    openai: new OpenAIClient({ apiKey: cfg.openaiApiKey, model: cfg.openaiModel })
+  };
 
-  if (cfg.defaultProvider === 'anthropic' && cfg.anthropicApiKey) {
-    return new GatewayClient(anthropic, cfg.geminiApiKey ? gemini : null);
-  }
-  return new GatewayClient(gemini, cfg.anthropicApiKey ? anthropic : null);
+  // Roteamento Dinâmico: O provedor pedido é o Primário. O padrão vira Fallback.
+  const primaryKey = requestedProvider || cfg.defaultProvider;
+  const primary = clients[primaryKey] || clients.google;
+  
+  // Escolhe um fallback diferente do primário que esteja configurado
+  const fallbackKey = Object.keys(clients).find(k => k !== primaryKey && clients[k].isConfigured());
+  const fallback = fallbackKey ? clients[fallbackKey] : null;
+
+  return new GatewayClient(primary, fallback);
 }
 
 export function resetClient() {}

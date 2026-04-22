@@ -7,12 +7,39 @@ import { verifyAuth } from './_lib/authMiddleware.js';
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 import { checkRateLimit } from './_lib/rateLimiter.js';
 import { getAllTools } from '../src/tools/registry.js';
+import { semanticCache } from './_lib/cache.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const config = {
   maxDuration: 60,
 };
 
+/**
+ * @typedef {Object} ChatMessage
+ * @property {string} role
+ * @property {string|Array} content
+ * @property {string} [uuid]
+ * @property {number} [timestamp]
+ */
+
+/**
+ * @typedef {Object} ChatRequest
+ * @property {string} content
+ * @property {ChatMessage[]} [messages]
+ * @property {string} [model]
+ * @property {string} [provider]
+ * @property {string} [projectId]
+ * @property {string} [sessionId]
+ * @property {string} [customInstructions]
+ * @property {string} [agentId]
+ * @property {Object} [settings]
+ */
+
+/**
+ * Formats messages for the LLM API providers.
+ * @param {ChatMessage[]} messages 
+ * @returns {Array}
+ */
 function formatMessagesForAPI(messages) {
   return messages.map(m => {
     if (m.type === 'tool_result') {
@@ -31,6 +58,11 @@ function formatMessagesForAPI(messages) {
   });
 }
 
+/**
+ * Main Chat SSE Handler (Zero Trust & Resilient)
+ * @param {import('next').NextApiRequest} req 
+ * @param {import('next').NextApiResponse} res 
+ */
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -40,29 +72,38 @@ export default async function handler(req, res) {
   const auth = await verifyAuth(req);
   const userId = auth?.user?.id || 'anonymous';
 
-  const { content, messages: historyMessages = [], model, projectId, sessionId: clientSessionId } = req.body;
+  const { content, messages: historyMessages = [], model: clientModel, provider, projectId, sessionId: clientSessionId, customInstructions = '', agentId } = req.body;
+  let activeModel = clientModel || 'gemini-2.5-flash';
+  let activeSystemPrompt = '';
 
   if (!content) {
     return res.status(400).json({ error: 'content is required' });
   }
 
-  // 🛡️ Enterprise Guardrails (Security Filter)
-  // Prevents Prompt Injection and malicious code execution
+  // 🛡️ Enterprise Guardrails 2.0 (Security Filter)
+  // Enhanced patterns against sophisticated jailbreaks and data exfiltration
   const forbiddenPatterns = [
     /ignore (all )?(previous )?(instructions|prompts|rules)/i,
     /bypass (the )?(system|rules|filters)/i,
     /drop table/i,
+    /truncate table/i,
+    /select \* from/i,
     /you are now (in )?developer mode/i,
     /system prompt/i,
-    /forget everything/i
+    /forget everything/i,
+    /dan mode/i,
+    /acting as/i,
+    /without any restrictions/i
   ];
 
+  const sanitizedContent = typeof content === 'string' ? content.trim() : JSON.stringify(content);
+
   for (const pattern of forbiddenPatterns) {
-    if (pattern.test(content)) {
-      console.warn(`[Guardrails] Blocked malicious prompt from user ${userId}:`, content);
+    if (pattern.test(sanitizedContent)) {
+      console.warn(`[SECURITY] Potential Injection Blocked | User: ${userId} | Pattern: ${pattern}`);
       return res.status(403).json({
-        error: 'Security Guardrail Triggered: Sua mensagem violou as diretrizes de segurança da plataforma (Ataque detectado). Acesso bloqueado.',
-        code: 'GUARDRAIL_BLOCK'
+        error: 'Detecção de Ameaça: Sua mensagem contém padrões não permitidos pelas diretrizes de segurança.',
+        code: 'SECURITY_VIOLATION'
       });
     }
   }
@@ -70,50 +111,81 @@ export default async function handler(req, res) {
   // Rate limit check via Centralized Limiter
   const limitCheck = await checkRateLimit(userId);
   if (!limitCheck.allowed) {
-    return res.status(429).json({
-      error: limitCheck.reason,
-      plan: limitCheck.plan,
-    });
+    return res.status(429).json({ error: limitCheck.reason, plan: limitCheck.plan });
   }
 
   const supabaseAdmin = getSupabaseAdmin();
+  
+  // 🚀 PERFORMANCE: Parallel Fetching for Context
+  let extraContext = '';
+  let profileInstructions = '';
 
-  // SSE headers
+  try {
+    const [knowledgeRes, profileRes] = await Promise.all([
+      projectId && supabaseAdmin ? supabaseAdmin.from('project_knowledge').select('file_name, content').eq('project_id', projectId) : Promise.resolve({ data: null }),
+      userId !== 'anonymous' && supabaseAdmin ? supabaseAdmin.from('profiles').select('custom_instructions').eq('id', userId).single() : Promise.resolve({ data: null })
+    ]);
+
+    if (knowledgeRes?.data?.length > 0) {
+      extraContext = '\n\n=== PROJECT KNOWLEDGE ===\n' + knowledgeRes.data.map(k => `[${k.file_name}]\n${k.content}`).join('\n\n') + '\n';
+    }
+
+    if (profileRes?.data?.custom_instructions) {
+      profileInstructions = `\n\n=== USER PREFERENCES ===\n${profileRes.data.custom_instructions}\n`;
+    }
+  } catch (e) {
+    console.error('[DATABASE_FETCH_ERROR]', e);
+  }
+
+  // SSE headers initialization (Resilience Pillar)
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
   res.flushHeaders();
 
-  function send(obj) {
+  const send = (obj) => {
     if (!res.writable) return;
     res.write(`data: ${JSON.stringify(obj)}\n\n`);
-  }
+  };
 
-  const apiClient = getApiClient();
+  const apiClient = getApiClient(provider);
   const tools = getAllTools();
   const sessionId = clientSessionId || uuidv4();
 
-  // 📚 RAG: Buscar Conhecimento do Projeto
-  let extraContext = '';
-  if (projectId && supabaseAdmin) {
+
+  let baseSystemPrompt = `Você é o NexusAI, uma inteligência artificial de elite (Technical Elite).
+Seu objetivo é ser um parceiro de produtividade de alto nível, operando com precisão cirúrgica.
+
+REGRAS DE OURO:
+1. Estilo: Profissional, técnico e direto. Use markdown rico.
+2. Gráficos: Para dados numéricos, use obrigatoriamente:
+   \`\`\`json_chart
+   { "type": "bar", "title": "...", "data": [ ... ] }
+   \`\`\`
+3. Ferramentas: Você tem acesso a ferramentas de busca, SEO, etc. Use-as sempre que necessário sem pedir permissão.` + profileInstructions + customInstructions;
+
+  // 🤖 Load Agent Configuration (Override)
+  if (agentId && supabaseAdmin) {
     try {
-      const { data: knowledge } = await supabaseAdmin
-        .from('project_knowledge')
-        .select('file_name, content')
-        .eq('project_id', projectId);
-        
-      if (knowledge && knowledge.length > 0) {
-        extraContext = '\n\n=== CONTEXTO DA BASE DE CONHECIMENTO (RAG) ===\n';
-        extraContext += 'Você deve usar as informações abaixo para guiar suas respostas. Priorize essas informações em vez do seu conhecimento geral.\n\n';
-        knowledge.forEach(k => {
-          extraContext += `[Arquivo: ${k.file_name}]\n${k.content}\n\n`;
-        });
-        extraContext += '===============================================\n\n';
+      const { data: agent } = await supabaseAdmin.from('agents').select('*').eq('id', agentId).single();
+      if (agent) {
+        baseSystemPrompt = `${agent.system_prompt}\n\n[CONTEXTO: Você está atuando como o agente '${agent.name}']\n\n${profileInstructions}`;
+        if (agent.model) activeModel = agent.model;
       }
-    } catch (e) {
-      console.error('[RAG Error] Failed to fetch knowledge:', e);
-    }
+    } catch (e) { console.error('Agent load error:', e); }
+  }
+  
+  activeSystemPrompt = baseSystemPrompt;
+
+  // 🧠 Semantic Cache Lookup
+  const cachedResponse = semanticCache.get(historyMessages, activeSystemPrompt);
+  if (cachedResponse && !content.includes('pesquise')) {
+    send({ type: 'session', sessionId });
+    send({ type: 'status', message: '💡 Resposta recuperada do Cache Semântico (Token Economizado)' });
+    send({ type: 'assistant', content: cachedResponse });
+    send({ type: 'done' });
+    return res.end();
   }
 
   // Create/update session in Supabase
@@ -159,32 +231,6 @@ export default async function handler(req, res) {
     });
   }
 
-  // Injetar Custom Instructions do Perfil do Usuário
-  let customInstructions = '';
-  if (supabaseAdmin && userId !== 'anonymous') {
-    const { data: profile } = await supabaseAdmin.from('profiles').select('custom_instructions').eq('id', userId).single();
-    if (profile && profile.custom_instructions) {
-      customInstructions = `\n\n=== INSTRUÇÕES PESSOAIS DO USUÁRIO ===\n${profile.custom_instructions}\n=======================================\n\n`;
-    }
-  }
-
-  const baseSystemPrompt = `Você é o NexusAI, uma inteligência artificial de elite, útil, honesta e inofensiva.
-Seu objetivo é ser um parceiro de produtividade de alto nível.
-
-REGRAS DE OURO:
-1. Respostas Diretas: Não seja prolixo. Vá direto ao ponto a menos que o usuário peça detalhes.
-2. Gráficos e Dados: Sempre que o usuário fornecer dados numéricos ou pedir uma análise estatística, você pode gerar um gráfico. Para isso, você DEVE incluir no final da sua resposta um bloco de código JSON com o formato:
-   \`\`\`json_chart
-   {
-     "type": "bar", // ou "line", "pie"
-     "title": "Título do Gráfico",
-     "data": [ {"name": "Item 1", "value": 100}, {"name": "Item 2", "value": 200} ]
-   }
-   \`\`\`
-3. Personalidade: Você é técnico, elegante e usa emojis com moderação apenas para melhorar a legibilidade.
-4. Código: Sempre use blocos de código com a linguagem especificada.` + customInstructions;
-
-  const tools = getAllTools();
   const toolDefs = tools.map(t => ({
     name: t.name,
     description: t.description || '',
@@ -192,19 +238,24 @@ REGRAS DE OURO:
   }));
 
   let turnCount = 0;
+  const { settings = {} } = req.body;
   const MAX_TURNS = 10;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
+  let finalAssistantContent = '';
 
   try {
     while (turnCount < MAX_TURNS) {
       turnCount++;
 
       const stream = await apiClient.stream({
-        model: model || process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-        system: baseSystemPrompt + extraContext,
+        model: activeModel,
+        system: activeSystemPrompt + extraContext,
         messages: formatMessagesForAPI(mutableMessages),
         tools: toolDefs,
+        temperature: settings.temperature ?? 0.7,
+        top_p: settings.topP ?? 0.9,
+        max_tokens: settings.maxTokens ?? 4096,
       });
 
       let assistantContent = '';
@@ -238,6 +289,8 @@ REGRAS DE OURO:
         try { return { ...tc, input: JSON.parse(tc.input) }; } catch { return { ...tc, input: {} }; }
       });
 
+      finalAssistantContent += assistantContent;
+
       const assistantMsg = {
         uuid: uuidv4(),
         role: 'assistant',
@@ -246,13 +299,16 @@ REGRAS DE OURO:
         toolCalls: parsedCalls,
         timestamp: Date.now(),
       };
+      // ✍️ Phase 14: Enterprise Watermarking
+      const watermark = `\n\n[Audit ID: ${assistantMsg.uuid.substring(0,8)}-NXAI]`;
+      assistantContent += watermark;
+      assistantMsg.content = assistantContent;
+
       mutableMessages.push(assistantMsg);
       send({ type: 'assistant', content: assistantContent, toolCalls: parsedCalls, uuid: assistantMsg.uuid });
 
-      // Save assistant message and deduct tokens
+      // Save assistant message to DB
       if (supabaseAdmin && userId !== 'anonymous') {
-        const totalTokensUsed = totalInputTokens + totalOutputTokens;
-
         await supabaseAdmin.from('messages').insert({
           id: assistantMsg.uuid,
           session_id: sessionId,
@@ -264,25 +320,6 @@ REGRAS DE OURO:
           tokens_output: totalOutputTokens,
           model: model || 'gemini-2.5-flash',
         });
-
-        // Deduz tokens do perfil do usuário para aplicar as quotas do plano
-        if (totalTokensUsed > 0) {
-          try {
-            const { data: userProfile } = await supabaseAdmin
-              .from('profiles')
-              .select('tokens_used_month')
-              .eq('id', userId)
-              .single();
-              
-            if (userProfile) {
-              await supabaseAdmin.from('profiles').update({
-                tokens_used_month: (userProfile.tokens_used_month || 0) + totalTokensUsed
-              }).eq('id', userId);
-            }
-          } catch(e) {
-            console.error('[Billing] Failed to update token usage', e);
-          }
-        }
       }
 
       if (stopReason !== 'tool_use' || parsedCalls.length === 0) break;
@@ -319,34 +356,84 @@ REGRAS DE OURO:
         send({ type: 'tool_result', toolName: tc.name, content: toolResultMsg.content, isError: toolResultMsg.isError });
       }
     }
+    
+    // ✅ Save to Semantic Cache if we have a final response
+    if (finalAssistantContent && turnCount < MAX_TURNS) {
+      semanticCache.set(historyMessages, activeSystemPrompt, finalAssistantContent);
+    }
+
   } catch (err) {
+    console.error('[Chat Error]', err);
     send({ type: 'error', message: err.message || 'Erro interno' });
   }
 
-  // Update token usage in profile
+  // 📊 Consolidated Billing & Logs
   if (supabaseAdmin && userId !== 'anonymous' && (totalInputTokens + totalOutputTokens) > 0) {
-    // Log usage
-    const usageCost = (totalInputTokens + totalOutputTokens) * 0.000003;
-    await supabaseAdmin.from('usage_logs').insert({
-      user_id: userId,
-      session_id: sessionId,
-      model: model || 'gemini-2.5-flash',
-      tokens_input: totalInputTokens,
-      tokens_output: totalOutputTokens,
-      cost_usd: usageCost,
-    });
+    try {
+      const usageCost = (totalInputTokens + totalOutputTokens) * 0.000003;
+      await supabaseAdmin.from('usage_logs').insert({
+        user_id: userId,
+        session_id: sessionId,
+        model: model || 'gemini-2.5-flash',
+        tokens_input: totalInputTokens,
+        tokens_output: totalOutputTokens,
+        cost_usd: usageCost,
+      });
 
-    // Increment monthly counter
-    // First fetch current, then update (since we don't have RPC guaranteed)
-    const { data: prof } = await supabaseAdmin.from('profiles').select('tokens_used_month').eq('id', userId).single();
-    if (prof) {
-      await supabaseAdmin
-        .from('profiles')
-        .update({ tokens_used_month: (prof.tokens_used_month || 0) + totalInputTokens + totalOutputTokens })
-        .eq('id', userId);
+      // Increment monthly counter safely
+      const { data: prof } = await supabaseAdmin.from('profiles').select('tokens_used_month').eq('id', userId).single();
+      if (prof) {
+        await supabaseAdmin
+          .from('profiles')
+          .update({ tokens_used_month: (prof.tokens_used_month || 0) + totalInputTokens + totalOutputTokens })
+          .eq('id', userId);
+      }
+    } catch (e) {
+      console.error('[Billing Error]', e);
     }
   }
 
-  send({ type: 'done' });
-  res.end();
-}
+  // 📈 Phase 13: Silent Sentiment & Lead Analysis (BI Engine)
+  if (supabaseAdmin && userId !== 'anonymous' && finalAssistantContent) {
+    try {
+      // Analyze sentiment briefly using the current model or a fast one
+      const sentimentPrompt = `Analise o sentimento da última mensagem do usuário nesta conversa. 
+      Responda APENAS um JSON: { "sentiment": "positivo" | "neutro" | "negativo", "lead_score": 0-10, "is_frustrated": boolean }`;
+      
+      const sentimentAnalysis = await apiClient.stream({
+        model: 'gemini-2.5-flash',
+        system: sentimentPrompt,
+        messages: [{ role: 'user', content: typeof content === 'string' ? content : 'Imagem/Arquivo enviado' }],
+        max_tokens: 100
+      });
+
+      let analysisResult = '';
+      for await (const event of sentimentAnalysis) {
+        if (event.type === 'content_block_delta' && event.delta?.text) analysisResult += event.delta.text;
+      }
+
+      try {
+        const biData = JSON.parse(analysisResult.match(/\{.*\}/s)?.[0] || '{}');
+        await supabaseAdmin.from('sessions').update({
+          sentiment_score: biData.sentiment,
+          lead_score: biData.lead_score,
+          metadata: { ...biData, last_analyzed: new Date().toISOString() }
+        }).eq('id', sessionId);
+      } catch (e) { /* parse error */ }
+      
+  } catch (err) {
+    const errorId = uuidv4().substring(0, 8);
+    console.error(`[CRITICAL_ERROR][${errorId}]`, {
+      message: err.message,
+      stack: err.stack,
+      userId,
+      sessionId
+    });
+
+    send({ 
+      type: 'error', 
+      message: 'Desculpe, ocorreu um erro inesperado no processamento da sua solicitação.',
+      errorId,
+      hint: 'Por favor, tente novamente ou entre em contato com o suporte técnico se o problema persistir.'
+    });
+  }

@@ -72,6 +72,25 @@ async function handleAnalytics(req, res, supabase) {
     });
   }
 
+  // 📈 Business Intelligence: Sentiment & Leads (Optimized for Pillar 3)
+  const { data: biSessions, error: biError } = await supabase
+    .from('sessions')
+    .select('sentiment_score, lead_score, title, user_id')
+    .order('created_at', { ascending: false })
+    .limit(500); // Guardrail to prevent memory spikes
+
+  if (biError) console.error('[BI_ANALYTICS_ERROR]', biError);
+
+  const sentimentStats = { positivo: 0, neutro: 0, negativo: 0 };
+  const hotLeads = [];
+
+  if (biSessions) {
+    biSessions.forEach(s => {
+      if (s.sentiment_score) sentimentStats[s.sentiment_score] = (sentimentStats[s.sentiment_score] || 0) + 1;
+      if (s.lead_score >= 7) hotLeads.push(s);
+    });
+  }
+
   const { data: recent } = await supabase.from('projects').select('name, created_at, user_id').order('created_at', { ascending: false }).limit(3);
   const { data: recentSessions } = await supabase.from('sessions').select('title, created_at, user_id').order('created_at', { ascending: false }).limit(3);
 
@@ -86,6 +105,11 @@ async function handleAnalytics(req, res, supabase) {
     totalTokens,
     totalCostUSD: totalCost,
     recentActivity: recentActivity.slice(0, 5),
+    bi: {
+      sentiment: sentimentStats,
+      hotLeads: hotLeads.slice(0, 5),
+      totalLeads: hotLeads.length
+    }
   });
 }
 
@@ -95,22 +119,34 @@ async function handleDb(req, res, supabase) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   const { table } = req.query;
+  // 🛡️ Zero Trust: Strict Whitelist Validation
   if (!table || !ALLOWED_TABLES.includes(table)) {
-    return res.status(400).json({ error: 'Tabela inválida ou não permitida' });
+    console.error(`[SECURITY_ALERT] Unauthorized table access attempt: ${table}`);
+    return res.status(403).json({ error: 'Acesso negado: Tabela não permitida ou inexistente.' });
   }
 
-  const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false, nullsFirst: false }).limit(100);
+  try {
+    const { data, error } = await supabase
+      .from(table)
+      .select('*')
+      .order('created_at', { ascending: false, nullsFirst: false })
+      .limit(100);
 
-  if (error) {
-    if (error.code === '42703') {
-      const { data: fallbackData, error: fallbackErr } = await supabase.from(table).select('*').limit(100);
-      if (fallbackErr) throw fallbackErr;
-      return res.status(200).json({ data: fallbackData });
+    if (error) {
+      // Fallback for tables without created_at (Pillar 2: Resilience)
+      if (error.code === '42703') {
+        const { data: fallbackData, error: fallbackErr } = await supabase.from(table).select('*').limit(100);
+        if (fallbackErr) throw fallbackErr;
+        return res.status(200).json({ data: fallbackData });
+      }
+      throw error;
     }
-    throw error;
-  }
 
-  return res.status(200).json({ data });
+    return res.status(200).json({ data });
+  } catch (err) {
+    console.error(`[DB_EXPLORER_ERROR][${table}]`, err);
+    return res.status(500).json({ error: 'Erro ao consultar o banco de dados.' });
+  }
 }
 
 // ─── Main router ─────────────────────────────────────────────

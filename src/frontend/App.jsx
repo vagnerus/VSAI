@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from './providers/AuthProvider.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
@@ -14,6 +14,63 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 // ═══════════════════════════════════════════════════════════════
 
 const API_BASE = '/api';
+
+/**
+ * Global Error Boundary (Pillar 2: Resilience)
+ */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error) { return { hasError: true }; }
+  componentDidCatch(error, errorInfo) { console.error('[UI_CRITICAL_ERROR]', error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#1e293b', padding: 20, textAlign: 'center' }}>
+          <h1 style={{ fontSize: 48 }}>⚠️</h1>
+          <h2>Ops! Algo deu errado na interface.</h2>
+          <p style={{ color: '#64748b', maxWidth: 400 }}>Ocorreu um erro inesperado. Não se preocupe, seus dados estão seguros.</p>
+          <button className="btn btn-primary" onClick={() => window.location.reload()} style={{ marginTop: 20 }}>Recarregar Aplicativo</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+/**
+ * Memoized Message Bubble (Pillar 3: Performance)
+ * Prevents re-rendering historical messages during chat streaming.
+ */
+const MessageBubble = React.memo(({ message, onCopy }) => {
+  const isAssistant = message.role === 'assistant';
+  return (
+    <div className={`message-wrapper ${message.role} animate-in`}>
+      <div className="message-avatar">{isAssistant ? '🧠' : '👤'}</div>
+      <div className="message-content-wrapper">
+        <div className="message-header">
+          <span className="message-author">{isAssistant ? 'NexusAI' : 'Você'}</span>
+          <span className="message-time">{new Date(message.timestamp).toLocaleTimeString()}</span>
+        </div>
+        <div className="message-bubble">
+          {isAssistant ? (
+            <div dangerouslySetInnerHTML={{ __html: parseMarkdown(message.content) }} />
+          ) : (
+            <div className="user-message-text">{typeof message.content === 'string' ? message.content : '[Mensagem Multimodal]'}</div>
+          )}
+          {message.toolCalls?.map(tc => (
+            <div key={tc.id} className="tool-call-badge">🛠️ Usou: {tc.name}</div>
+          ))}
+        </div>
+        <div className="message-actions">
+          <button className="message-action-btn" onClick={() => onCopy(message.content)} title="Copiar">📋</button>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 // ─── API Helper (with auth token) ────────────────────────────
 async function api(path, options = {}) {
@@ -39,15 +96,32 @@ async function api(path, options = {}) {
 // Power Features: Dynamic Charts & Prompt Library
 // ═══════════════════════════════════════════════════════════════
 
-function DynamicChart({ json }) {
+/**
+ * @typedef {Object} ChartData
+ * @property {string} name
+ * @property {number} value
+ */
+
+/**
+ * @typedef {Object} ChartConfig
+ * @property {string} type
+ * @property {string} title
+ * @property {ChartData[]} data
+ */
+
+/**
+ * DynamicChart Component (Pillar 3: Performance & Pillar 4: Clean Code)
+ * Memoized to prevent re-renders on every chat stream update.
+ */
+const DynamicChart = React.memo(({ json }) => {
   try {
     const config = JSON.parse(json);
     const { type, title, data } = config;
     const maxVal = Math.max(...data.map(d => d.value), 1);
     
     return (
-      <div className="card" style={{ padding: 16, marginTop: 12, border: '1px solid var(--accent-primary)', background: 'rgba(0,0,0,0.2)' }}>
-        <h4 style={{ fontSize: 14, marginBottom: 16, textAlign: 'center', opacity: 0.8 }}>📊 {title || 'Análise de Dados'}</h4>
+      <div className="card" style={{ padding: 16, marginTop: 12, border: '1px solid var(--glass-border)', background: 'var(--bg-secondary)', borderRadius: 12 }}>
+        <h4 style={{ fontSize: 14, marginBottom: 16, textAlign: 'center', color: 'var(--text-primary)' }}>📊 {title || 'Análise de Dados'}</h4>
         <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 8, padding: '0 10px' }}>
           {data.map((item, i) => (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -55,10 +129,10 @@ function DynamicChart({ json }) {
                 style={{ 
                   width: '100%', 
                   height: `${(item.value / maxVal) * 100}%`, 
-                  background: 'linear-gradient(to top, var(--accent-primary), var(--accent-secondary))',
+                  background: 'var(--gradient-primary)',
                   borderRadius: '4px 4px 0 0',
                   minHeight: 4,
-                  boxShadow: '0 0 10px rgba(108, 99, 255, 0.3)'
+                  boxShadow: '0 4px 12px rgba(0, 102, 255, 0.1)'
                 }} 
                 title={`${item.name}: ${item.value}`}
               />
@@ -73,7 +147,7 @@ function DynamicChart({ json }) {
   } catch (e) {
     return <div style={{ fontSize: 11, color: 'var(--accent-danger)' }}>Erro ao renderizar gráfico.</div>;
   }
-}
+});
 
 function PromptLibrary({ onSelect }) {
   const categories = [
@@ -88,8 +162,8 @@ function PromptLibrary({ onSelect }) {
   ];
 
   return (
-    <div style={{ padding: 12 }}>
-      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>📚 Biblioteca de Prompts</h3>
+    <div style={{ padding: 16 }}>
+      <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--accent-primary)' }}>📚 Biblioteca de Prompts</h3>
       {categories.map(cat => (
         <div key={cat.title} style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>{cat.title}</div>
@@ -99,7 +173,7 @@ function PromptLibrary({ onSelect }) {
                 key={p.label} 
                 className="btn btn-secondary btn-sm" 
                 onClick={() => onSelect(p.text)}
-                style={{ fontSize: 11, padding: '4px 8px' }}
+                style={{ fontSize: 11, padding: '6px 12px', background: '#fff', border: '1px solid var(--glass-border)' }}
               >
                 {p.label}
               </button>
@@ -115,6 +189,10 @@ function parseMarkdown(text) {
   if (!text) return '';
   let html = text
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Mermaid Diagrams support
+    .replace(/```mermaid\n([\s\S]*?)```/g, (_, code) => {
+      return `<div class="mermaid-block"><pre class="mermaid">${code}</pre><div class="mermaid-hint">✨ Digrama Interativo (Mermaid)</div></div>`;
+    })
     // Code blocks with copy button and language badge
     .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
       const langLabel = lang || 'code';
@@ -415,6 +493,26 @@ function Sidebar({ currentPage, onNavigate, stats, collapsed, onToggle }) {
             {item.badge != null && <span className="sidebar-item-badge">{item.badge}</span>}
           </div>
         ))}
+
+        {agents.length > 0 && (
+          <>
+            <div className="sidebar-section-label">🤖 Meus Agentes</div>
+            {agents.map(agent => (
+              <div
+                key={agent.id}
+                className={`sidebar-item ${selectedAgent?.id === agent.id ? 'active' : ''}`}
+                onClick={() => {
+                  setSelectedAgent(agent);
+                  onNavigate('chat');
+                }}
+              >
+                <span className="sidebar-item-icon">{agent.icon || '🤖'}</span>
+                <span>{agent.name}</span>
+                <span className="sidebar-item-badge" style={{ fontSize: 9 }}>Bot</span>
+              </div>
+            ))}
+          </>
+        )}
       </nav>
 
       <div className="sidebar-footer">
@@ -472,7 +570,7 @@ function DashboardPage({ stats, recentSessions }) {
             target="_blank"
             rel="noopener noreferrer"
             className="btn btn-primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none', borderRadius: 12, background: 'linear-gradient(135deg, #6c3bef, #8b5cf6)', color: 'white', boxShadow: '0 4px 24px rgba(139,92,246,0.3)', transition: 'all 0.2s' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none', borderRadius: 12, background: 'var(--gradient-primary)', color: 'white', boxShadow: '0 4px 12px rgba(0, 102, 255, 0.2)', transition: 'all 0.2s' }}
           >
             🚀 Abrir Painel do Usuário
           </a>
@@ -529,6 +627,13 @@ function DashboardPage({ stats, recentSessions }) {
           <div className="stat-card-value">{stats?.apiConfigured ? '✅' : '⚠️'}</div>
           <div className="stat-card-label">API Status</div>
         </div>
+        <div className="stat-card" style={{ background: 'var(--accent-primary-glow)', borderColor: 'var(--accent-primary)' }}>
+          <div className="stat-card-icon">💸</div>
+          <div className="stat-card-value" style={{ color: 'var(--accent-primary)' }}>
+            R$ {((stats?.tokensUsed || 0) * 0.000003 * 5.25).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </div>
+          <div className="stat-card-label">Custo Estimado (BRL)</div>
+        </div>
       </div>
 
       <div className="card" style={{ marginTop: 24, marginBottom: 24, padding: 24, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}>
@@ -541,13 +646,13 @@ function DashboardPage({ stats, recentSessions }) {
             <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.5}/>
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.1}/>
+                  <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-              <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <XAxis dataKey="name" stroke="var(--text-tertiary)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+              <YAxis stroke="var(--text-tertiary)" fontSize={12} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" vertical={false} />
               <Tooltip 
                 contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
                 itemStyle={{ color: '#fff', fontWeight: 600 }}
@@ -592,10 +697,6 @@ function DashboardPage({ stats, recentSessions }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Chat Page
-// ═══════════════════════════════════════════════════════════════
-
 function ChatPage({ projectId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -607,18 +708,37 @@ function ChatPage({ projectId }) {
   const [toolUses, setToolUses] = useState([]);
   const [usage, setUsage] = useState(null);
   const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
+  const [agents, setAgents] = useState([]);
+  const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentLogs, setAgentLogs] = useState([]);
   const [showArtifacts, setShowArtifacts] = useState(false);
   const [showPromptLibrary, setShowPromptLibrary] = useState(false);
   const [activeArtifactIdx, setActiveArtifactIdx] = useState(0);
+  const [errorState, setErrorState] = useState(null);
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // Extract artifacts from all assistant messages
-  const allArtifacts = messages
-    .filter(m => m.role === 'assistant')
-    .flatMap(m => extractArtifacts(m.content));
+  useEffect(() => {
+    fetchAgents();
+  }, []);
+
+  const fetchAgents = useCallback(async () => {
+    try {
+      const data = await api('/agents');
+      if (Array.isArray(data)) setAgents(data);
+    } catch (e) { console.error('Failed to fetch agents', e); }
+  }, []);
+
+  /**
+   * Optimized Artifact Extraction (Pillar 3: Performance)
+   * Only re-calculates when messages change.
+   */
+  const allArtifacts = useMemo(() => {
+    return messages
+      .filter(m => m.role === 'assistant')
+      .flatMap(m => extractArtifacts(m.content));
+  }, [messages]);
 
   const exportChat = () => {
     if (messages.length === 0) return alert('O chat está vazio.');
@@ -650,11 +770,38 @@ function ChatPage({ projectId }) {
     e.target.value = '';
   };
 
-  const GEMINI_MODELS = [
-    { id: 'gemini-2.5-flash', label: '⚡ Gemini 2.5 Flash' },
-    { id: 'gemini-2.5-pro', label: '🧠 Gemini 2.5 Pro' },
-    { id: 'gemini-2.0-flash', label: '🔹 Gemini 2.0 Flash' },
-  ];
+  const AI_CONFIG = {
+    google: {
+      name: 'Google Gemini',
+      icon: '🔹',
+      models: [
+        { id: 'gemini-2.5-flash', label: '⚡ Gemini 2.5 Flash' },
+        { id: 'gemini-2.5-pro', label: '🧠 Gemini 2.5 Pro' },
+        { id: 'gemini-2.0-flash', label: '🔹 Gemini 2.0 Flash' },
+      ]
+    },
+    openai: {
+      name: 'OpenAI GPT',
+      icon: '🟢',
+      models: [
+        { id: 'gpt-4o', label: '🚀 GPT-4o (Omni)' },
+        { id: 'gpt-4-turbo', label: '🔥 GPT-4 Turbo' },
+        { id: 'gpt-3.5-turbo', label: '⚡ GPT-3.5 Turbo' },
+      ]
+    },
+    anthropic: {
+      name: 'Anthropic Claude',
+      icon: '🏺',
+      models: [
+        { id: 'claude-3-5-sonnet-20240620', label: '🎭 Claude 3.5 Sonnet' },
+        { id: 'claude-3-opus-20240229', label: '🐘 Claude 3 Opus' },
+      ]
+    }
+  };
+
+  const [selectedProvider, setSelectedProvider] = useState('google');
+  const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096 });
+  const [showSettings, setShowSettings] = useState(false);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -662,6 +809,10 @@ function ChatPage({ projectId }) {
 
   useEffect(() => {
     scrollToBottom();
+    // Re-render mermaid diagrams if available
+    if (window.mermaid) {
+      window.mermaid.contentLoaded();
+    }
   }, [messages, streamText, scrollToBottom]);
 
   // ─── SSE-based sendMessage (substitui WebSocket) ─────────────────
@@ -712,7 +863,10 @@ function ChatPage({ projectId }) {
             .filter(m => m.role === 'user' || m.role === 'assistant')
             .map(m => ({ role: m.role, content: m.content })),
           model: selectedModel,
+          provider: selectedProvider,
           projectId,
+          agentId: selectedAgent?.id,
+          settings: chatSettings,
         }),
       });
 
@@ -771,7 +925,7 @@ function ChatPage({ projectId }) {
               case 'error':
                 setIsStreaming(false);
                 setStreamText('');
-                setMessages(prev => [...prev, { role: 'system', content: `Erro: ${msg.message}`, timestamp: Date.now() }]);
+                setErrorState({ message: msg.message, errorId: msg.errorId });
                 break;
             }
           } catch { }
@@ -864,44 +1018,20 @@ function ChatPage({ projectId }) {
             </div>
           )}
 
-          {messages.map((msg, i) => (
-            <div key={i} className={`chat-message ${msg.role === 'system' ? 'assistant' : msg.role}`}>
-              {msg.type === 'swarm' && (
-                <div style={{ marginBottom: 8, fontSize: 13, background: 'var(--accent-purple)', color: 'white', display: 'inline-block', padding: '2px 8px', borderRadius: 4 }}>
-                  🔄 Sub-Agente Reporta: @{msg.agent}
-                </div>
-              )}
-              <div className="chat-message-bubble">
-                {Array.isArray(msg.content) ? (
-                  <>
-                    {msg.content.find(c => c.type === 'image_url') && (
-                      <img src={msg.content.find(c => c.type === 'image_url').image_url.url} style={{maxWidth: 300, borderRadius: 8, marginBottom: 12, display: 'block'}} alt="Upload" />
-                    )}
-                    <div dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content.find(c => c.type === 'text')?.text || '') }} />
-                  </>
-                ) : msg.role === 'assistant' && typeof msg.content === 'string' && msg.content.includes('```json_chart') ? (
-                  <>
-                    <div dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content.split('```json_chart')[0]) }} />
-                    <DynamicChart json={msg.content.split('```json_chart')[1].split('```')[0]} />
-                    <div dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content.split('```')[2] || '') }} />
-                  </>
-                ) : (
-                  <div dangerouslySetInnerHTML={{ __html: parseMarkdown(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)) }} />
-                )}
+          {/* Error Resilience Alert (Pillar 2) */}
+          {errorState && (
+            <div className="card animate-in" style={{ margin: '0 24px 20px 24px', border: '1px solid var(--accent-danger)', background: 'rgba(239, 68, 68, 0.05)', padding: 16, borderRadius: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'var(--accent-danger)', fontWeight: 700 }}>
+                <span>⚠️ Erro de Sistema</span>
+                <button className="btn btn-secondary btn-sm" onClick={() => setErrorState(null)} style={{ marginLeft: 'auto' }}>Fechar</button>
               </div>
-              <div className="chat-message-meta">
-                <span>{msg.role === 'user' ? '👤 Você' : msg.role === 'assistant' ? '🧠 NexusAI' : '🤖 Sistema'}</span>
-                <span>•</span>
-                <span>{new Date(msg.timestamp).toLocaleTimeString('pt-BR')}</span>
-                <span 
-                  style={{ marginLeft: 'auto', cursor: 'pointer', opacity: 0.6 }} 
-                  onClick={() => copyMessage(msg.content)}
-                  title="Copiar mensagem"
-                >
-                  📋 Copiar
-                </span>
-              </div>
+              <p style={{ marginTop: 8, fontSize: 13, color: 'var(--text-secondary)' }}>{errorState.message}</p>
+              {errorState.errorId && <code style={{ fontSize: 10, opacity: 0.6 }}>ID do Erro: {errorState.errorId}</code>}
             </div>
+          )}
+
+          {messages.map((msg, i) => (
+            <MessageBubble key={msg.uuid || i} message={msg} onCopy={copyMessage} />
           ))}
 
           {/* Tool uses */}
@@ -954,26 +1084,98 @@ function ChatPage({ projectId }) {
 
         {/* Input Area */}
         <div className="chat-input-area">
-          {/* Model selector bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 8 }}>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Modelo:</span>
-            {GEMINI_MODELS.map(m => (
-              <button
-                key={m.id}
-                onClick={() => setSelectedModel(m.id)}
-                style={{
-                  fontSize: 11,
-                  padding: '3px 10px',
-                  borderRadius: 20,
-                  border: '1px solid',
-                  cursor: 'pointer',
-                  borderColor: selectedModel === m.id ? 'var(--accent-primary)' : 'var(--glass-border)',
-                  background: selectedModel === m.id ? 'var(--accent-primary)' : 'transparent',
-                  color: selectedModel === m.id ? 'white' : 'var(--text-secondary)',
-                  transition: 'all 0.15s',
-                }}
-              >{m.label}</button>
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 12, borderBottom: '1px solid var(--glass-border)', marginBottom: 12 }}>
+            {/* Provider Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Provedor:</span>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {Object.entries(AI_CONFIG).map(([id, cfg]) => (
+                  <button
+                    key={id}
+                    onClick={() => {
+                      setSelectedProvider(id);
+                      setSelectedModel(cfg.models[0].id);
+                    }}
+                    className={`btn ${selectedProvider === id ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ fontSize: 10, padding: '4px 10px', borderRadius: 8 }}
+                  >
+                    {cfg.icon} {cfg.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Model Selector */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Modelo:</span>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
+                {AI_CONFIG[selectedProvider].models.map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => setSelectedModel(m.id)}
+                    style={{
+                      fontSize: 11,
+                      padding: '4px 12px',
+                      borderRadius: 6,
+                      border: '1px solid',
+                      cursor: 'pointer',
+                      borderColor: selectedModel === m.id ? 'var(--accent-primary)' : 'var(--glass-border)',
+                      background: selectedModel === m.id ? 'var(--accent-primary-glow)' : '#fff',
+                      color: selectedModel === m.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                      fontWeight: selectedModel === m.id ? 700 : 400,
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+              <button 
+                onClick={() => setShowSettings(!showSettings)}
+                className="btn btn-secondary"
+                style={{ padding: '6px 12px', fontSize: 12, borderRadius: 8 }}
+                title="Configurações Avançadas"
+              >
+                ⚙️ {showSettings ? 'Fechar' : 'Ajustes'}
+              </button>
+            </div>
+
+            {/* Advanced Settings Panel */}
+            {showSettings && (
+              <div className="animate-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16, padding: 12, background: '#f1f5f9', borderRadius: 12, border: '1px solid var(--glass-border)' }}>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, marginBottom: 4, color: 'var(--text-secondary)' }}>TEMPERATURA: {chatSettings.temperature}</div>
+                  <input 
+                    type="range" min="0" max="1" step="0.1" 
+                    value={chatSettings.temperature} 
+                    onChange={(e) => setChatSettings({...chatSettings, temperature: parseFloat(e.target.value)})}
+                    style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, marginBottom: 4, color: 'var(--text-secondary)' }}>TOP-P: {chatSettings.topP}</div>
+                  <input 
+                    type="range" min="0" max="1" step="0.05" 
+                    value={chatSettings.topP} 
+                    onChange={(e) => setChatSettings({...chatSettings, topP: parseFloat(e.target.value)})}
+                    style={{ width: '100%', accentColor: 'var(--accent-primary)' }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 10, fontWeight: 700, marginBottom: 4, color: 'var(--text-secondary)' }}>MAX TOKENS: {chatSettings.maxTokens}</div>
+                  <select 
+                    value={chatSettings.maxTokens}
+                    onChange={(e) => setChatSettings({...chatSettings, maxTokens: parseInt(e.target.value)})}
+                    style={{ width: '100%', padding: '4px 8px', borderRadius: 6, border: '1px solid var(--glass-border)', fontSize: 11 }}
+                  >
+                    <option value="1024">1024 (Curto)</option>
+                    <option value="2048">2048 (Médio)</option>
+                    <option value="4096">4096 (Longo)</option>
+                    <option value="8192">8192 (Ultra)</option>
+                  </select>
+                </div>
+              </div>
+            )}
           </div>
           <div className="chat-input-wrapper" style={{ position: 'relative' }}>
             {imageAttachment && (
@@ -2020,6 +2222,14 @@ function DashboardShell({ onSignOut, userProfile }) {
 // ═══════════════════════════════════════════════════════════════
 
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <MainApp />
+    </ErrorBoundary>
+  );
+}
+
+function MainApp() {
   const { user, profile, loading, isAuthenticated, signOut } = useAuth();
   const [route, setRoute] = useState('landing');
 
