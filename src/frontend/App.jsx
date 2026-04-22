@@ -163,7 +163,7 @@ function PromptLibrary({ onSelect }) {
 
   return (
     <div style={{ padding: 16 }}>
-      <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--accent-primary)' }}>📚 Biblioteca de Prompts</h3>
+      <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: 'var(--text-primary)' }}>📚 Biblioteca de Prompts</h3>
       {categories.map(cat => (
         <div key={cat.title} style={{ marginBottom: 16 }}>
           <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>{cat.title}</div>
@@ -285,7 +285,7 @@ function WorkspaceExplorer({ projectId, onFileSelect }) {
     if (!projectId) return;
     setLoading(true);
     try {
-      const data = await api(`//${projectId}/workspace`);
+      const data = await api(`/projects/${projectId}/workspace`);
       setTree(data.tree || []);
       setWorkspacePath(data.workspacePath || '');
       setExists(data.exists);
@@ -433,7 +433,7 @@ function WindowControls() {
   );
 }
 
-function Sidebar({ currentPage, onNavigate, stats, collapsed, onToggle }) {
+function Sidebar({ currentPage, onNavigate, stats, agents = [], selectedAgent, setSelectedAgent, collapsed, onToggle }) {
   const { isAdmin } = useAuth();
 
   const navItems = [
@@ -1521,7 +1521,7 @@ function PermissionsPage() {
   const [permissions, setPermissions] = useState({ mode: 'default', denyRules: [], askRules: [], alwaysAllowRules: [] });
 
   useEffect(() => {
-    api('/permissions').then(setPermissions);
+    api('/v1/permissions').then(setPermissions);
   }, []);
 
   const modes = [
@@ -2218,15 +2218,18 @@ function SettingsPage() {
 // ═══════════════════════════════════════════════════════════════
 
 function DashboardShell({ onSignOut, userProfile }) {
+  const { isAdmin } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [dashboardData, setDashboardData] = useState({ stats: {}, recentSessions: [] });
+  const [agents, setAgents] = useState([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isElectron = !!window.electron;
 
   useEffect(() => {
     const fetchData = () => {
       api('/dashboard').then(setDashboardData).catch(() => { });
+      api('/agents').then(data => { if (Array.isArray(data)) setAgents(data); }).catch(() => { });
     };
     fetchData();
     const interval = setInterval(fetchData, 15000);
@@ -2274,6 +2277,7 @@ function DashboardShell({ onSignOut, userProfile }) {
         currentPage={currentPage}
         onNavigate={setCurrentPage}
         stats={dashboardData.stats}
+        agents={agents}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
