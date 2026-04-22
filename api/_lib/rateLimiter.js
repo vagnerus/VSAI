@@ -32,13 +32,21 @@ export async function checkRateLimit(userId) {
     // Buscar perfil do usuário
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
-      .select('plan, tokens_used_month, tokens_limit')
+      .select('plan, role, tokens_used_month, tokens_limit')
       .eq('id', userId)
       .single();
 
     if (profileErr || !profile) {
       console.error('[RateLimiter] Erro ao buscar perfil:', profileErr);
       return { allowed: true };
+    }
+
+    if (profile.role === 'banned') {
+      return {
+        allowed: false,
+        reason: 'Sua conta foi suspensa por violação dos termos de serviço.',
+        plan: 'banned'
+      };
     }
 
     const plan = profile.plan || 'free';

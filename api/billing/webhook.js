@@ -1,6 +1,5 @@
 import Stripe from 'stripe';
 import { getSupabaseAdmin } from '../_lib/supabaseAdmin.js';
-import { buffer } from 'micro';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -11,6 +10,15 @@ export const config = {
     bodyParser: false,
   },
 };
+
+// Leitor de buffer nativo do Node.js
+async function buffer(readable) {
+  const chunks = [];
+  for await (const chunk of readable) {
+    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+  }
+  return Buffer.concat(chunks);
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {

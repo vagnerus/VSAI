@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Roadmap: Admin Panel + IA tipo Claude</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #1e1e2e;
+    --accent: #6c63ff;
+    --accent2: #ff6b6b;
+    --accent3: #43e97b;
+    --accent4: #f7b731;
+    --text: #e2e2f0;
+    --muted: #6b6b8a;
+    --card: #13131c;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background grid */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 72px;
+  }
+
+  .header-tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(108,99,255,0.3);
+    padding: 6px 16px;
+    border-radius: 2px;
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-size: clamp(2.2rem, 5vw, 3.6rem);
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, #fff 40%, #6c63ff);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 1rem;
+    font-weight: 400;
+    max-width: 500px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* Layer sections */
+  .layer {
+    margin-bottom: 48px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .layer:nth-child(1) { animation-delay: 0.1s; }
+  .layer:nth-child(2) { animation-delay: 0.2s; }
+  .layer:nth-child(3) { animation-delay: 0.3s; }
+  .layer:nth-child(4) { animation-delay: 0.4s; }
+  .layer:nth-child(5) { animation-delay: 0.5s; }
+  .layer:nth-child(6) { animation-delay: 0.6s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .layer-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .layer-number {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--bg);
+    background: var(--accent);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .layer-number.orange { background: var(--accent2); }
+  .layer-number.green { background: var(--accent3); }
+  .layer-number.yellow { background: var(--accent4); }
+  .layer-number.pink { background: #e879f9; }
+  .layer-number.cyan { background: #22d3ee; }
+
+  .layer-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #fff;
+  }
+
+  .layer-desc {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin-left: 42px;
+    margin-top: -10px;
+    margin-bottom: 14px;
+  }
+
+  /* Cards grid */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: default;
+  }
+
+  .card:hover {
+    border-color: rgba(108,99,255,0.4);
+    transform: translateY(-2px);
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--line-color, var(--accent)), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .card:hover::before { opacity: 1; }
+
+  .card-icon {
+    font-size: 1.4rem;
+    margin-bottom: 10px;
+    display: block;
+  }
+
+  .card-name {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+  }
+
+  .card-detail {
+    font-size: 0.76rem;
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+  }
+
+  .tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-top: 8px;
+    margin-right: 4px;
+    font-weight: 600;
+  }
+
+  .tag-purple { background: rgba(108,99,255,0.15); color: #a78bfa; border: 1px solid rgba(108,99,255,0.2); }
+  .tag-red    { background: rgba(255,107,107,0.12); color: #f87171; border: 1px solid rgba(255,107,107,0.2); }
+  .tag-green  { background: rgba(67,233,123,0.1);  color: #4ade80; border: 1px solid rgba(67,233,123,0.2); }
+  .tag-yellow { background: rgba(247,183,49,0.1);  color: #fbbf24; border: 1px solid rgba(247,183,49,0.2); }
+  .tag-cyan   { background: rgba(34,211,238,0.1);  color: #22d3ee; border: 1px solid rgba(34,211,238,0.2); }
+  .tag-pink   { background: rgba(232,121,249,0.1); color: #e879f9; border: 1px solid rgba(232,121,249,0.2); }
+
+  /* Divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 56px 0 48px;
+    opacity: 0.3;
+  }
+  .divider-line { flex: 1; height: 1px; background: var(--border); }
+  .divider-text { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; }
+
+  /* Stack section */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 600px) {
+    .stack-grid { grid-template-columns: 1fr; }
+    .cards { grid-template-columns: 1fr; }
+  }
+
+  .stack-col {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+  }
+
+  .stack-col-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .stack-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stack-item:last-child { border-bottom: none; }
+
+  .stack-bullet {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: 6px;
+    flex-shrink: 0;
+  }
+  .stack-bullet.red    { background: var(--accent2); }
+  .stack-bullet.green  { background: var(--accent3); }
+  .stack-bullet.yellow { background: var(--accent4); }
+  .stack-bullet.pink   { background: #e879f9; }
+  .stack-bullet.cyan   { background: #22d3ee; }
+
+  .stack-info {}
+  .stack-name { font-size: 0.85rem; font-weight: 700; color: #fff; }
+  .stack-sub  { font-size: 0.73rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+  /* Cost section */
+  .cost-box {
+    background: var(--card);
+    border: 1px solid rgba(247,183,49,0.2);
+    border-radius: 10px;
+    padding: 28px;
+    margin-top: 48px;
+  }
+
+  .cost-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--accent4);
+    margin-bottom: 20px;
+  }
+
+  .cost-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .cost-row:last-child { border-bottom: none; }
+  .cost-label { color: var(--muted); }
+  .cost-value { color: #fff; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .cost-value.free { color: var(--accent3); }
+  .cost-value.paid { color: var(--accent4); }
+
+  /* Footer note */
+  .footer-note {
+    text-align: center;
+    margin-top: 64px;
+    padding: 24px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .footer-note span { color: var(--accent); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-tag">// ROADMAP TÉCNICO</div>
+    <h1>Admin Panel + IA<br>tipo Claude</h1>
+    <p class="subtitle">Tudo que você precisa implementar, organizado por camadas de desenvolvimento.</p>
+  </div>
+
+  <!-- 1. Backend & API -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-number">01</div>
+      <div class="layer-title">Backend & Servidor</div>
+    </div>
+    <div class="layer-desc">// base da aplicação e roteamento da API</div>
+    <div class="cards">
+      <div class="card" style="--line-color: #6c63ff">
+        <span class="card-icon">⚙️</span>
+        <div class="card-name">Framework Backend</div>
+        <div class="card-detail">Node.js + Express, ou FastAPI (Python). Gerencia rotas, autenticação e comunicação com a IA.</div>
+        <span class="tag tag-purple">Node.js</span>
+        <span class="tag tag-cyan">FastAPI</span>
+      </div>
+      <div class="card" style="--line-color: #6c63ff">
+        <span class="card-icon">🔑</span>
+        <div class="card-name">Autenticação & Autorização</div>
+        <div class="card-detail">JWT para sessões. Middleware de roles (admin, user, viewer). Refresh token + logout seguro.</div>
+        <span class="tag tag-red">JWT</span>
+        <span class="tag tag-purple">RBAC</span>
+      </div>
+      <div class="card" style="--line-color: #6c63ff">
+        <span class="card-icon">🗄️</span>
+        <div class="card-name">Banco de Dados</div>
+        <div class="card-detail">PostgreSQL para dados relacionais (usuários, conversas). Redis para cache e sessões rápidas.</div>
+        <span class="tag tag-cyan">PostgreSQL</span>
+        <span class="tag tag-red">Redis</span>
+      </div>
+      <div class="card" style="--line-color: #6c63ff">
+        <span class="card-icon">🔗</span>
+        <div class="card-name">API REST + WebSocket</div>
+        <div class="card-detail">REST para CRUD do painel admin. WebSocket (Socket.io) para streaming das respostas da IA em tempo real.</div>
+        <span class="tag tag-green">REST</span>
+        <span class="tag tag-yellow">WebSocket</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. IA Core -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-number orange">02</div>
+      <div class="layer-title">Integração com IA (Core)</div>
+    </div>
+    <div class="layer-desc">// o cérebro — LLM + contexto + memória</div>
+    <div class="cards">
+      <div class="card" style="--line-color: #ff6b6b">
+        <span class="card-icon">🧠</span>
+        <div class="card-name">LLM Provider</div>
+        <div class="card-detail">Anthropic API (Claude), OpenAI (GPT-4), ou Groq (Llama). Escolha baseada em custo e qualidade.</div>
+        <span class="tag tag-purple">Claude API</span>
+        <span class="tag tag-cyan">OpenAI</span>
+        <span class="tag tag-green">Groq</span>
+      </div>
+      <div class="card" style="--line-color: #ff6b6b">
+        <span class="card-icon">📜</span>
+        <div class="card-name">System Prompt & Contexto</div>
+        <div class="card-detail">Defina a personalidade da IA. Injete contexto do usuário, histórico e dados relevantes no prompt.</div>
+        <span class="tag tag-yellow">Prompt Engineering</span>
+      </div>
+      <div class="card" style="--line-color: #ff6b6b">
+        <span class="card-icon">🧵</span>
+        <div class="card-name">Gerenciamento de Memória</div>
+        <div class="card-detail">Salve histórico de conversas no DB. Implemente janela de contexto (últimas N mensagens). Summarization para longas conversas.</div>
+        <span class="tag tag-red">Histórico</span>
+        <span class="tag tag-purple">Context Window</span>
+      </div>
+      <div class="card" style="--line-color: #ff6b6b">
+        <span class="card-icon">🌊</span>
+        <div class="card-name">Streaming de Resposta</div>
+        <div class="card-detail">Use SSE (Server-Sent Events) ou WebSocket para enviar tokens em tempo real — exatamente como Claude faz.</div>
+        <span class="tag tag-cyan">SSE</span>
+        <span class="tag tag-yellow">Streaming</span>
+      </div>
+      <div class="card" style="--line-color: #ff6b6b">
+        <span class="card-icon">🔍</span>
+        <div class="card-name">RAG (Retrieval Augmented)</div>
+        <div class="card-detail">Embeddings + busca vetorial para a IA consultar documentos da empresa. Pinecone, pgvector ou Chroma.</div>
+        <span class="tag tag-pink">Embeddings</span>
+        <span class="tag tag-green">pgvector</span>
+      </div>
+      <div class="card" style="--line-color: #ff6b6b">
+        <span class="card-icon">🛠️</span>
+        <div class="card-name">Function Calling / Tools</div>
+        <div class="card-detail">Permita que a IA execute ações reais: buscar dados, criar registros, fazer cálculos, chamar APIs externas.</div>
+        <span class="tag tag-red">Tool Use</span>
+        <span class="tag tag-purple">Agentes</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Frontend Chat -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-number green">03</div>
+      <div class="layer-title">Interface de Chat (Frontend)</div>
+    </div>
+    <div class="layer-desc">// UI do chat — o que o usuário vê e interage</div>
+    <div class="cards">
+      <div class="card" style="--line-color: #43e97b">
+        <span class="card-icon">💬</span>
+        <div class="card-name">Componente de Chat</div>
+        <div class="card-detail">Mensagens por bolha (user/AI), scroll automático, input com Shift+Enter para nova linha, botão de parar geração.</div>
+        <span class="tag tag-green">React</span>
+        <span class="tag tag-cyan">Vue</span>
+      </div>
+      <div class="card" style="--line-color: #43e97b">
+        <span class="card-icon">✍️</span>
+        <div class="card-name">Renderização Markdown</div>
+        <div class="card-detail">Use react-markdown + syntax-highlight para renderizar código, listas, tabelas e negrito nas respostas da IA.</div>
+        <span class="tag tag-yellow">Markdown</span>
+        <span class="tag tag-purple">Code Blocks</span>
+      </div>
+      <div class="card" style="--line-color: #43e97b">
+        <span class="card-icon">⚡</span>
+        <div class="card-name">Efeito de Digitação</div>
+        <div class="card-detail">Renderize tokens em tempo real conforme chegam do streaming. Adicione cursor piscante durante geração.</div>
+        <span class="tag tag-cyan">Streaming UI</span>
+      </div>
+      <div class="card" style="--line-color: #43e97b">
+        <span class="card-icon">📁</span>
+        <div class="card-name">Sidebar de Conversas</div>
+        <div class="card-detail">Lista de conversas anteriores com busca, agrupamento por data, renomear e deletar chats.</div>
+        <span class="tag tag-green">Histórico</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Painel Admin -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-number yellow">04</div>
+      <div class="layer-title">Painel Administrativo</div>
+    </div>
+    <div class="layer-desc">// gestão, controle e visibilidade do sistema</div>
+    <div class="cards">
+      <div class="card" style="--line-color: #f7b731">
+        <span class="card-icon">👥</span>
+        <div class="card-name">Gerenciamento de Usuários</div>
+        <div class="card-detail">CRUD de usuários, atribuição de planos/roles, bloquear/desbloquear contas, ver histórico de uso.</div>
+        <span class="tag tag-yellow">CRUD</span>
+        <span class="tag tag-red">Roles</span>
+      </div>
+      <div class="card" style="--line-color: #f7b731">
+        <span class="card-icon">📊</span>
+        <div class="card-name">Dashboard de Métricas</div>
+        <div class="card-detail">Total de mensagens, tokens consumidos, usuários ativos, custo da API, gráficos de uso ao longo do tempo.</div>
+        <span class="tag tag-cyan">Recharts</span>
+        <span class="tag tag-purple">Analytics</span>
+      </div>
+      <div class="card" style="--line-color: #f7b731">
+        <span class="card-icon">🔧</span>
+        <div class="card-name">Configuração do Modelo</div>
+        <div class="card-detail">Ajuste de system prompt, temperatura, max tokens, modelo ativo. Alterações sem redeploy.</div>
+        <span class="tag tag-yellow">Config</span>
+      </div>
+      <div class="card" style="--line-color: #f7b731">
+        <span class="card-icon">🔍</span>
+        <div class="card-name">Visualizador de Conversas</div>
+        <div class="card-detail">Acesso admin às conversas para moderação, debug e análise de qualidade das respostas.</div>
+        <span class="tag tag-red">Moderação</span>
+      </div>
+      <div class="card" style="--line-color: #f7b731">
+        <span class="card-icon">🚦</span>
+        <div class="card-name">Rate Limiting & Cotas</div>
+        <div class="card-detail">Limite de mensagens por plano (ex: 100/dia para free). Controle de abuso via Redis.</div>
+        <span class="tag tag-green">Throttling</span>
+        <span class="tag tag-red">Redis</span>
+      </div>
+      <div class="card" style="--line-color: #f7b731">
+        <span class="card-icon">📋</span>
+        <div class="card-name">Logs & Auditoria</div>
+        <div class="card-detail">Log de todas as ações admin, erros da API, latência das respostas e alertas de falha.</div>
+        <span class="tag tag-purple">Logs</span>
+        <span class="tag tag-cyan">Alertas</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Segurança -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-number pink">05</div>
+      <div class="layer-title">Segurança & Compliance</div>
+    </div>
+    <div class="layer-desc">// proteção de dados e boas práticas obrigatórias</div>
+    <div class="cards">
+      <div class="card" style="--line-color: #e879f9">
+        <span class="card-icon">🔐</span>
+        <div class="card-name">Criptografia</div>
+        <div class="card-detail">HTTPS obrigatório. Senhas com bcrypt. Chaves de API criptografadas em variáveis de ambiente (nunca no código).</div>
+        <span class="tag tag-pink">bcrypt</span>
+        <span class="tag tag-red">HTTPS</span>
+      </div>
+      <div class="card" style="--line-color: #e879f9">
+        <span class="card-icon">🛡️</span>
+        <div class="card-name">Validação & Sanitização</div>
+        <div class="card-detail">Zod ou Joi para validar inputs. Proteção contra SQL injection, XSS e prompt injection na IA.</div>
+        <span class="tag tag-yellow">Zod</span>
+        <span class="tag tag-purple">Sanitize</span>
+      </div>
+      <div class="card" style="--line-color: #e879f9">
+        <span class="card-icon">🔒</span>
+        <div class="card-name">Moderação de Conteúdo</div>
+        <div class="card-detail">Filtre inputs maliciosos antes de enviar para a IA. Use a Moderation API da OpenAI ou regras customizadas.</div>
+        <span class="tag tag-red">Content Filter</span>
+        <span class="tag tag-pink">Guardrails</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Deploy -->
+  <div class="layer">
+    <div class="layer-header">
+      <div class="layer-number cyan">06</div>
+      <div class="layer-title">Infraestrutura & Deploy</div>
+    </div>
+    <div class="layer-desc">// colocar no ar de forma escalável</div>
+    <div class="cards">
+      <div class="card" style="--line-color: #22d3ee">
+        <span class="card-icon">🐳</span>
+        <div class="card-name">Docker & Containers</div>
+        <div class="card-detail">Containerize backend, frontend e banco. Docker Compose para dev local. Facilita deploy em qualquer cloud.</div>
+        <span class="tag tag-cyan">Docker</span>
+        <span class="tag tag-green">Compose</span>
+      </div>
+      <div class="card" style="--line-color: #22d3ee">
+        <span class="card-icon">☁️</span>
+        <div class="card-name">Cloud / Hosting</div>
+        <div class="card-detail">Vercel/Railway para frontend. Render ou Fly.io para backend. Supabase ou Neon para PostgreSQL gerenciado.</div>
+        <span class="tag tag-purple">Vercel</span>
+        <span class="tag tag-yellow">Railway</span>
+        <span class="tag tag-green">Fly.io</span>
+      </div>
+      <div class="card" style="--line-color: #22d3ee">
+        <span class="card-icon">🔄</span>
+        <div class="card-name">CI/CD Pipeline</div>
+        <div class="card-detail">GitHub Actions para testes automáticos e deploy em cada push para main. Zero-downtime deployments.</div>
+        <span class="tag tag-cyan">GitHub Actions</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <div class="divider">
+    <div class="divider-line"></div>
+    <div class="divider-text">Stack Sugerido</div>
+    <div class="divider-line"></div>
+  </div>
+
+  <!-- Stack Recommendation -->
+  <div class="stack-grid">
+    <div class="stack-col">
+      <div class="stack-col-title">// Frontend</div>
+      <div class="stack-item">
+        <div class="stack-bullet"></div>
+        <div class="stack-info">
+          <div class="stack-name">Next.js 14 (App Router)</div>
+          <div class="stack-sub">SSR + API routes integradas</div>
+        </div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-bullet pink"></div>
+        <div class="stack-info">
+          <div class="stack-name">Tailwind CSS + shadcn/ui</div>
+          <div class="stack-sub">componentes prontos e customizáveis</div>
+        </div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-bullet green"></div>
+        <div class="stack-info">
+          <div class="stack-name">Zustand ou Jotai</div>
+          <div class="stack-sub">estado global leve</div>
+        </div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-bullet yellow"></div>
+        <div class="stack-info">
+          <div class="stack-name">react-markdown + Prism</div>
+          <div class="stack-sub">renderização de respostas da IA</div>
+        </div>
+      </div>
+    </div>
+    <div class="stack-col">
+      <div class="stack-col-title">// Backend</div>
+      <div class="stack-item">
+        <div class="stack-bullet cyan"></div>
+        <div class="stack-info">
+          <div class="stack-name">Node.js + Hono ou Express</div>
+          <div class="stack-sub">API rápida e tipada com TypeScript</div>
+        </div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-bullet red"></div>
+        <div class="stack-info">
+          <div class="stack-name">Prisma ORM + PostgreSQL</div>
+          <div class="stack-sub">modelos de dados tipados</div>
+        </div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-bullet"></div>
+        <div class="stack-info">
+          <div class="stack-name">Anthropic SDK / Vercel AI SDK</div>
+          <div class="stack-sub">integração com LLMs + streaming</div>
+        </div>
+      </div>
+      <div class="stack-item">
+        <div class="stack-bullet pink"></div>
+        <div class="stack-info">
+          <div class="stack-name">Upstash Redis</div>
+          <div class="stack-sub">rate limiting e cache serverless</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cost estimate -->
+  <div class="cost-box">
+    <div class="cost-title">// Estimativa de Custo Mensal (MVP)</div>
+    <div class="cost-row">
+      <span class="cost-label">Hospedagem (Vercel + Railway)</span>
+      <span class="cost-value free">Gratuito → $20/mês</span>
+    </div>
+    <div class="cost-row">
+      <span class="cost-label">PostgreSQL (Neon / Supabase free tier)</span>
+      <span class="cost-value free">Gratuito</span>
+    </div>
+    <div class="cost-row">
+      <span class="cost-label">Redis (Upstash)</span>
+      <span class="cost-value free">Gratuito (10k req/dia)</span>
+    </div>
+    <div class="cost-row">
+      <span class="cost-label">Anthropic API (Claude Haiku - 1M tokens)</span>
+      <span class="cost-value paid">~$1,25 / 1M tokens</span>
+    </div>
+    <div class="cost-row">
+      <span class="cost-label">Domínio + SSL</span>
+      <span class="cost-value paid">~$12/ano (SSL gratuito)</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer-note">
+    <span>Ordem de implementação recomendada:</span><br>
+    Autenticação → Chat básico com IA → Histórico de conversas → Painel admin simples → RAG & Tools → Rate limiting → Deploy
+  </div>
+
+</div>
+</body>
+</html>

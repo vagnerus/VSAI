@@ -68,6 +68,47 @@ export default function AdminLayout() {
     }
   };
 
+  const handleBanUser = async (userId, newRole) => {
+    if (!window.confirm(newRole === 'banned' ? 'Tem certeza que deseja banir (suspender) este usuário permanentemente?' : 'Tem certeza que deseja desbanir este usuário?')) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/admin/users`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, role: newRole })
+      });
+      if (res.ok) {
+        setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      } else {
+        alert('Erro ao alterar status do usuário.');
+      }
+    } catch (err) {
+      alert('Erro na requisição');
+    }
+  };
+
+  const handleBonusTokens = async (userId, userName) => {
+    const amount = window.prompt(`Quantos tokens extras deseja dar para ${userName}? (ex: 100000)`);
+    if (!amount || isNaN(amount)) return;
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/admin/users`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, bonus_tokens: parseInt(amount, 10) })
+      });
+      if (res.ok) {
+        const { user: updatedUser } = await res.json();
+        setUsers(users.map(u => u.id === userId ? { ...u, tokens_limit: updatedUser.tokens_limit } : u));
+        alert('Tokens bônus adicionados com sucesso!');
+      } else {
+        alert('Erro ao adicionar tokens.');
+      }
+    } catch (err) {
+      alert('Erro na requisição');
+    }
+  };
+
   const renderDashboard = () => (
     <div className="admin-dashboard-grid animate-in">
       <div className="admin-stats-cards">
@@ -163,7 +204,7 @@ export default function AdminLayout() {
                 <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
                 <td><span className={`plan-badge ${u.plan}`}>{u.plan}</span></td>
                 <td>{u.tokens_used_month?.toLocaleString()} / {u.tokens_limit?.toLocaleString()}</td>
-                <td>
+                <td style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <select
                     className="admin-select"
                     value={u.plan}
@@ -173,6 +214,26 @@ export default function AdminLayout() {
                     <option value="pro">Pro</option>
                     <option value="premium">Premium</option>
                   </select>
+                  
+                  <button 
+                    className="btn btn-secondary btn-sm" 
+                    onClick={() => handleBanUser(u.id, u.role === 'banned' ? 'user' : 'banned')}
+                    style={{ 
+                      background: 'rgba(0,0,0,0.3)',
+                      borderColor: u.role === 'banned' ? '#10b981' : '#ef4444', 
+                      color: u.role === 'banned' ? '#10b981' : '#ef4444',
+                      padding: '4px 8px', fontSize: 11
+                    }}
+                  >
+                    {u.role === 'banned' ? 'Desbanir' : 'Banir'}
+                  </button>
+                  <button 
+                    className="btn btn-secondary btn-sm" 
+                    onClick={() => handleBonusTokens(u.id, u.full_name || 'Usuário')}
+                    style={{ padding: '4px 8px', fontSize: 11, borderColor: '#3b82f6', color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)' }}
+                  >
+                    + Bônus
+                  </button>
                 </td>
               </tr>
             ))}

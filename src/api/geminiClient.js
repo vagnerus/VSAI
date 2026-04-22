@@ -41,6 +41,15 @@ export class GeminiClient {
         for (const block of msg.content) {
           if (block.type === 'text') {
             parts.push({ text: block.text });
+          } else if (block.type === 'image_url') {
+            const base64Data = block.image_url.url.split(',')[1];
+            const mimeType = block.image_url.url.match(/data:(.*?);base64/)?.[1] || 'image/jpeg';
+            parts.push({
+              inlineData: {
+                data: base64Data,
+                mimeType: mimeType
+              }
+            });
           } else if (block.type === 'tool_use') {
             parts.push({
               functionCall: {

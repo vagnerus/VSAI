@@ -36,7 +36,7 @@ function handleHealth(req, res) {
   res.json({
     status: 'ok', version: '1.0.0', name: 'NexusAI',
     apiConfigured: apiClient.isConfigured(),
-    provider: apiClient.constructor.name,
+    provider: (apiClient.constructorName || apiClient.constructor.name).replace('Client', ''),
   });
 }
 
@@ -59,6 +59,7 @@ async function handleDashboard(req, res) {
   }
 
   try {
+    const apiClient = getApiClient();
     const { data: profile } = await supabase.from('profiles').select('plan, tokens_used_month, tokens_limit').eq('id', auth.user.id).single();
     const { count: sessionCount } = await supabase.from('sessions').select('*', { count: 'exact', head: true });
     const { count: messageCount } = await supabase.from('messages').select('*', { count: 'exact', head: true });
@@ -69,7 +70,7 @@ async function handleDashboard(req, res) {
         totalSessions: sessionCount || 0, activeSessions: 0, totalMessages: messageCount || 0,
         totalTools: 20, totalHooks: 0, apiConfigured: true, uptime: 0,
         model: process.env.GEMINI_MODEL || process.env.ANTHROPIC_MODEL || 'gemini-2.5-flash',
-        provider: apiClient.constructor.name.replace('Client', ''),
+        provider: (apiClient.constructorName || apiClient.constructor.name).replace('Client', ''),
         plan: profile?.plan || 'free', tokensUsed: profile?.tokens_used_month || 0,
         tokensLimit: profile?.tokens_limit || 50000,
       },
@@ -103,7 +104,7 @@ function handleConfig(req, res) {
       fs.writeFileSync(CONFIG_PATH, JSON.stringify(req.body, null, 2));
       resetClient();
       const apiClient = getApiClient();
-      return res.json({ status: 'success', provider: apiClient.constructor.name });
+      return res.json({ status: 'success', provider: (apiClient.constructorName || apiClient.constructor.name).replace('Client', '') });
     } catch (e) {
       return res.status(500).json({ error: e.message });
     }
@@ -117,7 +118,7 @@ function handleSettings(req, res) {
   if (req.method === 'GET') {
     return res.json({
       apiConfigured: apiClient.isConfigured(),
-      provider: apiClient.constructor.name,
+      provider: (apiClient.constructorName || apiClient.constructor.name).replace('Client', ''),
       model: process.env.GEMINI_MODEL || process.env.ANTHROPIC_MODEL || 'gemini-2.5-flash',
       maxTokens: parseInt(process.env.MAX_TOKENS) || 8192,
       permissionMode: 'default',

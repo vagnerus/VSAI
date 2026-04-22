@@ -7,6 +7,7 @@ import PricingPage from './pages/PricingPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import ArtifactsPanel, { extractArtifacts } from './components/ArtifactsPanel.jsx';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 // ═══════════════════════════════════════════════════════════════
 // NexusAI — Main Application
@@ -34,6 +35,82 @@ async function api(path, options = {}) {
 }
 
 // ─── Markdown Parser (enhanced Claude-like) ─────────────────
+// ═══════════════════════════════════════════════════════════════
+// Power Features: Dynamic Charts & Prompt Library
+// ═══════════════════════════════════════════════════════════════
+
+function DynamicChart({ json }) {
+  try {
+    const config = JSON.parse(json);
+    const { type, title, data } = config;
+    const maxVal = Math.max(...data.map(d => d.value), 1);
+    
+    return (
+      <div className="card" style={{ padding: 16, marginTop: 12, border: '1px solid var(--accent-primary)', background: 'rgba(0,0,0,0.2)' }}>
+        <h4 style={{ fontSize: 14, marginBottom: 16, textAlign: 'center', opacity: 0.8 }}>📊 {title || 'Análise de Dados'}</h4>
+        <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 8, padding: '0 10px' }}>
+          {data.map((item, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <div 
+                style={{ 
+                  width: '100%', 
+                  height: `${(item.value / maxVal) * 100}%`, 
+                  background: 'linear-gradient(to top, var(--accent-primary), var(--accent-secondary))',
+                  borderRadius: '4px 4px 0 0',
+                  minHeight: 4,
+                  boxShadow: '0 0 10px rgba(108, 99, 255, 0.3)'
+                }} 
+                title={`${item.name}: ${item.value}`}
+              />
+              <span style={{ fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', opacity: 0.6 }}>
+                {item.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  } catch (e) {
+    return <div style={{ fontSize: 11, color: 'var(--accent-danger)' }}>Erro ao renderizar gráfico.</div>;
+  }
+}
+
+function PromptLibrary({ onSelect }) {
+  const categories = [
+    { title: '🚀 Business & Marketing', prompts: [
+        { label: 'Estratégia SaaS', text: 'Crie uma estratégia de marketing para um SaaS de IA focado em B2B. Defina canais, ICP e plano de 30 dias.' },
+        { label: 'Copywriting de Elite', text: 'Reescreva o seguinte texto usando a técnica AIDA para converter mais assinantes premium: ' }
+    ]},
+    { title: '💻 Programação & Tech', prompts: [
+        { label: 'Code Review Master', text: 'Analise este código e identifique bugs, problemas de performance e sugira refatoração para Clean Code: ' },
+        { label: 'Arquiteto de DB', text: 'Desenhe o schema de banco de dados para um sistema de [DESCREVA O SISTEMA]. Retorne SQL e explicações.' }
+    ]}
+  ];
+
+  return (
+    <div style={{ padding: 12 }}>
+      <h3 style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>📚 Biblioteca de Prompts</h3>
+      {categories.map(cat => (
+        <div key={cat.title} style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>{cat.title}</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {cat.prompts.map(p => (
+              <button 
+                key={p.label} 
+                className="btn btn-secondary btn-sm" 
+                onClick={() => onSelect(p.text)}
+                style={{ fontSize: 11, padding: '4px 8px' }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function parseMarkdown(text) {
   if (!text) return '';
   let html = text
@@ -283,6 +360,8 @@ function Sidebar({ currentPage, onNavigate, stats, collapsed, onToggle }) {
 
   const navItems = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
+    { id: 'profile', icon: '👤', label: 'Meu Perfil' },
+    { id: 'teams', icon: '🏢', label: 'Equipes (B2B)' },
     { id: 'projects', icon: '📁', label: 'Projetos' },
     { id: 'chat', icon: '💬', label: 'Chat AI', badge: null },
     { id: 'tools', icon: '🛠️', label: 'Ferramentas', badge: stats?.totalTools },
@@ -339,6 +418,25 @@ function Sidebar({ currentPage, onNavigate, stats, collapsed, onToggle }) {
       </nav>
 
       <div className="sidebar-footer">
+        {stats && stats.tokensLimit && (
+          <div style={{ padding: '0 16px 16px 16px', borderBottom: '1px solid var(--border)', marginBottom: 12 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 8, color: 'var(--text-secondary)', fontWeight: 600 }}>
+              <span style={{ textTransform: 'uppercase' }}>PLANO {stats.plan || 'FREE'}</span>
+              <span>{Math.round(((stats.tokensUsed || 0) / stats.tokensLimit) * 100)}%</span>
+            </div>
+            <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+              <div style={{ 
+                height: '100%', 
+                width: `${Math.min(((stats.tokensUsed || 0) / stats.tokensLimit) * 100, 100)}%`, 
+                background: ((stats.tokensUsed || 0) / stats.tokensLimit) > 0.8 ? 'linear-gradient(90deg, #ef4444, #b91c1c)' : 'linear-gradient(90deg, #6c3bef, #8b5cf6)', 
+                transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' 
+              }} />
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 8, textAlign: 'center', fontFamily: 'var(--font-mono)' }}>
+              {(stats.tokensUsed || 0).toLocaleString()} / {stats.tokensLimit.toLocaleString()} TOKENS
+            </div>
+          </div>
+        )}
         <div className="sidebar-status">
           <span className="sidebar-status-dot" style={{ backgroundColor: stats?.apiConfigured ? '#10b981' : '#f59e0b' }}></span>
           <span>{stats?.apiConfigured ? (stats.provider || 'API Conectada') : 'Modo Demo'}</span>
@@ -353,6 +451,16 @@ function Sidebar({ currentPage, onNavigate, stats, collapsed, onToggle }) {
 // ═══════════════════════════════════════════════════════════════
 
 function DashboardPage({ stats, recentSessions }) {
+  const chartData = [
+    { name: 'Seg', chamadas: 12, tokens: 1500 },
+    { name: 'Ter', chamadas: 25, tokens: 3200 },
+    { name: 'Qua', chamadas: 18, tokens: 2100 },
+    { name: 'Qui', chamadas: 34, tokens: 4000 },
+    { name: 'Sex', chamadas: 22, tokens: 2500 },
+    { name: 'Sab', chamadas: 8, tokens: 1000 },
+    { name: 'Dom', chamadas: Math.max(5, stats?.totalSessions || 15), tokens: stats?.tokensUsed || 3000 }
+  ];
+
   return (
     <div className="animate-in">
       <div className="welcome-banner">
@@ -423,8 +531,36 @@ function DashboardPage({ stats, recentSessions }) {
         </div>
       </div>
 
+      <div className="card" style={{ marginTop: 24, marginBottom: 24, padding: 24, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}>
+        <div style={{ marginBottom: 20 }}>
+          <h3 style={{ margin: 0, fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>📈 Atividade da API</h3>
+          <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: 13 }}>Consumo de tokens estimado nos últimos 7 dias</p>
+        </div>
+        <div style={{ width: '100%', height: 320 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.5}/>
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+              <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <Tooltip 
+                contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
+                itemStyle={{ color: '#fff', fontWeight: 600 }}
+                labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
+              />
+              <Area type="monotone" dataKey="tokens" name="Tokens Processados" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorTokens)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {recentSessions?.length > 0 && (
-        <div className="card" style={{ marginTop: 8 }}>
+        <div className="card">
           <div className="card-header">
             <div className="card-title">📋 Sessões Recentes</div>
           </div>
@@ -463,6 +599,7 @@ function DashboardPage({ stats, recentSessions }) {
 function ChatPage({ projectId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [imageAttachment, setImageAttachment] = useState(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamText, setStreamText] = useState('');
   const [statusText, setStatusText] = useState('');
@@ -472,6 +609,7 @@ function ChatPage({ projectId }) {
   const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [agentLogs, setAgentLogs] = useState([]);
   const [showArtifacts, setShowArtifacts] = useState(false);
+  const [showPromptLibrary, setShowPromptLibrary] = useState(false);
   const [activeArtifactIdx, setActiveArtifactIdx] = useState(0);
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -481,6 +619,36 @@ function ChatPage({ projectId }) {
   const allArtifacts = messages
     .filter(m => m.role === 'assistant')
     .flatMap(m => extractArtifacts(m.content));
+
+  const exportChat = () => {
+    if (messages.length === 0) return alert('O chat está vazio.');
+    let content = "# Histórico de Conversa - NexusAI\n\n";
+    messages.forEach(m => {
+      content += `### ${m.role === 'user' ? '👤 Você' : '🧠 NexusAI'}\n`;
+      content += `${m.content}\n\n---\n\n`;
+    });
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `chat-export-${new Date().toISOString().slice(0,10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const copyMessage = (content) => {
+    navigator.clipboard.writeText(typeof content === 'string' ? content : content.find(c => c.type === 'text')?.text || '');
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 4 * 1024 * 1024) return alert('A imagem deve ter no máximo 4MB.');
+    const reader = new FileReader();
+    reader.onload = (event) => setImageAttachment(event.target.result);
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   const GEMINI_MODELS = [
     { id: 'gemini-2.5-flash', label: '⚡ Gemini 2.5 Flash' },
@@ -498,10 +666,18 @@ function ChatPage({ projectId }) {
 
   // ─── SSE-based sendMessage (substitui WebSocket) ─────────────────
   const sendMessage = useCallback(async () => {
-    if (!input.trim() || isStreaming) return;
+    if ((!input.trim() && !imageAttachment) || isStreaming) return;
 
     const userContent = input.trim();
+    const payloadContent = imageAttachment 
+      ? [
+          { type: 'image_url', image_url: { url: imageAttachment } },
+          { type: 'text', text: userContent || 'O que você vê nesta imagem?' }
+        ]
+      : userContent;
+
     setInput('');
+    setImageAttachment(null);
     setIsStreaming(true);
     setStreamText('');
     setToolUses([]);
@@ -509,7 +685,7 @@ function ChatPage({ projectId }) {
 
     setMessages(prev => [...prev, {
       role: 'user',
-      content: userContent,
+      content: payloadContent,
       timestamp: Date.now(),
     }]);
 
@@ -664,9 +840,17 @@ function ChatPage({ projectId }) {
                 🔤 {(usage.inputTokens + usage.outputTokens).toLocaleString()} tokens
               </span>
             )}
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowPromptLibrary(!showPromptLibrary)} style={{ marginRight: 8 }}>📚 Prompts</button>
+            <button className="btn btn-secondary btn-sm" onClick={exportChat} style={{ marginRight: 8 }}>📤 Exportar (.md)</button>
             <button className="btn btn-secondary btn-sm" onClick={newChat}>+ Nova</button>
           </div>
         </div>
+
+        {showPromptLibrary && (
+          <div className="card animate-in" style={{ margin: '0 24px 20px 24px', border: '1px solid var(--accent-primary)' }}>
+            <PromptLibrary onSelect={(text) => { setInput(text); setShowPromptLibrary(false); }} />
+          </div>
+        )}
 
         {/* Messages */}
         <div className="chat-messages">
@@ -687,14 +871,36 @@ function ChatPage({ projectId }) {
                   🔄 Sub-Agente Reporta: @{msg.agent}
                 </div>
               )}
-              <div
-                className="chat-message-bubble"
-                dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content) }}
-              />
+              <div className="chat-message-bubble">
+                {Array.isArray(msg.content) ? (
+                  <>
+                    {msg.content.find(c => c.type === 'image_url') && (
+                      <img src={msg.content.find(c => c.type === 'image_url').image_url.url} style={{maxWidth: 300, borderRadius: 8, marginBottom: 12, display: 'block'}} alt="Upload" />
+                    )}
+                    <div dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content.find(c => c.type === 'text')?.text || '') }} />
+                  </>
+                ) : (
+                {msg.role === 'assistant' && typeof msg.content === 'string' && msg.content.includes('```json_chart') ? (
+                  <>
+                    <div dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content.split('```json_chart')[0]) }} />
+                    <DynamicChart json={msg.content.split('```json_chart')[1].split('```')[0]} />
+                    <div dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content.split('```')[2] || '') }} />
+                  </>
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: parseMarkdown(typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)) }} />
+                )}
+              </div>
               <div className="chat-message-meta">
                 <span>{msg.role === 'user' ? '👤 Você' : msg.role === 'assistant' ? '🧠 NexusAI' : '🤖 Sistema'}</span>
                 <span>•</span>
                 <span>{new Date(msg.timestamp).toLocaleTimeString('pt-BR')}</span>
+                <span 
+                  style={{ marginLeft: 'auto', cursor: 'pointer', opacity: 0.6 }} 
+                  onClick={() => copyMessage(msg.content)}
+                  title="Copiar mensagem"
+                >
+                  📋 Copiar
+                </span>
               </div>
             </div>
           ))}
@@ -719,10 +925,18 @@ function ChatPage({ projectId }) {
           {/* Streaming text */}
           {isStreaming && streamText && (
             <div className="chat-message assistant">
-              <div
-                className="chat-message-bubble"
-                dangerouslySetInnerHTML={{ __html: parseMarkdown(streamText) }}
-              />
+              <div className="chat-message-bubble">
+                {streamText.includes('```json_chart') ? (
+                  <>
+                    <div dangerouslySetInnerHTML={{ __html: parseMarkdown(streamText.split('```json_chart')[0]) }} />
+                    {streamText.includes('```', streamText.indexOf('```json_chart') + 13) && (
+                      <DynamicChart json={streamText.split('```json_chart')[1].split('```')[0]} />
+                    )}
+                  </>
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: parseMarkdown(streamText) }} />
+                )}
+              </div>
             </div>
           )}
 
@@ -762,7 +976,17 @@ function ChatPage({ projectId }) {
               >{m.label}</button>
             ))}
           </div>
-          <div className="chat-input-wrapper">
+          <div className="chat-input-wrapper" style={{ position: 'relative' }}>
+            {imageAttachment && (
+              <div style={{ position: 'absolute', top: -70, left: 10, background: 'var(--bg-secondary)', padding: 4, borderRadius: 8, border: '1px solid var(--border)', zIndex: 10 }}>
+                <img src={imageAttachment} style={{ height: 60, borderRadius: 4 }} alt="Preview" />
+                <button onClick={() => setImageAttachment(null)} style={{ position: 'absolute', top: -8, right: -8, background: 'var(--accent-danger)', color: 'white', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+              </div>
+            )}
+            <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 12px', color: 'var(--text-secondary)' }} title="Anexar Imagem">
+              <span style={{ fontSize: 18 }}>📎</span>
+              <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+            </label>
             <textarea
               ref={textareaRef}
               placeholder="Digite sua mensagem... (Enter para enviar, Shift+Enter para nova linha)"
@@ -1404,6 +1628,160 @@ function ProjectsPage({ onStartChat }) {
 // Settings Page
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+// Profile Page
+// ═══════════════════════════════════════════════════════════════
+
+function ProfilePage() {
+  const [profile, setProfile] = useState({ custom_instructions: '', plan: 'free', tokens_used_month: 0, tokens_limit: 50000 });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api('/profile').then(data => {
+      if (data && data.profile) setProfile(data.profile);
+      setLoading(false);
+    });
+  }, []);
+
+  const saveProfile = async () => {
+    setSaving(true);
+    try {
+      await api('/profile', { method: 'POST', body: { custom_instructions: profile.custom_instructions } });
+      alert('Perfil e instruções salvas com sucesso! As próximas conversas usarão esta configuração.');
+    } catch (e) {
+      alert('Erro ao salvar o perfil.');
+    }
+    setSaving(false);
+  };
+
+  if (loading) return <div style={{ padding: 24 }}>Carregando perfil...</div>;
+
+  return (
+    <div className="animate-in" style={{ padding: 24, maxWidth: 800 }}>
+      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 24 }}>👤 Meu Perfil e Customização da IA</h2>
+
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card-header"><div className="card-title">Instruções Customizadas</div></div>
+        <div className="card-body">
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>
+            O que a IA deve saber sobre você para fornecer respostas melhores? Como você quer que a IA responda? 
+            Estas regras serão injetadas secretamente em todas as suas conversas.
+          </p>
+          <textarea
+            className="input-field"
+            rows={6}
+            placeholder="Ex: Sou um desenvolvedor sênior de React. Nunca me explique conceitos básicos. Sempre use arrow functions e retorne apenas o código direto."
+            value={profile.custom_instructions || ''}
+            onChange={(e) => setProfile({ ...profile, custom_instructions: e.target.value })}
+            style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}
+          />
+        </div>
+        <div className="card-footer" style={{ justifyContent: 'flex-end' }}>
+          <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>
+            {saving ? 'Salvando...' : 'Salvar Instruções'}
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-header"><div className="card-title">Resumo do Plano</div></div>
+        <div className="card-body">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Plano Atual</div>
+              <div style={{ fontSize: 18, fontWeight: 700, textTransform: 'capitalize' }}>{profile.plan || 'Free'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Consumo Mensal</div>
+              <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                {(profile.tokens_used_month || 0).toLocaleString()} / {(profile.tokens_limit || 50000).toLocaleString()}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Teams / Workspaces Page
+// ═══════════════════════════════════════════════════════════════
+
+function TeamsPage() {
+  const [teams, setTeams] = useState([]);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api('/teams').then(data => {
+      if (data && data.teams) setTeams(data.teams);
+      setLoading(false);
+    });
+  }, []);
+
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim()) return alert('Digite um nome para a equipe.');
+    const res = await api('/teams', { method: 'POST', body: { name: newTeamName } });
+    if (res.success) {
+      setTeams([...teams, { ...res.team, my_role: 'owner' }]);
+      setNewTeamName('');
+      alert('Equipe criada com sucesso!');
+    } else {
+      alert('Erro ao criar equipe: ' + (res.error || ''));
+    }
+  };
+
+  if (loading) return <div style={{ padding: 24 }}>Carregando equipes...</div>;
+
+  return (
+    <div className="animate-in" style={{ padding: 24, maxWidth: 900 }}>
+      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>🏢 Organizações (B2B)</h2>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>Crie workspaces para sua empresa e divida os tokens do seu plano premium com toda a sua equipe.</p>
+
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card-header"><div className="card-title">Criar Nova Equipe</div></div>
+        <div className="card-body" style={{ display: 'flex', gap: 12 }}>
+          <input 
+            className="input-field" 
+            placeholder="Nome da sua Empresa (ex: Agência Nexus)" 
+            value={newTeamName}
+            onChange={(e) => setNewTeamName(e.target.value)}
+            style={{ flex: 1 }}
+          />
+          <button className="btn btn-primary" onClick={handleCreateTeam}>+ Fundar Empresa</button>
+        </div>
+      </div>
+
+      <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Minhas Equipes</h3>
+      
+      {teams.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">🏢</div>
+          <div className="empty-state-title">Nenhuma equipe ainda</div>
+          <div className="empty-state-desc">Crie uma organização acima para começar a convidar colegas.</div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+          {teams.map(team => (
+            <div key={team.id} className="card" style={{ padding: 16, border: '1px solid var(--purple-main)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                <h4 style={{ fontSize: 16, fontWeight: 700 }}>{team.name}</h4>
+                <span className="badge badge-purple" style={{ textTransform: 'uppercase' }}>{team.my_role}</span>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>ID: {team.id.substring(0,8)}...</p>
+              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--glass-border)' }}>
+                <button className="btn btn-secondary btn-sm" style={{ width: '100%' }}>Gerenciar Membros</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SettingsPage() {
   const [config, setConfig] = useState({
     geminiApiKey: '',
@@ -1590,6 +1968,8 @@ function DashboardShell({ onSignOut, userProfile }) {
       case 'analytics': return <AnalyticsPage stats={dashboardData.stats} />;
       case 'plugins': return <PluginsPage />;
       case 'settings': return <SettingsPage />;
+      case 'profile': return <ProfilePage />;
+      case 'teams': return <TeamsPage />;
       case 'admin': return isAdmin ? <AdminLayout onNavigate={setCurrentPage} /> : <DashboardPage stats={dashboardData.stats} recentSessions={dashboardData.recentSessions} />;
       default: return <DashboardPage stats={dashboardData.stats} recentSessions={dashboardData.recentSessions} />;
     }

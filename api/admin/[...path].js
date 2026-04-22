@@ -29,7 +29,7 @@ async function handleUsers(req, res, supabase) {
   }
 
   if (req.method === 'PUT') {
-    const { id, role, plan } = req.body;
+    const { id, role, plan, bonus_tokens } = req.body;
     if (!id) return res.status(400).json({ error: 'User ID is required' });
     const updates = {};
     if (role) updates.role = role;
@@ -39,6 +39,13 @@ async function handleUsers(req, res, supabase) {
       else if (plan === 'pro') updates.tokens_limit = 500000;
       else if (plan === 'premium') updates.tokens_limit = 5000000;
     }
+    
+    // Process bonus tokens
+    if (bonus_tokens) {
+      const { data: currentUser } = await supabase.from('profiles').select('tokens_limit').eq('id', id).single();
+      updates.tokens_limit = (currentUser?.tokens_limit || 50000) + Number(bonus_tokens);
+    }
+    
     updates.updated_at = new Date().toISOString();
     const { data, error } = await supabase.from('profiles').update(updates).eq('id', id).select().single();
     if (error) throw error;

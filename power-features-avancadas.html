@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Funções Avançadas — Power Features</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,700&family=DM+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --bg:      #07080d;
+  --surf:    #0d0f17;
+  --surf2:   #12141f;
+  --border:  #1c1f30;
+  --border2: #252840;
+  --text:    #d8daf0;
+  --muted:   #545878;
+  --dim:     #2a2d47;
+
+  --c1: #4af0c8;   /* teal  */
+  --c2: #f0a84a;   /* amber */
+  --c3: #a84af0;   /* violet*/
+  --c4: #f04a7a;   /* pink  */
+  --c5: #4a9ff0;   /* blue  */
+  --c6: #c8f04a;   /* lime  */
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Fraunces', Georgia, serif;
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* scanline subtle overlay */
+body::before{
+  content:'';
+  position:fixed; inset:0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(255,255,255,0.008) 2px,
+    rgba(255,255,255,0.008) 4px
+  );
+  pointer-events:none; z-index:9998;
+}
+
+.wrap{
+  max-width:1120px;
+  margin:0 auto;
+  padding: 72px 28px 100px;
+}
+
+/* ══ HEADER ══ */
+.hdr{
+  margin-bottom: 80px;
+  position:relative;
+}
+
+.hdr-kicker{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:4px;
+  text-transform:uppercase;
+  color: var(--c1);
+  margin-bottom:20px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.hdr-kicker::before{
+  content:'';
+  display:block;
+  width:32px; height:1px;
+  background: var(--c1);
+}
+
+h1{
+  font-size: clamp(2.8rem,6vw,5.5rem);
+  font-weight:900;
+  line-height:1.0;
+  letter-spacing:-0.03em;
+  margin-bottom:24px;
+}
+
+h1 .line2{
+  display:block;
+  font-style:italic;
+  font-weight:300;
+  color: var(--muted);
+  font-size:0.75em;
+}
+
+.hdr-sub{
+  max-width:520px;
+  font-size:1rem;
+  font-weight:300;
+  color: var(--muted);
+  line-height:1.7;
+  font-style:italic;
+}
+
+/* corner deco */
+.hdr::after{
+  content: '// advanced';
+  position:absolute;
+  right:0; top:8px;
+  font-family:'DM Mono',monospace;
+  font-size:11px;
+  color: var(--dim);
+  letter-spacing:2px;
+}
+
+/* ══ CATEGORY ══ */
+.cat{
+  margin-bottom:64px;
+  animation: up .5s ease both;
+}
+.cat:nth-child(1){animation-delay:.05s}
+.cat:nth-child(2){animation-delay:.12s}
+.cat:nth-child(3){animation-delay:.19s}
+.cat:nth-child(4){animation-delay:.26s}
+.cat:nth-child(5){animation-delay:.33s}
+.cat:nth-child(6){animation-delay:.40s}
+.cat:nth-child(7){animation-delay:.47s}
+.cat:nth-child(8){animation-delay:.54s}
+
+@keyframes up{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+.cat-label{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:20px;
+}
+
+.cat-icon-wrap{
+  width:40px; height:40px;
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.2rem;
+  flex-shrink:0;
+  border: 1px solid;
+}
+
+.cat-title{
+  font-size:1.1rem;
+  font-weight:700;
+  letter-spacing:-0.01em;
+}
+
+.cat-title span{
+  display:block;
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  font-weight:400;
+  margin-top:2px;
+  opacity:.5;
+}
+
+/* ══ FEATURE CARDS ══ */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:12px;
+}
+
+.card{
+  background: var(--surf);
+  border: 1px solid var(--border);
+  border-radius:14px;
+  padding:22px 24px;
+  position:relative;
+  overflow:hidden;
+  cursor:default;
+  transition: border-color .2s, transform .2s, background .2s;
+}
+
+.card:hover{
+  border-color: var(--card-color, var(--c1));
+  background: var(--surf2);
+  transform:translateY(-3px);
+}
+
+/* glow on hover */
+.card::after{
+  content:'';
+  position:absolute;
+  inset:-1px;
+  border-radius:14px;
+  background: radial-gradient(circle at 50% 0%, var(--card-color,var(--c1)) 0%, transparent 60%);
+  opacity:0;
+  transition:opacity .3s;
+  pointer-events:none;
+  z-index:0;
+}
+.card:hover::after{ opacity:.07; }
+
+.card > * { position:relative; z-index:1; }
+
+.card-head{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:10px;
+  gap:8px;
+}
+
+.card-emoji{ font-size:1.5rem; }
+
+.card-badge{
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:3px 8px;
+  border-radius:4px;
+  font-weight:500;
+  white-space:nowrap;
+  flex-shrink:0;
+}
+
+.badge-wow  { background:rgba(74,240,200,.12); color:var(--c1); border:1px solid rgba(74,240,200,.2); }
+.badge-dev  { background:rgba(74,159,240,.12); color:var(--c5); border:1px solid rgba(74,159,240,.2); }
+.badge-ai   { background:rgba(168,74,240,.12); color:var(--c3); border:1px solid rgba(168,74,240,.2); }
+.badge-data { background:rgba(240,168,74,.12); color:var(--c2); border:1px solid rgba(240,168,74,.2); }
+.badge-collab{background:rgba(240,74,122,.12); color:var(--c4); border:1px solid rgba(240,74,122,.2); }
+.badge-auto { background:rgba(200,240,74,.12); color:var(--c6); border:1px solid rgba(200,240,74,.2); }
+
+.card-name{
+  font-size:.92rem;
+  font-weight:700;
+  color:#fff;
+  margin-bottom:8px;
+  letter-spacing:-.01em;
+}
+
+.card-desc{
+  font-size:.78rem;
+  color: var(--muted);
+  line-height:1.65;
+  font-weight:300;
+  font-family:'DM Mono',monospace;
+  margin-bottom:12px;
+}
+
+.card-impl{
+  font-size:.73rem;
+  color: var(--dim);
+  font-family:'DM Mono',monospace;
+  line-height:1.5;
+  border-top: 1px solid var(--border);
+  padding-top:10px;
+  margin-top:4px;
+}
+
+.card-impl strong{
+  color: var(--card-color, var(--c1));
+  font-weight:500;
+}
+
+/* ══ MEGA CARD (featured) ══ */
+.mega-card{
+  background: var(--surf);
+  border: 1px solid var(--border2);
+  border-radius:16px;
+  padding:32px;
+  margin-bottom:12px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:32px;
+  align-items:start;
+}
+
+.mega-card:hover{
+  border-color: var(--card-color, var(--c1));
+}
+
+.mega-left{}
+.mega-badge{
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  padding:4px 10px;
+  border-radius:4px;
+  display:inline-block;
+  margin-bottom:14px;
+}
+
+.mega-name{
+  font-size:1.3rem;
+  font-weight:700;
+  color:#fff;
+  letter-spacing:-.02em;
+  margin-bottom:10px;
+  line-height:1.2;
+}
+
+.mega-desc{
+  font-size:.82rem;
+  color: var(--muted);
+  line-height:1.7;
+  font-family:'DM Mono',monospace;
+  font-weight:300;
+}
+
+.mega-right{}
+
+.feature-list-mini{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.fli{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  font-size:.76rem;
+  color: var(--text);
+  font-family:'DM Mono',monospace;
+  line-height:1.5;
+}
+
+.fli::before{
+  content:'→';
+  color: var(--card-color, var(--c1));
+  flex-shrink:0;
+  font-size:.8rem;
+}
+
+@media(max-width:640px){
+  .mega-card{ grid-template-columns:1fr; gap:20px; }
+}
+
+/* ══ DIAGRAM VISUAL ══ */
+.diagram-box{
+  background: var(--surf);
+  border: 1px solid var(--border2);
+  border-radius:16px;
+  padding:32px;
+  margin-bottom:12px;
+  overflow:hidden;
+  position:relative;
+}
+
+.db-title{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color: var(--muted);
+  margin-bottom:24px;
+  text-align:center;
+}
+
+.db-flow{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  flex-wrap:wrap;
+  row-gap:16px;
+}
+
+.db-node{
+  border-radius:10px;
+  padding:12px 18px;
+  text-align:center;
+  border:1px solid;
+  font-size:.72rem;
+  font-family:'DM Mono',monospace;
+  font-weight:500;
+  min-width:90px;
+}
+
+.db-arrow{
+  font-size:1.2rem;
+  color: var(--dim);
+  padding:0 6px;
+  flex-shrink:0;
+}
+
+.n-teal   { background:rgba(74,240,200,.08); border-color:rgba(74,240,200,.3); color:var(--c1); }
+.n-violet { background:rgba(168,74,240,.08); border-color:rgba(168,74,240,.3); color:var(--c3); }
+.n-amber  { background:rgba(240,168,74,.08); border-color:rgba(240,168,74,.3); color:var(--c2); }
+.n-pink   { background:rgba(240,74,122,.08); border-color:rgba(240,74,122,.3); color:var(--c4); }
+.n-blue   { background:rgba(74,159,240,.08); border-color:rgba(74,159,240,.3); color:var(--c5); }
+.n-lime   { background:rgba(200,240,74,.08); border-color:rgba(200,240,74,.3); color:var(--c6); }
+
+/* ══ SECTION DIVIDER ══ */
+.divider{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin:72px 0 56px;
+  opacity:.25;
+}
+.div-line{ flex:1; height:1px; background:var(--border2); }
+.div-text{
+  font-family:'DM Mono',monospace;
+  font-size:10px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  white-space:nowrap;
+}
+
+/* ══ STACK TABLE ══ */
+.stk{
+  width:100%;
+  border-collapse:collapse;
+  border-radius:12px;
+  overflow:hidden;
+  border:1px solid var(--border2);
+  font-size:.78rem;
+}
+.stk thead tr{ background:var(--surf2); }
+.stk th{
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  color: var(--muted);
+  padding:12px 18px;
+  text-align:left;
+  font-weight:500;
+  border-bottom:1px solid var(--border2);
+}
+.stk td{
+  padding:13px 18px;
+  border-bottom:1px solid var(--border);
+  vertical-align:top;
+  line-height:1.5;
+}
+.stk tr:last-child td{ border-bottom:none; }
+.stk tr:hover td{ background:var(--surf2); }
+.stk td:first-child{ color:var(--c1); font-family:'DM Mono',monospace; font-weight:500; }
+.stk td:nth-child(2){ color:var(--c2); font-family:'DM Mono',monospace; font-size:.72rem; }
+.stk td:nth-child(3){ color: var(--muted); font-family:'DM Mono',monospace; font-size:.72rem; }
+
+/* ══ IMPACT GRID ══ */
+.impact-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:2px;
+  border:1px solid var(--border2);
+  border-radius:12px;
+  overflow:hidden;
+}
+
+@media(max-width:640px){ .impact-grid{ grid-template-columns:1fr; } }
+
+.ig-cell{
+  background: var(--surf);
+  padding:24px;
+  text-align:center;
+  transition:background .2s;
+}
+.ig-cell:hover{ background:var(--surf2); }
+
+.ig-val{
+  font-size:2.4rem;
+  font-weight:900;
+  letter-spacing:-.04em;
+  margin-bottom:6px;
+}
+.ig-label{
+  font-family:'DM Mono',monospace;
+  font-size:.7rem;
+  letter-spacing:1px;
+  color: var(--muted);
+  text-transform:uppercase;
+}
+
+/* ══ FOOTER ══ */
+.footer{
+  margin-top:80px;
+  padding-top:32px;
+  border-top:1px solid var(--border2);
+  display:flex;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  gap:20px;
+}
+.footer-col{ }
+.footer-title{
+  font-family:'DM Mono',monospace;
+  font-size:9px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  color: var(--muted);
+  margin-bottom:12px;
+}
+.footer-items{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.footer-item{
+  font-size:.78rem;
+  color:var(--dim);
+  font-family:'DM Mono',monospace;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.footer-item::before{ content:'·'; font-size:1.2rem; }
+
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <div class="hdr-kicker">funções avançadas</div>
+    <h1>Power Features<br><span class="line2">o que transforma um chat em produto real</span></h1>
+    <p class="hdr-sub">Recursos que elevam a experiência do usuário a outro nível — visualizações, automações, integrações e capacidades de IA que nenhum concorrente básico tem.</p>
+  </div>
+
+  <!-- IMPACT NUMBERS -->
+  <div class="impact-grid" style="margin-bottom:64px;">
+    <div class="ig-cell">
+      <div class="ig-val" style="color:var(--c1)">8</div>
+      <div class="ig-label">categorias avançadas</div>
+    </div>
+    <div class="ig-cell">
+      <div class="ig-val" style="color:var(--c3)">40+</div>
+      <div class="ig-label">features mapeadas</div>
+    </div>
+    <div class="ig-cell">
+      <div class="ig-val" style="color:var(--c2)">∞</div>
+      <div class="ig-label">diferencial competitivo</div>
+    </div>
+  </div>
+
+
+  <!-- ══ CAT 1: VISUALIZAÇÃO DE DADOS & IA ══ -->
+  <div class="cat">
+    <div class="cat-label">
+      <div class="cat-icon-wrap" style="background:rgba(74,240,200,.1);border-color:rgba(74,240,200,.25);">🗺️</div>
+      <div class="cat-title" style="color:var(--c1)">
+        Visualização de Dados & IA
+        <span>diagrams · graphs · schema explorer</span>
+      </div>
+    </div>
+
+    <!-- MEGA CARD: DB Diagram -->
+    <div class="mega-card" style="--card-color:var(--c1); border-color:rgba(74,240,200,.2); margin-bottom:12px;">
+      <div class="mega-left">
+        <div class="mega-badge badge-wow">⭐ Destaque</div>
+        <div class="mega-name">Visualizador de Schema do Banco</div>
+        <div class="mega-desc">A IA analisa a estrutura do banco e gera um diagrama ER interativo em tempo real. O usuário clica em qualquer tabela para ver colunas, tipos, FK e queries de exemplo.</div>
+      </div>
+      <div class="mega-right">
+        <div class="feature-list-mini">
+          <div class="fli">Diagrama ER drag-and-drop (React Flow)</div>
+          <div class="fli">Tabelas com colunas, PKs e FKs visuais</div>
+          <div class="fli">IA explica cada campo em linguagem natural</div>
+          <div class="fli">Export como PNG, SVG ou Mermaid .md</div>
+          <div class="fli">Highlight de tabelas relacionadas ao passar o mouse</div>
+          <div class="fli">Modo "query builder" — montar SELECT visualmente</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flow do schema visual -->
+    <div class="diagram-box" style="margin-bottom:12px;">
+      <div class="db-title">// como funciona o visualizador de schema</div>
+      <div class="db-flow">
+        <div class="db-node n-teal">Upload SQL<br>ou string DB</div>
+        <div class="db-arrow">→</div>
+        <div class="db-node n-violet">IA parseia<br>schema</div>
+        <div class="db-arrow">→</div>
+        <div class="db-node n-amber">Gera JSON<br>de relações</div>
+        <div class="db-arrow">→</div>
+        <div class="db-node n-blue">React Flow<br>renderiza</div>
+        <div class="db-arrow">→</div>
+        <div class="db-node n-pink">Diagrama<br>interativo</div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card" style="--card-color:var(--c1)">
+        <div class="card-head">
+          <div class="card-emoji">📊</div>
+          <div class="card-badge badge-wow">Visual</div>
+        </div>
+        <div class="card-name">Gráficos gerados pela IA</div>
+        <div class="card-desc">Usuário pede "mostre um gráfico de barras dos meus dados" e a IA gera o código + renderiza o chart direto no chat com Recharts ou Chart.js.</div>
+        <div class="card-impl"><strong>Como:</strong> IA retorna JSON de dados + tipo de chart → componente renderiza inline</div>
+      </div>
+      <div class="card" style="--card-color:var(--c1)">
+        <div class="card-head">
+          <div class="card-emoji">🗂️</div>
+          <div class="card-badge badge-wow">Visual</div>
+        </div>
+        <div class="card-name">Mindmap de ideias</div>
+        <div class="card-desc">IA organiza o output como mindmap interativo. Clicar em um nó expande subitens. Ótimo para brainstorm, planejamento e resumo de documentos.</div>
+        <div class="card-impl"><strong>Como:</strong> D3.js tree layout + parsing do markdown gerado pela IA</div>
+      </div>
+      <div class="card" style="--card-color:var(--c1)">
+        <div class="card-head">
+          <div class="card-emoji">📈</div>
+          <div class="card-badge badge-data">Data</div>
+        </div>
+        <div class="card-name">Análise de CSV / Excel</div>
+        <div class="card-desc">Upload de planilha → IA faz análise estatística, identifica anomalias, sugere visualizações e responde perguntas sobre os dados em linguagem natural.</div>
+        <div class="card-impl"><strong>Como:</strong> Papa Parse no frontend + chunk de dados no prompt</div>
+      </div>
+      <div class="card" style="--card-color:var(--c1)">
+        <div class="card-head">
+          <div class="card-emoji">🔀</div>
+          <div class="card-badge badge-wow">Visual</div>
+        </div>
+        <div class="card-name">Fluxogramas e diagramas</div>
+        <div class="card-desc">IA gera fluxogramas, diagramas de sequência e arquitetura automaticamente em Mermaid.js renderizado no chat.</div>
+        <div class="card-impl"><strong>Como:</strong> Detectar bloco ```mermaid no output → renderizar com mermaid.js</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CAT 2: IA AVANÇADA ══ -->
+  <div class="cat">
+    <div class="cat-label">
+      <div class="cat-icon-wrap" style="background:rgba(168,74,240,.1);border-color:rgba(168,74,240,.25);">🧠</div>
+      <div class="cat-title" style="color:var(--c3)">
+        Capacidades Avançadas de IA
+        <span>agents · tools · multimodal · reasoning</span>
+      </div>
+    </div>
+
+    <div class="mega-card" style="--card-color:var(--c3); border-color:rgba(168,74,240,.2); margin-bottom:12px;">
+      <div class="mega-left">
+        <div class="mega-badge badge-ai">🧠 IA Avançada</div>
+        <div class="mega-name">Modo Agente (Multi-step)</div>
+        <div class="mega-desc">A IA executa tarefas de múltiplos passos autonomamente: pesquisa na web, lê documentos, faz cálculos e retorna um relatório completo. O usuário acompanha cada step em tempo real.</div>
+      </div>
+      <div class="mega-right">
+        <div class="feature-list-mini">
+          <div class="fli">Barra de progresso mostrando etapas do agente</div>
+          <div class="fli">Cada "tool call" exibido com ícone (🔍 buscando, 📄 lendo...)</div>
+          <div class="fli">Cancelar execução a qualquer momento</div>
+          <div class="fli">Log detalhado de cada ação executada</div>
+          <div class="fli">Resultado final consolidado em relatório</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cards">
+      <div class="card" style="--card-color:var(--c3)">
+        <div class="card-head"><div class="card-emoji">👁️</div><div class="card-badge badge-ai">Vision</div></div>
+        <div class="card-name">Análise de imagem / screenshot</div>
+        <div class="card-desc">Enviar screenshot de código, UI, gráfico ou foto e a IA descreve, corrige, extrai dados ou responde perguntas sobre o que vê.</div>
+        <div class="card-impl"><strong>Como:</strong> Anthropic Vision API / GPT-4V com imagem em base64</div>
+      </div>
+      <div class="card" style="--card-color:var(--c3)">
+        <div class="card-head"><div class="card-emoji">🔍</div><div class="card-badge badge-ai">Web</div></div>
+        <div class="card-name">IA com busca na web (RAG live)</div>
+        <div class="card-desc">IA busca informações atuais na internet antes de responder. Cita as fontes usadas com links. Ideal para perguntas sobre eventos recentes.</div>
+        <div class="card-impl"><strong>Como:</strong> Tool use → Tavily API ou SerpAPI → injetar resultado no contexto</div>
+      </div>
+      <div class="card" style="--card-color:var(--c3)">
+        <div class="card-head"><div class="card-emoji">📄</div><div class="card-badge badge-ai">RAG</div></div>
+        <div class="card-name">Chat com seus documentos</div>
+        <div class="card-desc">Upload de PDFs, docs ou URLs → IA indexa e responde perguntas com base no conteúdo exato. Cita o trecho exato de onde veio a resposta.</div>
+        <div class="card-impl"><strong>Como:</strong> Embeddings → pgvector → similarity search → context injection</div>
+      </div>
+      <div class="card" style="--card-color:var(--c3)">
+        <div class="card-head"><div class="card-emoji">⚡</div><div class="card-badge badge-ai">Prompts</div></div>
+        <div class="card-name">Biblioteca de prompts</div>
+        <div class="card-desc">Galeria de prompts pré-configurados por categoria (marketing, código, análise, redação). Usuário clica e usa com 1 toque.</div>
+        <div class="card-impl"><strong>Como:</strong> JSON de templates → inserir no textarea ao clicar</div>
+      </div>
+      <div class="card" style="--card-color:var(--c3)">
+        <div class="card-head"><div class="card-emoji">🔁</div><div class="card-badge badge-ai">Chain</div></div>
+        <div class="card-name">Prompt chaining visual</div>
+        <div class="card-desc">Montar sequência de prompts que se alimentam: output do passo 1 vira input do passo 2. Builder drag-and-drop visual tipo n8n.</div>
+        <div class="card-impl"><strong>Como:</strong> React Flow + orquestrador de chamadas sequenciais à API</div>
+      </div>
+      <div class="card" style="--card-color:var(--c3)">
+        <div class="card-head"><div class="card-emoji">🌐</div><div class="card-badge badge-ai">Multi</div></div>
+        <div class="card-name">Comparação A/B de modelos</div>
+        <div class="card-desc">Enviar o mesmo prompt para dois modelos ao mesmo tempo e ver as respostas lado a lado para comparar qualidade.</div>
+        <div class="card-impl"><strong>Como:</strong> Parallel fetch → layout split screen</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CAT 3: CANVAS / EDITOR ══ -->
+  <div class="cat">
+    <div class="cat-label">
+      <div class="cat-icon-wrap" style="background:rgba(240,168,74,.1);border-color:rgba(240,168,74,.25);">🎨</div>
+      <div class="cat-title" style="color:var(--c2)">
+        Canvas & Editor de Conteúdo
+        <span>artifacts · live preview · co-editing</span>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--card-color:var(--c2)">
+        <div class="card-head"><div class="card-emoji">🖼️</div><div class="card-badge badge-data">Canvas</div></div>
+        <div class="card-name">Artifacts / Canvas ao vivo</div>
+        <div class="card-desc">IA gera HTML, React ou código e renderiza ao vivo num painel lateral. Usuário vê o resultado enquanto a IA escreve — exatamente como Claude Artifacts.</div>
+        <div class="card-impl"><strong>Como:</strong> iframe sandbox + postMessage para injetar código em tempo real</div>
+      </div>
+      <div class="card" style="--card-color:var(--c2)">
+        <div class="card-head"><div class="card-emoji">✍️</div><div class="card-badge badge-data">Editor</div></div>
+        <div class="card-name">Editor rich text com IA inline</div>
+        <div class="card-desc">Editor tipo Notion com /comandos para invocar a IA diretamente. "Reescreva isso", "continue", "resuma" sem sair do documento.</div>
+        <div class="card-impl"><strong>Como:</strong> TipTap editor + slash commands → API call inline</div>
+      </div>
+      <div class="card" style="--card-color:var(--c2)">
+        <div class="card-head"><div class="card-emoji">💻</div><div class="card-badge badge-dev">Code</div></div>
+        <div class="card-name">Playground de código executável</div>
+        <div class="card-desc">IA gera código Python/JS e o usuário executa direto no navegador com output instantâneo. Sandbox seguro sem backend.</div>
+        <div class="card-impl"><strong>Como:</strong> Pyodide (Python no browser) ou Sandpack (JS)</div>
+      </div>
+      <div class="card" style="--card-color:var(--c2)">
+        <div class="card-head"><div class="card-emoji">🔄</div><div class="card-badge badge-data">Diff</div></div>
+        <div class="card-name">Diff de revisões</div>
+        <div class="card-desc">Quando a IA reescreve um texto, mostrar o diff colorido (o que mudou, removeu, adicionou) igual ao GitHub.</div>
+        <div class="card-impl"><strong>Como:</strong> diff-match-patch lib → highlight de mudanças</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CAT 4: AUTOMAÇÃO & WORKFLOWS ══ -->
+  <div class="cat">
+    <div class="cat-label">
+      <div class="cat-icon-wrap" style="background:rgba(200,240,74,.1);border-color:rgba(200,240,74,.25);">⚡</div>
+      <div class="cat-title" style="color:var(--c6)">
+        Automação & Workflows
+        <span>triggers · scheduled · integrations</span>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--card-color:var(--c6)">
+        <div class="card-head"><div class="card-emoji">⏰</div><div class="card-badge badge-auto">Agendado</div></div>
+        <div class="card-name">Prompts agendados</div>
+        <div class="card-desc">Agendar um prompt para rodar automaticamente: "todo dia às 8h resumir as notícias de tech e enviar por e-mail."</div>
+        <div class="card-impl"><strong>Como:</strong> cron jobs no servidor + Resend para e-mail do resultado</div>
+      </div>
+      <div class="card" style="--card-color:var(--c6)">
+        <div class="card-head"><div class="card-emoji">🔗</div><div class="card-badge badge-auto">Webhook</div></div>
+        <div class="card-name">Webhooks de entrada</div>
+        <div class="card-desc">Outros sistemas disparam a IA via webhook. Ex: novo lead no CRM → IA redige e-mail de boas-vindas automaticamente.</div>
+        <div class="card-impl"><strong>Como:</strong> endpoint POST público → processa com IA → envia resultado</div>
+      </div>
+      <div class="card" style="--card-color:var(--c6)">
+        <div class="card-head"><div class="card-emoji">🧩</div><div class="card-badge badge-auto">Integração</div></div>
+        <div class="card-name">Conectores nativos</div>
+        <div class="card-desc">Integração com Notion, Google Sheets, Slack, GitHub, Trello. IA pode ler e escrever dados nessas plataformas.</div>
+        <div class="card-impl"><strong>Como:</strong> OAuth por conector + API calls como tool use da IA</div>
+      </div>
+      <div class="card" style="--card-color:var(--c6)">
+        <div class="card-head"><div class="card-emoji">📱</div><div class="card-badge badge-auto">Multi-canal</div></div>
+        <div class="card-name">IA no WhatsApp / Telegram</div>
+        <div class="card-desc">Conectar a IA ao WhatsApp Business ou Telegram. Usuários interagem pelo app que já usam.</div>
+        <div class="card-impl"><strong>Como:</strong> Twilio (WhatsApp) / Telegram Bot API + forward para sua IA</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CAT 5: COLABORAÇÃO ══ -->
+  <div class="cat">
+    <div class="cat-label">
+      <div class="cat-icon-wrap" style="background:rgba(240,74,122,.1);border-color:rgba(240,74,122,.25);">👥</div>
+      <div class="cat-title" style="color:var(--c4)">
+        Colaboração em Equipe
+        <span>shared · workspaces · multi-user</span>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--card-color:var(--c4)">
+        <div class="card-head"><div class="card-emoji">🏢</div><div class="card-badge badge-collab">Team</div></div>
+        <div class="card-name">Workspaces de equipe</div>
+        <div class="card-desc">Times compartilham um workspace com histórico, prompts e configurações comuns. Membros têm roles: Admin, Editor, Viewer.</div>
+        <div class="card-impl"><strong>Como:</strong> tabela teams + team_members + isolamento por tenant</div>
+      </div>
+      <div class="card" style="--card-color:var(--c4)">
+        <div class="card-head"><div class="card-emoji">💬</div><div class="card-badge badge-collab">Collab</div></div>
+        <div class="card-name">Chat colaborativo em tempo real</div>
+        <div class="card-desc">Múltiplos usuários na mesma conversa com a IA simultaneamente. Cada mensagem mostra quem enviou.</div>
+        <div class="card-impl"><strong>Como:</strong> WebSocket rooms + Yjs para sync em tempo real</div>
+      </div>
+      <div class="card" style="--card-color:var(--c4)">
+        <div class="card-head"><div class="card-emoji">💬</div><div class="card-badge badge-collab">Feedback</div></div>
+        <div class="card-name">Comentários em respostas</div>
+        <div class="card-desc">Membros da equipe comentam em respostas da IA. Útil para review de conteúdo gerado e controle de qualidade.</div>
+        <div class="card-impl"><strong>Como:</strong> tabela comments com referência à message_id</div>
+      </div>
+      <div class="card" style="--card-color:var(--c4)">
+        <div class="card-head"><div class="card-emoji">📚</div><div class="card-badge badge-collab">KBase</div></div>
+        <div class="card-name">Base de conhecimento do time</div>
+        <div class="card-desc">Documentos e FAQs da empresa que a IA usa como contexto. Qualquer membro do time pode adicionar/editar.</div>
+        <div class="card-impl"><strong>Como:</strong> editor de docs + embeddings por workspace + RAG</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CAT 6: DEVELOPER TOOLS ══ -->
+  <div class="cat">
+    <div class="cat-label">
+      <div class="cat-icon-wrap" style="background:rgba(74,159,240,.1);border-color:rgba(74,159,240,.25);">🛠️</div>
+      <div class="cat-title" style="color:var(--c5)">
+        Developer Tools
+        <span>API · playground · debug · SDK</span>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--card-color:var(--c5)">
+        <div class="card-head"><div class="card-emoji">🔑</div><div class="card-badge badge-dev">API</div></div>
+        <div class="card-name">API Keys pessoais</div>
+        <div class="card-desc">Usuário gera chaves de API para integrar a IA em seus próprios sistemas. Dashboard com uso por key e revogação.</div>
+        <div class="card-impl"><strong>Como:</strong> uuid como key, hash no DB, middleware de autenticação por header</div>
+      </div>
+      <div class="card" style="--card-color:var(--c5)">
+        <div class="card-head"><div class="card-emoji">🎮</div><div class="card-badge badge-dev">Playground</div></div>
+        <div class="card-name">API Playground</div>
+        <div class="card-desc">Interface visual para testar a API: ajustar temperatura, max_tokens, system prompt e ver o request/response JSON completo.</div>
+        <div class="card-impl"><strong>Como:</strong> form → fetch → exibir JSON com syntax highlight</div>
+      </div>
+      <div class="card" style="--card-color:var(--c5)">
+        <div class="card-head"><div class="card-emoji">🐛</div><div class="card-badge badge-dev">Debug</div></div>
+        <div class="card-name">Debug mode / token inspector</div>
+        <div class="card-desc">Modo dev que mostra: tokens usados, latência, qual model foi chamado, context window atual, custo estimado da request.</div>
+        <div class="card-impl"><strong>Como:</strong> painel colapsável por mensagem com metadata da API call</div>
+      </div>
+      <div class="card" style="--card-color:var(--c5)">
+        <div class="card-head"><div class="card-emoji">📦</div><div class="card-badge badge-dev">SDK</div></div>
+        <div class="card-name">Widget embedável</div>
+        <div class="card-desc">Script de 1 linha para embeddar o chat em qualquer site. Customizável via atributos HTML (cor, posição, prompt inicial).</div>
+        <div class="card-impl"><strong>Como:</strong> Web Component + iframe + postMessage API pública</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CAT 7: ANALYTICS DO USUÁRIO ══ -->
+  <div class="cat">
+    <div class="cat-label">
+      <div class="cat-icon-wrap" style="background:rgba(74,240,200,.1);border-color:rgba(74,240,200,.25);">📊</div>
+      <div class="cat-title" style="color:var(--c1)">
+        Analytics Pessoal (para o usuário)
+        <span>uso · insights · produtividade</span>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--card-color:var(--c1)">
+        <div class="card-head"><div class="card-emoji">📅</div><div class="card-badge badge-wow">Stats</div></div>
+        <div class="card-name">Dashboard de uso pessoal</div>
+        <div class="card-desc">Gráfico de mensagens por dia, total de tokens, categorias mais usadas, horário de pico de uso, streak de dias consecutivos.</div>
+        <div class="card-impl"><strong>Como:</strong> agregar events de uso por user_id → Recharts dashboard</div>
+      </div>
+      <div class="card" style="--card-color:var(--c1)">
+        <div class="card-head"><div class="card-emoji">🏷️</div><div class="card-badge badge-wow">Organize</div></div>
+        <div class="card-name">Tags e categorias de chats</div>
+        <div class="card-desc">Organizar conversas com tags customizadas (#trabalho, #código, #estudos). Filtrar histórico por tag.</div>
+        <div class="card-impl"><strong>Como:</strong> tabela tags M2M com conversations</div>
+      </div>
+      <div class="card" style="--card-color:var(--c1)">
+        <div class="card-head"><div class="card-emoji">💡</div><div class="card-badge badge-ai">Insights</div></div>
+        <div class="card-name">Resumo semanal inteligente</div>
+        <div class="card-desc">E-mail automático toda semana: "você fez X conversas, os principais temas foram Y, aqui estão suas conquistas."</div>
+        <div class="card-impl"><strong>Como:</strong> cron semanal → IA sumariza histórico → Resend envia</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ CAT 8: GAMIFICAÇÃO & ENGAJAMENTO ══ -->
+  <div class="cat">
+    <div class="cat-label">
+      <div class="cat-icon-wrap" style="background:rgba(240,168,74,.1);border-color:rgba(240,168,74,.25);">🏆</div>
+      <div class="cat-title" style="color:var(--c2)">
+        Gamificação & Engajamento
+        <span>streaks · achievements · onboarding</span>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card" style="--card-color:var(--c2)">
+        <div class="card-head"><div class="card-emoji">🔥</div><div class="card-badge badge-data">Streak</div></div>
+        <div class="card-name">Streak diário</div>
+        <div class="card-desc">Contador de dias consecutivos de uso. Animação especial ao manter o streak. Notificação para não quebrar.</div>
+        <div class="card-impl"><strong>Como:</strong> calcular streak em login diário → armazenar last_active_date</div>
+      </div>
+      <div class="card" style="--card-color:var(--c2)">
+        <div class="card-head"><div class="card-emoji">🏅</div><div class="card-badge badge-data">Badge</div></div>
+        <div class="card-name">Badges e conquistas</div>
+        <div class="card-desc">"Primeira conversa", "100 mensagens", "Power User", "Explorador" etc. Aparece no perfil e motiva o uso contínuo.</div>
+        <div class="card-impl"><strong>Como:</strong> event triggers → verificar condições → award badge</div>
+      </div>
+      <div class="card" style="--card-color:var(--c2)">
+        <div class="card-head"><div class="card-emoji">👋</div><div class="card-badge badge-data">UX</div></div>
+        <div class="card-name">Onboarding interativo</div>
+        <div class="card-desc">Tour passo a passo na primeira visita. Checklist de "getting started" com progresso. Sugestões de primeiros prompts contextual.</div>
+        <div class="card-impl"><strong>Como:</strong> driver.js para o tour + checklist em localStorage</div>
+      </div>
+      <div class="card" style="--card-color:var(--c2)">
+        <div class="card-head"><div class="card-emoji">💬</div><div class="card-badge badge-data">NPS</div></div>
+        <div class="card-name">NPS e feedback contextual</div>
+        <div class="card-desc">Após X conversas, perguntar "o quanto você indicaria para um amigo?" com NPS 0-10. Resultados visíveis no admin.</div>
+        <div class="card-impl"><strong>Como:</strong> modal condicional por contador de sessões</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIVIDER -->
+  <div class="divider">
+    <div class="div-line"></div>
+    <div class="div-text">Stack técnica para features avançadas</div>
+    <div class="div-line"></div>
+  </div>
+
+  <!-- TECH TABLE -->
+  <table class="stk">
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>Lib / Serviço</th>
+        <th>Observação</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Diagrama ER / Fluxograma</td><td>React Flow + Mermaid.js</td><td>React Flow para interativo, Mermaid para geração automática pela IA</td></tr>
+      <tr><td>Charts gerados pela IA</td><td>Recharts / Chart.js</td><td>IA retorna spec JSON → componente renderiza o chart</td></tr>
+      <tr><td>Código Python no browser</td><td>Pyodide (WebAssembly)</td><td>Roda Python puro no navegador sem backend</td></tr>
+      <tr><td>Código JS sandbox</td><td>Sandpack (CodeSandbox)</td><td>Ambiente React/JS completo no browser</td></tr>
+      <tr><td>Editor rich text</td><td>TipTap v2</td><td>Extensível, suporte a slash commands e IA inline</td></tr>
+      <tr><td>Busca na web (IA)</td><td>Tavily API</td><td>Feita para RAG, retorna conteúdo limpo, não HTML bruto</td></tr>
+      <tr><td>Embeddings / RAG</td><td>pgvector + OpenAI Embeddings</td><td>Direto no Postgres, sem serviço externo extra</td></tr>
+      <tr><td>Automação / Agendamento</td><td>BullMQ + Redis</td><td>Filas e cron jobs robustos, retry automático</td></tr>
+      <tr><td>Webhooks</td><td>Svix</td><td>Plataforma de webhooks com retry, logs, dashboard</td></tr>
+      <tr><td>WhatsApp</td><td>Twilio / Zapi (Brasil)</td><td>Zapi é mais barato para Brasil, Twilio é global</td></tr>
+      <tr><td>Widget embedável</td><td>Web Components + Shadow DOM</td><td>Isolado do CSS da página host</td></tr>
+      <tr><td>Tour / Onboarding</td><td>driver.js</td><td>Leve, sem dependências, altamente customizável</td></tr>
+      <tr><td>Analytics de produto</td><td>PostHog</td><td>Self-hostável, LGPD-friendly, feature flags incluso</td></tr>
+      <tr><td>Diff de texto</td><td>diff-match-patch</td><td>Google's diff library, leve e precisa</td></tr>
+    </tbody>
+  </table>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-col">
+      <div class="footer-title">// Quick wins (implementar primeiro)</div>
+      <div class="footer-items">
+        <div class="footer-item">Biblioteca de prompts — baixo custo, alto valor</div>
+        <div class="footer-item">Renderização Mermaid — IA já gera, só falta renderizar</div>
+        <div class="footer-item">Gráficos via IA — ótimo wow factor</div>
+        <div class="footer-item">API Keys — habilita integrações externas</div>
+      </div>
+    </div>
+    <div class="footer-col">
+      <div class="footer-title">// Features que viralizam</div>
+      <div class="footer-items">
+        <div class="footer-item">Diagrama ER do banco de dados</div>
+        <div class="footer-item">Código executável no browser</div>
+        <div class="footer-item">IA no WhatsApp</div>
+        <div class="footer-item">Canvas com preview ao vivo</div>
+      </div>
+    </div>
+    <div class="footer-col">
+      <div class="footer-title">// Para versão enterprise</div>
+      <div class="footer-items">
+        <div class="footer-item">Workspaces de equipe</div>
+        <div class="footer-item">SSO / SAML</div>
+        <div class="footer-item">Widget embedável</div>
+        <div class="footer-item">Auditoria completa de uso</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -42,10 +42,38 @@ async function handleProjectById(req, res, supabase, projectId) {
 
 // ─── Knowledge ───────────────────────────────────────────────
 
-function handleKnowledge(req, res) {
+async function handleKnowledge(req, res, supabase, projectId) {
   if (req.method === 'POST') {
-    return res.json({ status: 'uploaded', count: 0, note: 'Upload não disponível no Vercel' });
+    const { files } = req.body || {};
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      return res.status(400).json({ error: 'Nenhum arquivo de texto fornecido' });
+    }
+
+    try {
+      const inserts = files.map(f => ({
+        project_id: projectId,
+        file_name: f.name,
+        content: f.content
+      }));
+
+      const { error } = await supabase.from('project_knowledge').insert(inserts);
+      
+      if (error) throw error;
+
+      return res.json({ status: 'uploaded', count: files.length });
+    } catch (err) {
+      console.error('[Knowledge Upload]', err);
+      return res.status(500).json({ error: err.message });
+    }
   }
+
+  // Permite listar os arquivos salvos se precisar no futuro
+  if (req.method === 'GET') {
+    const { data, error } = await supabase.from('project_knowledge').select('id, file_name, created_at').eq('project_id', projectId);
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ files: data || [] });
+  }
+
   res.status(405).json({ error: 'Method not allowed' });
 }
 
@@ -68,14 +96,13 @@ export default async function handler(req, res) {
 
   const subRoute = pathSegments[1];
 
-  // Knowledge and workspace don't need supabase
-  if (subRoute === 'knowledge') return handleKnowledge(req, res);
   if (subRoute === 'workspace') return handleWorkspace(req, res);
 
-  // Project CRUD needs supabase
+  // Everything else needs supabase
   const supabase = auth.token ? getSupabaseClient(auth.token) : null;
   if (!supabase) return res.status(500).json({ error: 'Database not configured' });
 
+  if (subRoute === 'knowledge') return handleKnowledge(req, res, supabase, projectId);
   if (!subRoute) return handleProjectById(req, res, supabase, projectId);
 
   res.status(404).json({ error: 'Unknown project sub-route' });

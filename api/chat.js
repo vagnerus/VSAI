@@ -46,6 +46,27 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'content is required' });
   }
 
+  // 🛡️ Enterprise Guardrails (Security Filter)
+  // Prevents Prompt Injection and malicious code execution
+  const forbiddenPatterns = [
+    /ignore (all )?(previous )?(instructions|prompts|rules)/i,
+    /bypass (the )?(system|rules|filters)/i,
+    /drop table/i,
+    /you are now (in )?developer mode/i,
+    /system prompt/i,
+    /forget everything/i
+  ];
+
+  for (const pattern of forbiddenPatterns) {
+    if (pattern.test(content)) {
+      console.warn(`[Guardrails] Blocked malicious prompt from user ${userId}:`, content);
+      return res.status(403).json({
+        error: 'Security Guardrail Triggered: Sua mensagem violou as diretrizes de segurança da plataforma (Ataque detectado). Acesso bloqueado.',
+        code: 'GUARDRAIL_BLOCK'
+      });
+    }
+  }
+
   // Rate limit check via Centralized Limiter
   const limitCheck = await checkRateLimit(userId);
   if (!limitCheck.allowed) {
@@ -73,6 +94,28 @@ export default async function handler(req, res) {
   const tools = getAllTools();
   const sessionId = clientSessionId || uuidv4();
 
+  // 📚 RAG: Buscar Conhecimento do Projeto
+  let extraContext = '';
+  if (projectId && supabaseAdmin) {
+    try {
+      const { data: knowledge } = await supabaseAdmin
+        .from('project_knowledge')
+        .select('file_name, content')
+        .eq('project_id', projectId);
+        
+      if (knowledge && knowledge.length > 0) {
+        extraContext = '\n\n=== CONTEXTO DA BASE DE CONHECIMENTO (RAG) ===\n';
+        extraContext += 'Você deve usar as informações abaixo para guiar suas respostas. Priorize essas informações em vez do seu conhecimento geral.\n\n';
+        knowledge.forEach(k => {
+          extraContext += `[Arquivo: ${k.file_name}]\n${k.content}\n\n`;
+        });
+        extraContext += '===============================================\n\n';
+      }
+    } catch (e) {
+      console.error('[RAG Error] Failed to fetch knowledge:', e);
+    }
+  }
+
   // Create/update session in Supabase
   if (supabaseAdmin && userId !== 'anonymous') {
     const { data: existingSession } = await supabaseAdmin
@@ -82,11 +125,12 @@ export default async function handler(req, res) {
       .single();
 
     if (!existingSession) {
+      const titleContent = typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || 'Imagem Anexada');
       await supabaseAdmin.from('sessions').insert({
         id: sessionId,
         user_id: userId,
         project_id: projectId || null,
-        title: content.substring(0, 100),
+        title: titleContent.substring(0, 100),
       });
     }
   }
@@ -110,13 +154,37 @@ export default async function handler(req, res) {
       session_id: sessionId,
       user_id: userId,
       role: 'user',
-      content,
+      content: typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || '[Imagem Anexada]'),
       model: model || 'gemini-2.5-flash',
     });
   }
 
-  const systemPrompt = `Você é o NexusAI, um assistente de IA avançado. Seja preciso, útil e responda em português.`;
+  // Injetar Custom Instructions do Perfil do Usuário
+  let customInstructions = '';
+  if (supabaseAdmin && userId !== 'anonymous') {
+    const { data: profile } = await supabaseAdmin.from('profiles').select('custom_instructions').eq('id', userId).single();
+    if (profile && profile.custom_instructions) {
+      customInstructions = `\n\n=== INSTRUÇÕES PESSOAIS DO USUÁRIO ===\n${profile.custom_instructions}\n=======================================\n\n`;
+    }
+  }
 
+  const baseSystemPrompt = `Você é o NexusAI, uma inteligência artificial de elite, útil, honesta e inofensiva.
+Seu objetivo é ser um parceiro de produtividade de alto nível.
+
+REGRAS DE OURO:
+1. Respostas Diretas: Não seja prolixo. Vá direto ao ponto a menos que o usuário peça detalhes.
+2. Gráficos e Dados: Sempre que o usuário fornecer dados numéricos ou pedir uma análise estatística, você pode gerar um gráfico. Para isso, você DEVE incluir no final da sua resposta um bloco de código JSON com o formato:
+   \`\`\`json_chart
+   {
+     "type": "bar", // ou "line", "pie"
+     "title": "Título do Gráfico",
+     "data": [ {"name": "Item 1", "value": 100}, {"name": "Item 2", "value": 200} ]
+   }
+   \`\`\`
+3. Personalidade: Você é técnico, elegante e usa emojis com moderação apenas para melhorar a legibilidade.
+4. Código: Sempre use blocos de código com a linguagem especificada.` + customInstructions;
+
+  const tools = getAllTools();
   const toolDefs = tools.map(t => ({
     name: t.name,
     description: t.description || '',
@@ -134,7 +202,7 @@ export default async function handler(req, res) {
 
       const stream = await apiClient.stream({
         model: model || process.env.GEMINI_MODEL || 'gemini-2.5-flash',
-        system: systemPrompt,
+        system: baseSystemPrompt + extraContext,
         messages: formatMessagesForAPI(mutableMessages),
         tools: toolDefs,
       });
@@ -181,8 +249,10 @@ export default async function handler(req, res) {
       mutableMessages.push(assistantMsg);
       send({ type: 'assistant', content: assistantContent, toolCalls: parsedCalls, uuid: assistantMsg.uuid });
 
-      // Save assistant message
+      // Save assistant message and deduct tokens
       if (supabaseAdmin && userId !== 'anonymous') {
+        const totalTokensUsed = totalInputTokens + totalOutputTokens;
+
         await supabaseAdmin.from('messages').insert({
           id: assistantMsg.uuid,
           session_id: sessionId,
@@ -194,6 +264,25 @@ export default async function handler(req, res) {
           tokens_output: totalOutputTokens,
           model: model || 'gemini-2.5-flash',
         });
+
+        // Deduz tokens do perfil do usuário para aplicar as quotas do plano
+        if (totalTokensUsed > 0) {
+          try {
+            const { data: userProfile } = await supabaseAdmin
+              .from('profiles')
+              .select('tokens_used_month')
+              .eq('id', userId)
+              .single();
+              
+            if (userProfile) {
+              await supabaseAdmin.from('profiles').update({
+                tokens_used_month: (userProfile.tokens_used_month || 0) + totalTokensUsed
+              }).eq('id', userId);
+            }
+          } catch(e) {
+            console.error('[Billing] Failed to update token usage', e);
+          }
+        }
       }
 
       if (stopReason !== 'tool_use' || parsedCalls.length === 0) break;

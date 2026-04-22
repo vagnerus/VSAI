@@ -17,19 +17,46 @@ const isVercel = !!process.env.VERCEL;
 
 export const WebSearchTool = buildTool({
   name: 'web_search',
-  description: 'Search the web for current information, news, and data.',
+  description: 'Pesquisa na web por informações atuais, notícias e dados em tempo real.',
   isReadOnly: () => true,
   isConcurrencySafe: () => true,
   inputSchema: {
     type: 'object',
     properties: {
-      query: { type: 'string', description: 'The search query' },
-      max_results: { type: 'number', description: 'Max results to return (default: 5)' },
+      query: { type: 'string', description: 'O termo de busca ou pergunta' },
+      max_results: { type: 'number', description: 'Número máximo de resultados (padrão: 5)' },
     },
     required: ['query'],
   },
   async call(input) {
-    return { results: [{ title: 'Web search', snippet: `Results for: ${input.query}`, url: 'https://example.com' }], note: 'Configure search API for real results' };
+    const apiKey = process.env.TAVILY_API_KEY;
+    if (!apiKey) {
+      return { 
+        results: [], 
+        note: 'A busca em tempo real requer a configuração da TAVILY_API_KEY no arquivo .env. Usando modo offline.' 
+      };
+    }
+
+    try {
+      const response = await fetch('https://api.tavily.com/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: apiKey,
+          query: input.query,
+          search_depth: 'advanced',
+          max_results: input.max_results || 5
+        })
+      });
+      const data = await response.json();
+      return { 
+        results: data.results || [], 
+        answer: data.answer,
+        query: input.query
+      };
+    } catch (err) {
+      return { error: `Erro na busca: ${err.message}` };
+    }
   },
 });
 

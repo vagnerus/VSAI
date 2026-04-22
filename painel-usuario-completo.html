@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel do Usuário — Guia Completo</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;600&display=swap');
+
+:root {
+  --bg: #f5f3ef;
+  --ink: #1a1814;
+  --ink2: #3d3a35;
+  --muted: #9a9288;
+  --border: #ddd9d3;
+  --surface: #ffffff;
+  --accent: #d4501a;
+  --accent2: #1a6fd4;
+  --accent3: #1aad6b;
+  --accent4: #c4a012;
+  --accent5: #9b1ad4;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Outfit', sans-serif;
+  min-height: 100vh;
+}
+
+/* Noise texture overlay */
+body::after {
+  content:'';
+  position:fixed; inset:0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events:none; z-index:9999; opacity:0.4;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 64px 28px 96px;
+}
+
+/* ── HEADER ── */
+.header {
+  border-bottom: 2px solid var(--ink);
+  padding-bottom: 32px;
+  margin-bottom: 64px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.header-left {}
+
+.eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 12px;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.05;
+  color: var(--ink);
+  letter-spacing: -0.03em;
+}
+
+h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.header-right {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.8;
+}
+
+/* ── INTRO ── */
+.intro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin-bottom: 64px;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.intro-box {
+  background: var(--surface);
+  padding: 28px 32px;
+  border-right: 2px solid var(--ink);
+}
+.intro-box:last-child { border-right: none; }
+
+.intro-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.intro-text {
+  font-size: 0.9rem;
+  color: var(--ink2);
+  line-height: 1.7;
+  font-weight: 400;
+}
+
+@media (max-width: 640px) {
+  .intro { grid-template-columns: 1fr; }
+  .intro-box { border-right: none; border-bottom: 2px solid var(--ink); }
+  .intro-box:last-child { border-bottom: none; }
+}
+
+/* ── SECTION ── */
+.section {
+  margin-bottom: 56px;
+  animation: rise 0.4s ease both;
+}
+
+@keyframes rise {
+  from { opacity:0; transform:translateY(16px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+.section:nth-child(1) { animation-delay:.05s }
+.section:nth-child(2) { animation-delay:.10s }
+.section:nth-child(3) { animation-delay:.15s }
+.section:nth-child(4) { animation-delay:.20s }
+.section:nth-child(5) { animation-delay:.25s }
+.section:nth-child(6) { animation-delay:.30s }
+.section:nth-child(7) { animation-delay:.35s }
+.section:nth-child(8) { animation-delay:.40s }
+.section:nth-child(9) { animation-delay:.45s }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 20px;
+}
+
+.section-num {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 11px;
+  color: var(--surface);
+  background: var(--ink);
+  padding: 4px 10px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  padding: 4px 14px;
+  background: var(--surface);
+  border: 2px solid var(--ink);
+  border-left: none;
+  flex: 1;
+}
+
+.section-title .accent { color: var(--sec-color, var(--accent)); }
+
+/* ── FEATURE ROWS ── */
+.feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.feature-row {
+  display: grid;
+  grid-template-columns: 40px 220px 1fr auto;
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+  gap: 0;
+}
+.feature-row:last-child { border-bottom: none; }
+.feature-row:hover { background: #faf8f5; }
+
+.feature-icon {
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 14px 0;
+  border-right: 1px solid var(--border);
+}
+
+.feature-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink);
+  padding: 14px 16px;
+  border-right: 1px solid var(--border);
+}
+
+.feature-detail {
+  font-size: 0.8rem;
+  color: var(--ink2);
+  padding: 14px 16px;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.feature-tags {
+  display: flex;
+  gap: 4px;
+  padding: 14px 16px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.tag {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.t-o { background: rgba(212,80,26,0.1);  color: #d4501a; border:1px solid rgba(212,80,26,0.25); }
+.t-b { background: rgba(26,111,212,0.1); color: #1a6fd4; border:1px solid rgba(26,111,212,0.25); }
+.t-g { background: rgba(26,173,107,0.1); color: #1aad6b; border:1px solid rgba(26,173,107,0.25); }
+.t-y { background: rgba(196,160,18,0.1); color: #a07a00; border:1px solid rgba(196,160,18,0.25); }
+.t-p { background: rgba(155,26,212,0.1); color: #9b1ad4; border:1px solid rgba(155,26,212,0.25); }
+.t-k { background: rgba(26,24,20,0.08);  color: #1a1814; border:1px solid rgba(26,24,20,0.2); }
+
+/* Priority dot */
+.priority {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+.p-must  { background: #d4501a; }
+.p-should{ background: #c4a012; }
+.p-nice  { background: #1aad6b; }
+
+/* ── WIDE CARDS (for big sections) ── */
+.wide-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px,1fr));
+  gap: 2px;
+  border: 2px solid var(--ink);
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.w-card {
+  background: var(--surface);
+  padding: 22px 24px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.w-card:hover { background: #faf8f5; }
+
+.w-icon { font-size: 1.5rem; margin-bottom: 10px; }
+.w-name { font-size: 0.88rem; font-weight: 700; margin-bottom: 6px; }
+.w-desc { font-size: 0.76rem; color: var(--ink2); line-height: 1.6; margin-bottom: 10px; }
+
+/* ── PRIORITY LEGEND ── */
+.legend {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  padding: 14px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.75rem;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--ink2);
+}
+
+/* ── FLOW DIAGRAM ── */
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow-x: auto;
+  padding: 24px 0;
+  border: 2px solid var(--ink);
+  border-radius: 2px;
+  background: var(--surface);
+}
+
+.flow-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.flow-circle {
+  width: 44px; height: 44px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: var(--surface);
+  display: flex; align-items:center; justify-content:center;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.flow-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink);
+  max-width: 70px;
+  line-height: 1.3;
+}
+
+.flow-arrow {
+  font-size: 1.2rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+/* ── TECH TABLE ── */
+.tech-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 2px solid var(--ink);
+  font-size: 0.8rem;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.tech-table th {
+  background: var(--ink);
+  color: var(--surface);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.tech-table td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.tech-table tr:last-child td { border-bottom: none; }
+.tech-table tr:hover td { background: #faf8f5; }
+
+.tech-table td:first-child { font-weight: 600; color: var(--ink); }
+.tech-table td:nth-child(2) { font-family: 'IBM Plex Mono', monospace; color: var(--accent2); font-size:0.74rem; }
+.tech-table td:nth-child(3) { color: var(--ink2); }
+
+/* ── CHECKLIST ── */
+.checklist {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  border: 2px solid var(--ink);
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.check-item:hover { background: #faf8f5; }
+
+.check-box {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex; align-items:center; justify-content:center;
+  font-size: 10px;
+}
+
+.check-text { font-size: 0.8rem; color: var(--ink2); line-height: 1.4; }
+.check-text strong { color: var(--ink); display: block; font-size: 0.83rem; margin-bottom: 2px; }
+
+@media (max-width: 640px) {
+  .checklist { grid-template-columns: 1fr; }
+  .feature-row { grid-template-columns: 40px 1fr; }
+  .feature-detail, .feature-tags { display: none; }
+}
+
+/* ── FOOTER ── */
+.footer {
+  margin-top: 80px;
+  border-top: 2px solid var(--ink);
+  padding-top: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-order {
+  font-size: 0.82rem;
+  color: var(--ink2);
+  line-height: 1.8;
+}
+
+.footer-order strong { color: var(--ink); }
+
+.footer-note {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: right;
+  line-height: 1.7;
+}
+
+/* section color vars */
+.s1 { --sec-color: #d4501a; }
+.s2 { --sec-color: #1a6fd4; }
+.s3 { --sec-color: #1aad6b; }
+.s4 { --sec-color: #c4a012; }
+.s5 { --sec-color: #9b1ad4; }
+.s6 { --sec-color: #d4501a; }
+.s7 { --sec-color: #1a6fd4; }
+.s8 { --sec-color: #1aad6b; }
+.s9 { --sec-color: #c4a012; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-left">
+      <div class="eyebrow">// Guia de Produto Completo</div>
+      <h1>Painel do <em>Usuário</em><br>— tudo que precisa</h1>
+    </div>
+    <div class="header-right">
+      versão 1.0<br>
+      9 módulos · 60+ features<br>
+      prioridade por módulo
+    </div>
+  </div>
+
+  <!-- INTRO -->
+  <div class="intro">
+    <div class="intro-box">
+      <div class="intro-label">O que é o painel do usuário?</div>
+      <div class="intro-text">É tudo que o usuário acessa após fazer login: o chat com a IA, histórico, configurações de conta, perfil, planos, integrações e muito mais. É a experiência principal do produto.</div>
+    </div>
+    <div class="intro-box">
+      <div class="intro-label">Como usar este guia</div>
+      <div class="intro-text">Cada feature tem uma prioridade: <strong>● Must Have</strong> (essencial para lançar), <strong>● Should Have</strong> (importante a médio prazo) e <strong>● Nice to Have</strong> (diferencial competitivo).</div>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div class="legend">
+    <span style="font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; text-transform:uppercase; color:var(--muted);">Prioridade:</span>
+    <div class="legend-item"><span class="priority p-must"></span> Must Have — lançar sem isso não faz sentido</div>
+    <div class="legend-item"><span class="priority p-should"></span> Should Have — importante para retenção</div>
+    <div class="legend-item"><span class="priority p-nice"></span> Nice to Have — diferencial / v2+</div>
+  </div>
+
+  <!-- 1. AUTENTICAÇÃO -->
+  <div class="section s1">
+    <div class="section-head">
+      <div class="section-num">01</div>
+      <div class="section-title"><span class="accent">Autenticação</span> & Acesso</div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-icon">📧</div>
+        <div class="feature-name"><span class="priority p-must"></span>Login com e-mail + senha</div>
+        <div class="feature-detail">Formulário de login com validação, mensagens de erro claras, lembrar sessão (remember me).</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span><span class="tag t-k">JWT</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔗</div>
+        <div class="feature-name"><span class="priority p-must"></span>OAuth (Google, GitHub)</div>
+        <div class="feature-detail">Login social com 1 clique. Reduz fricção no cadastro. Essencial para conversão.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span><span class="tag t-b">OAuth2</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📝</div>
+        <div class="feature-name"><span class="priority p-must"></span>Cadastro com verificação</div>
+        <div class="feature-detail">Tela de signup, e-mail de confirmação, onboarding pós-cadastro (boas-vindas, tour do produto).</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span><span class="tag t-g">Email</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔑</div>
+        <div class="feature-name"><span class="priority p-must"></span>Recuperação de senha</div>
+        <div class="feature-detail">Fluxo "esqueci minha senha" via e-mail com link de redefinição com expiração.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔐</div>
+        <div class="feature-name"><span class="priority p-should"></span>2FA (Autenticação em 2 fatores)</div>
+        <div class="feature-detail">TOTP via app (Google Authenticator) ou SMS. Aumenta segurança da conta.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span><span class="tag t-p">TOTP</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🖥️</div>
+        <div class="feature-name"><span class="priority p-should"></span>Sessões ativas</div>
+        <div class="feature-detail">Lista de dispositivos logados com IP, localização, data. Botão "encerrar sessão" por dispositivo.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔒</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Login sem senha (Magic Link)</div>
+        <div class="feature-detail">Envia link de login por e-mail. Sem necessidade de senha. Experiência mais fluida.</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. CHAT COM IA -->
+  <div class="section s2">
+    <div class="section-head">
+      <div class="section-num">02</div>
+      <div class="section-title"><span class="accent">Interface de Chat</span> com a IA</div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-icon">💬</div>
+        <div class="feature-name"><span class="priority p-must"></span>Área de mensagens</div>
+        <div class="feature-detail">Bolhas de mensagem separadas por user/AI, scroll automático para última mensagem, timestamp.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">⌨️</div>
+        <div class="feature-name"><span class="priority p-must"></span>Input com envio</div>
+        <div class="feature-detail">Textarea auto-expansível, Enter envia, Shift+Enter quebra linha, contador de caracteres, botão enviar.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🌊</div>
+        <div class="feature-name"><span class="priority p-must"></span>Streaming de resposta</div>
+        <div class="feature-detail">Tokens aparecem em tempo real conforme a IA gera. Cursor piscante durante geração. Botão "parar".</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span><span class="tag t-b">SSE</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📝</div>
+        <div class="feature-name"><span class="priority p-must"></span>Renderização Markdown</div>
+        <div class="feature-detail">Negrito, itálico, listas, tabelas, código inline e blocos de código com syntax highlighting.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span><span class="tag t-k">Markdown</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📋</div>
+        <div class="feature-name"><span class="priority p-must"></span>Copiar resposta / código</div>
+        <div class="feature-detail">Botão "copiar" em cada mensagem e em cada bloco de código. Feedback visual (ícone muda para ✓).</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔄</div>
+        <div class="feature-name"><span class="priority p-must"></span>Regenerar resposta</div>
+        <div class="feature-detail">Botão para regenerar a última resposta da IA sem precisar reenviar a mensagem.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">👍</div>
+        <div class="feature-name"><span class="priority p-should"></span>Feedback (thumbs up/down)</div>
+        <div class="feature-detail">Avaliação por mensagem. Dados vão para o admin para análise de qualidade.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">✏️</div>
+        <div class="feature-name"><span class="priority p-should"></span>Editar mensagem enviada</div>
+        <div class="feature-detail">Clicar na mensagem do usuário para editar e reenviar. Mostra versão anterior.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📎</div>
+        <div class="feature-name"><span class="priority p-should"></span>Upload de arquivos</div>
+        <div class="feature-detail">Enviar PDF, imagem ou .txt para a IA analisar. Preview do arquivo antes de enviar.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span><span class="tag t-p">Multimodal</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🎤</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Input por voz</div>
+        <div class="feature-detail">Microfone para ditado. Transcreve com Whisper API e preenche o textarea automaticamente.</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span><span class="tag t-b">Whisper</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔊</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Leitura em voz alta (TTS)</div>
+        <div class="feature-detail">Botão para ouvir a resposta da IA via Text-to-Speech (ElevenLabs ou OpenAI TTS).</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span><span class="tag t-p">TTS</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. HISTÓRICO DE CONVERSAS -->
+  <div class="section s3">
+    <div class="section-head">
+      <div class="section-num">03</div>
+      <div class="section-title"><span class="accent">Histórico</span> de Conversas</div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-icon">📂</div>
+        <div class="feature-name"><span class="priority p-must"></span>Sidebar de conversas</div>
+        <div class="feature-detail">Lista de chats anteriores na lateral. Agrupados por "hoje", "ontem", "semana passada", "mês".</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">➕</div>
+        <div class="feature-name"><span class="priority p-must"></span>Novo chat</div>
+        <div class="feature-detail">Botão prominente para iniciar nova conversa. Atalho de teclado (Ctrl/Cmd + N).</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🗑️</div>
+        <div class="feature-name"><span class="priority p-must"></span>Deletar conversa</div>
+        <div class="feature-detail">Botão de excluir com confirmação (modal ou undo toast). Exclusão permanente ou soft delete.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">✏️</div>
+        <div class="feature-name"><span class="priority p-should"></span>Renomear conversa</div>
+        <div class="feature-detail">Título auto-gerado pela IA baseado no conteúdo. Usuário pode editar manualmente com duplo clique.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔍</div>
+        <div class="feature-name"><span class="priority p-should"></span>Busca no histórico</div>
+        <div class="feature-detail">Pesquisa full-text em todas as conversas. Destaca o termo encontrado. Filtro por data.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span><span class="tag t-b">Full-text</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📌</div>
+        <div class="feature-name"><span class="priority p-should"></span>Fixar conversas</div>
+        <div class="feature-detail">Marcar conversas favoritas que aparecem sempre no topo da sidebar.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📤</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Exportar conversa</div>
+        <div class="feature-detail">Baixar conversa como .txt, .md ou .pdf. Útil para documentação.</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔗</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Compartilhar conversa</div>
+        <div class="feature-detail">Gerar link público de uma conversa (somente leitura). Expiração configurável.</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. PERFIL DO USUÁRIO -->
+  <div class="section s4">
+    <div class="section-head">
+      <div class="section-num">04</div>
+      <div class="section-title"><span class="accent">Perfil</span> do Usuário</div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-icon">👤</div>
+        <div class="feature-name"><span class="priority p-must"></span>Editar nome e foto</div>
+        <div class="feature-detail">Upload de avatar com crop, nome de exibição, bio opcional. Preview antes de salvar.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📧</div>
+        <div class="feature-name"><span class="priority p-must"></span>Alterar e-mail</div>
+        <div class="feature-detail">Novo e-mail exige confirmação no endereço antigo E no novo antes de aplicar.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔑</div>
+        <div class="feature-name"><span class="priority p-must"></span>Alterar senha</div>
+        <div class="feature-detail">Confirmar senha atual, nova senha com indicador de força. Logout em outros dispositivos após alterar.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🌐</div>
+        <div class="feature-name"><span class="priority p-should"></span>Preferências de idioma</div>
+        <div class="feature-detail">Idioma da interface e idioma padrão das respostas da IA.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span><span class="tag t-b">i18n</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🗓️</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Data de aniversário / fuso horário</div>
+        <div class="feature-detail">Para personalização de saudações e formatação correta de datas/horas na IA.</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. PERSONALIZAÇÃO DA IA -->
+  <div class="section s5">
+    <div class="section-head">
+      <div class="section-num">05</div>
+      <div class="section-title"><span class="accent">Personalização</span> da IA</div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-icon">🤖</div>
+        <div class="feature-name"><span class="priority p-should"></span>Instruções customizadas</div>
+        <div class="feature-detail">Campo "Sobre mim" e "Como a IA deve se comportar". Injetado automaticamente em todo novo chat (como Claude tem).</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span><span class="tag t-p">System Prompt</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🎭</div>
+        <div class="feature-name"><span class="priority p-should"></span>Tom de resposta</div>
+        <div class="feature-detail">Seletor: Formal / Casual / Técnico / Amigável. Altera o system prompt da IA.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📏</div>
+        <div class="feature-name"><span class="priority p-should"></span>Tamanho de resposta padrão</div>
+        <div class="feature-detail">Seletor: Conciso / Moderado / Detalhado. Influencia o max_tokens e o prompt.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🧩</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Modelos disponíveis</div>
+        <div class="feature-detail">Permitir ao usuário escolher o modelo de IA (ex: rápido vs. mais inteligente) dependendo do plano.</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span><span class="tag t-b">Multi-model</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">💾</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Memória persistente</div>
+        <div class="feature-detail">IA lembra de informações do usuário entre conversas (nome, preferências, projetos ativos).</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span><span class="tag t-p">Memory</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. PLANOS & BILLING -->
+  <div class="section s6">
+    <div class="section-head">
+      <div class="section-num">06</div>
+      <div class="section-title"><span class="accent">Planos</span> & Cobrança</div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-icon">📊</div>
+        <div class="feature-name"><span class="priority p-must"></span>Uso atual do plano</div>
+        <div class="feature-detail">Barra de progresso: mensagens usadas / limite do plano. Alerta ao chegar em 80% e 100%.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">⬆️</div>
+        <div class="feature-name"><span class="priority p-must"></span>Upgrade de plano</div>
+        <div class="feature-detail">Tela de comparação de planos clara com CTA. Integração com Stripe para pagamento.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span><span class="tag t-b">Stripe</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">💳</div>
+        <div class="feature-name"><span class="priority p-must"></span>Gerenciar método de pagamento</div>
+        <div class="feature-detail">Adicionar/remover cartões, ver cartão ativo, atualizar dados de cobrança via portal Stripe.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span><span class="tag t-b">Stripe Portal</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🧾</div>
+        <div class="feature-name"><span class="priority p-should"></span>Histórico de faturas</div>
+        <div class="feature-detail">Lista de cobranças passadas com data, valor e botão para baixar PDF da nota fiscal.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">❌</div>
+        <div class="feature-name"><span class="priority p-should"></span>Cancelar assinatura</div>
+        <div class="feature-detail">Fluxo de cancelamento com motivo de saída (churn survey), oferta de desconto antes de cancelar.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🎁</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Cupons e créditos</div>
+        <div class="feature-detail">Campo para inserir código promocional. Exibir saldo de créditos na conta.</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. NOTIFICAÇÕES -->
+  <div class="section s7">
+    <div class="section-head">
+      <div class="section-num">07</div>
+      <div class="section-title"><span class="accent">Notificações</span> & Alertas</div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-icon">🔔</div>
+        <div class="feature-name"><span class="priority p-should"></span>Central de notificações</div>
+        <div class="feature-detail">Ícone no header com badge de não lidas. Dropdown com lista de notificações recentes.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">⚙️</div>
+        <div class="feature-name"><span class="priority p-should"></span>Preferências de notificação</div>
+        <div class="feature-detail">Toggles para: alertas de uso, novidades do produto, e-mails marketing, notificações de segurança.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">⚠️</div>
+        <div class="feature-name"><span class="priority p-must"></span>Alertas de limite</div>
+        <div class="feature-detail">Banner no chat quando o usuário atinge 80% e 100% do limite do plano.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📣</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Changelog / novidades</div>
+        <div class="feature-detail">Badge "novo" no menu ao lançar features. Modal de "o que há de novo" no primeiro acesso após update.</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. APARÊNCIA & ACESSIBILIDADE -->
+  <div class="section s8">
+    <div class="section-head">
+      <div class="section-num">08</div>
+      <div class="section-title"><span class="accent">Aparência</span> & Acessibilidade</div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-icon">🌙</div>
+        <div class="feature-name"><span class="priority p-must"></span>Modo escuro / claro</div>
+        <div class="feature-detail">Toggle dark/light mode. Salvar preferência. Respeitar prefers-color-scheme do sistema.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔤</div>
+        <div class="feature-name"><span class="priority p-should"></span>Tamanho da fonte</div>
+        <div class="feature-detail">Slider ou seletor: Pequeno / Médio / Grande. Afeta a área de chat e interface.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🎨</div>
+        <div class="feature-name"><span class="priority p-nice"></span>Temas de cor</div>
+        <div class="feature-detail">Paletas pré-definidas (padrão, oceano, floresta, roxo etc.) para personalização visual.</div>
+        <div class="feature-tags"><span class="tag t-g">NICE</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">⌨️</div>
+        <div class="feature-name"><span class="priority p-should"></span>Atalhos de teclado</div>
+        <div class="feature-detail">Ctrl+K para busca, Ctrl+N para novo chat, Esc para fechar modals. Modal de ajuda com lista.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 9. SEGURANÇA & CONTA -->
+  <div class="section s9">
+    <div class="section-head">
+      <div class="section-num">09</div>
+      <div class="section-title"><span class="accent">Segurança</span> & Gerenciamento de Conta</div>
+    </div>
+    <div class="feature-list">
+      <div class="feature-row">
+        <div class="feature-icon">📜</div>
+        <div class="feature-name"><span class="priority p-must"></span>Log de atividade</div>
+        <div class="feature-detail">Histórico de logins com IP, localização, dispositivo e horário. Alerta de login suspeito por e-mail.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🔓</div>
+        <div class="feature-name"><span class="priority p-should"></span>Revogar acesso OAuth</div>
+        <div class="feature-detail">Listar apps conectados (Google, GitHub) com botão para desconectar cada um.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">📥</div>
+        <div class="feature-name"><span class="priority p-should"></span>Exportar meus dados</div>
+        <div class="feature-detail">Baixar todos os dados da conta em JSON ou ZIP (LGPD/GDPR compliance). Processado assincronamente.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span><span class="tag t-b">LGPD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🗑️</div>
+        <div class="feature-name"><span class="priority p-must"></span>Deletar conta</div>
+        <div class="feature-detail">Fluxo com confirmação de senha, aviso sobre o que será perdido e exclusão permanente de dados.</div>
+        <div class="feature-tags"><span class="tag t-o">MUST</span><span class="tag t-b">LGPD</span></div>
+      </div>
+      <div class="feature-row">
+        <div class="feature-icon">🆘</div>
+        <div class="feature-name"><span class="priority p-should"></span>Suporte / Help center</div>
+        <div class="feature-detail">Link para FAQ, chat de suporte ou formulário de contato. Widget Intercom/Crisp opcional.</div>
+        <div class="feature-tags"><span class="tag t-y">SHOULD</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TECH TABLE -->
+  <div style="margin-top:48px;">
+    <div class="section-head" style="margin-bottom:16px;">
+      <div class="section-num" style="background:#1a1814;">⚡</div>
+      <div class="section-title">Tecnologias Recomendadas por Função</div>
+    </div>
+    <table class="tech-table">
+      <thead>
+        <tr>
+          <th>Função</th>
+          <th>Lib / Serviço</th>
+          <th>Por quê usar</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Auth completo</td><td>NextAuth.js / Clerk</td><td>OAuth, JWT, sessões, magic link — tudo pronto. Clerk tem UI integrada.</td></tr>
+        <tr><td>Pagamentos</td><td>Stripe + stripe-js</td><td>Checkout, portal de clientes, webhooks de assinatura, faturas em PDF.</td></tr>
+        <tr><td>Streaming IA</td><td>Vercel AI SDK</td><td>useChat() hook com streaming nativo, suporte a múltiplos providers.</td></tr>
+        <tr><td>Markdown</td><td>react-markdown + rehype-highlight</td><td>Renderização segura de MD com syntax highlight nos blocos de código.</td></tr>
+        <tr><td>Upload arquivos</td><td>UploadThing / Cloudinary</td><td>Upload com progress, validação de tipo/tamanho, CDN automático.</td></tr>
+        <tr><td>E-mails transacionais</td><td>Resend + React Email</td><td>Templates em React, alta entregabilidade, API simples.</td></tr>
+        <tr><td>Notificações push</td><td>Novu / OneSignal</td><td>Orquestrador multi-canal: in-app, e-mail, push mobile.</td></tr>
+        <tr><td>Estado global</td><td>Zustand</td><td>Leve, sem boilerplate. Perfeito para sidebar open/close, preferências.</td></tr>
+        <tr><td>Banco de dados</td><td>Prisma + PostgreSQL</td><td>Migrations, type safety, relacionamentos fáceis.</td></tr>
+        <tr><td>Analytics de produto</td><td>PostHog (self-host)</td><td>Funil, feature flags, session replay. Open-source, LGPD-friendly.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- CHECKLIST FINAL -->
+  <div style="margin-top:48px;">
+    <div class="section-head" style="margin-bottom:16px;">
+      <div class="section-num" style="background:#1aad6b;">✓</div>
+      <div class="section-title">Checklist de UX Obrigatório</div>
+    </div>
+    <div class="checklist">
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Loading states</strong>Skeletons e spinners em toda operação assíncrona</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Error states</strong>Mensagens de erro amigáveis (não "Error 500")</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Empty states</strong>Telas vazias com ilustração e CTA (ex: "Inicie seu primeiro chat")</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Toast notifications</strong>Feedback de ações: "Salvo!", "Copiado!", "Erro ao enviar"</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Confirmação antes de destruir</strong>Modals antes de deletar conta, conversa ou dados</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Responsivo (mobile)</strong>Interface funcional em telas de 375px+</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Acessibilidade básica</strong>aria-labels, foco visível, contraste WCAG AA</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Atalhos de teclado</strong>Ctrl+K, Ctrl+N, Tab navigation funcional</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Persistência de preferências</strong>Tema, sidebar aberta/fechada, fonte salva</div></div>
+      <div class="check-item"><div class="check-box"></div><div class="check-text"><strong>Onboarding</strong>Tour ou dicas para usuário novo (primeira vez)</div></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <div class="footer-order">
+      <strong>Ordem recomendada de implementação:</strong><br>
+      1. Auth → 2. Chat básico com streaming → 3. Histórico de conversas<br>
+      4. Perfil (editar + alterar senha) → 5. Planos & Billing<br>
+      6. Personalização da IA → 7. Notificações → 8. Aparência<br>
+      9. Segurança avançada (2FA, export dados)
+    </div>
+    <div class="footer-note">
+      9 módulos<br>
+      60+ features mapeadas<br>
+      ● Must · ● Should · ● Nice
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
