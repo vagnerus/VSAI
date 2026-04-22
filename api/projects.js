@@ -10,13 +10,9 @@ export default async function handler(req, res) {
   const supabase = auth.token ? getSupabaseClient(auth.token) : null;
   const supabaseAdmin = getSupabaseAdmin(); // For some admin ops if needed
 
-  // Extract path segments if any (simulating [...path] logic)
-  // On Vercel, api/projects.js handles /api/projects
-  // To handle /api/projects/123, we'd ideally need a rewrite or different structure,
-  // but many clients send the ID in the body or as a query param 'id'.
-  // Let's handle both query.id and query.path (for local dev compat)
+  // Extract path segments
   const projectId = query.id || (query.path && query.path[0]);
-  const subRoute = query.path && query.path[1];
+  const subRoute = query.route || (query.path && query.path[1]);
 
   // ─── 1. LIST OR CREATE (No Project ID) ────────────────────────
   if (!projectId) {

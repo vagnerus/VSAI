@@ -182,7 +182,7 @@ export default async function handler(req, res) {
     res.write(`data: ${JSON.stringify(obj)}\n\n`);
   };
 
-  const apiClient = getApiClient(provider);
+  const apiClient = getApiClient(activeProvider);
   const tools = getAllTools();
   const sessionId = clientSessionId || uuidv4();
 
@@ -313,7 +313,7 @@ REGRAS DE OURO:
         send({ type: 'status', message: '🥊 Iniciando debate entre modelos (Gemini vs Claude)...' });
         const models = ['gemini-1.5-pro', 'claude-3-5-sonnet-20240620'];
         const debateResults = await Promise.all(models.map(m => 
-          apiClient.chat({ model: m, system: 'Você é um debatedor técnico. Analise o problema e dê sua melhor solução.', messages: formattedMessages })
+          apiClient.chat({ model: m, system: 'Você é um debatedor técnico. Analise o problema e dê sua melhor solução.', messages: formatMessagesForAPI(mutableMessages) })
         ));
     
         const consensus = await apiClient.chat({

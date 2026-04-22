@@ -3,7 +3,7 @@ import { getSupabaseClient } from './_lib/supabaseAdmin.js';
 
 export default async function handler(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const path = url.pathname.split('/').pop();
+  const path = req.query.route || url.pathname.split('/').pop();
 
   // 1. Health Check (No Auth needed)
   if (path === 'health') {
@@ -46,7 +46,45 @@ export default async function handler(req, res) {
     }
   }
 
-  // 3. Handle Teams Logic
+  // 3. Tools & Modules
+  if (path === 'tools') {
+    return res.json({
+      tools: [
+        { id: 't1', name: 'Web Search', category: 'Search', status: 'active' },
+        { id: 't2', name: 'SEO Analyzer', category: 'Marketing', status: 'active' },
+        { id: 't3', name: 'Code Executor', category: 'Dev', status: 'active' },
+        { id: 't4', name: 'Image Gen', category: 'Media', status: 'active' }
+      ]
+    });
+  }
+
+  // 4. Hooks & Automations
+  if (path === 'hooks') {
+    return res.json({
+      hooks: [
+        { id: 'h1', name: 'Slack Notify', event: 'session_end', status: 'active' },
+        { id: 'h2', name: 'Lead Export', event: 'new_lead', status: 'disabled' }
+      ]
+    });
+  }
+
+  // 5. System Config & Models
+  if (path === 'config' || path === 'models') {
+    return res.json({
+      models: [
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google', speed: 'ultra' },
+        { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', speed: 'high' },
+        { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', speed: 'high' }
+      ],
+      settings: {
+        defaultModel: 'gemini-2.5-flash',
+        maxTokens: 4096,
+        safetyMode: 'enterprise'
+      }
+    });
+  }
+
+  // 6. Handle Teams Logic
   if (path === 'teams' || req.query.service === 'teams') {
     if (req.method === 'GET') {
       const { data, error } = await supabase.from('team_members').select('role, teams(id, name, owner_id)').eq('user_id', auth.user.id);
