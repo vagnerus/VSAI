@@ -879,8 +879,7 @@ function ChatPage({ projectId }) {
                     )}
                     <div dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content.find(c => c.type === 'text')?.text || '') }} />
                   </>
-                ) : (
-                {msg.role === 'assistant' && typeof msg.content === 'string' && msg.content.includes('```json_chart') ? (
+                ) : msg.role === 'assistant' && typeof msg.content === 'string' && msg.content.includes('```json_chart') ? (
                   <>
                     <div dangerouslySetInnerHTML={{ __html: parseMarkdown(msg.content.split('```json_chart')[0]) }} />
                     <DynamicChart json={msg.content.split('```json_chart')[1].split('```')[0]} />
