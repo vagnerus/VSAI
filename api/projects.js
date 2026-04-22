@@ -1,82 +1,81 @@
-/**
- * GET/POST /api/projects
- * Lists or creates projects for the authenticated user.
- * Uses Supabase if configured, falls back to in-memory for local dev.
- */
-
 import { requireAuth } from './_lib/authMiddleware.js';
-import { getSupabaseClient } from './_lib/supabaseAdmin.js';
-
-// In-memory fallback for local dev
-let localProjects = [];
+import { getSupabaseClient, getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 
 export default async function handler(req, res) {
-  // Try auth (optional for local dev)
   const auth = await requireAuth(req, res);
   if (!auth) return;
 
+  const { method, query, body } = req;
   const userId = auth.user.id;
   const supabase = auth.token ? getSupabaseClient(auth.token) : null;
+  const supabaseAdmin = getSupabaseAdmin(); // For some admin ops if needed
 
-  if (req.method === 'GET') {
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false });
+  // Extract path segments if any (simulating [...path] logic)
+  // On Vercel, api/projects.js handles /api/projects
+  // To handle /api/projects/123, we'd ideally need a rewrite or different structure,
+  // but many clients send the ID in the body or as a query param 'id'.
+  // Let's handle both query.id and query.path (for local dev compat)
+  const projectId = query.id || (query.path && query.path[0]);
+  const subRoute = query.path && query.path[1];
 
+  // ─── 1. LIST OR CREATE (No Project ID) ────────────────────────
+  if (!projectId) {
+    if (method === 'GET') {
+      if (!supabase) return res.json({ projects: [] }); // Fallback
+      const { data, error } = await supabase.from('projects').select('*').eq('user_id', userId).order('updated_at', { ascending: false });
       if (error) return res.status(500).json({ error: error.message });
-
-      const projects = (data || []).map(p => ({
-        id: p.id,
-        name: p.name,
-        description: p.description || '',
-        systemPrompt: p.system_prompt || '',
-        workspacePath: p.workspace_path || '',
-        language: p.language || 'Agnóstico',
-        createdAt: p.created_at,
-        knowledgeCount: 0,
-      }));
-      return res.json({ projects });
+      return res.json({ projects: data || [] });
     }
 
-    // Fallback: local
-    return res.json({ projects: localProjects.filter(p => p.userId === userId) });
-  }
-
-  if (req.method === 'POST') {
-    const { name, description, language } = req.body || {};
-    if (!name) return res.status(400).json({ error: 'Name is required' });
-
-    if (supabase) {
-      const { data, error } = await supabase
-        .from('projects')
-        .insert({
-          user_id: userId,
-          name,
-          description: description || '',
-          language: language || 'Agnóstico',
-        })
-        .select()
-        .single();
-
+    if (method === 'POST') {
+      const { name, description, language } = body || {};
+      if (!name) return res.status(400).json({ error: 'Name is required' });
+      if (!supabase) return res.status(500).json({ error: 'Database not configured' });
+      const { data, error } = await supabase.from('projects').insert({ user_id: userId, name, description: description || '', language: language || 'Agnóstico' }).select().single();
       if (error) return res.status(500).json({ error: error.message });
       return res.json({ status: 'created', project: data });
     }
+  }
 
-    // Fallback: local
-    const id = name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    const project = {
-      id, userId, name,
-      description: description || '',
-      language: language || 'Agnóstico',
-      systemPrompt: '', workspacePath: '',
-      createdAt: new Date().toISOString(),
-      knowledgeCount: 0,
-    };
-    localProjects.push(project);
-    return res.json({ status: 'created', project });
+  // ─── 2. SPECIFIC PROJECT OPS (With Project ID) ────────────────
+  if (!supabase) return res.status(500).json({ error: 'Database not configured' });
+
+  // subRoute: /api/projects/:id/knowledge
+  if (subRoute === 'knowledge') {
+    if (method === 'POST') {
+      const { files } = body || {};
+      if (!files || !Array.isArray(files)) return res.status(400).json({ error: 'Files required' });
+      const inserts = files.map(f => ({ project_id: projectId, file_name: f.name, content: f.content }));
+      const { error } = await supabase.from('project_knowledge').insert(inserts);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ status: 'uploaded', count: files.length });
+    }
+    if (method === 'GET') {
+      const { data, error } = await supabase.from('project_knowledge').select('*').eq('project_id', projectId);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.json({ files: data || [] });
+    }
+  }
+
+  // GET PROJECT BY ID
+  if (method === 'GET') {
+    const { data, error } = await supabase.from('projects').select('*').eq('id', projectId).single();
+    if (error) return res.status(404).json({ error: 'Project not found' });
+    return res.json({ project: data });
+  }
+
+  // UPDATE PROJECT
+  if (method === 'PUT') {
+    const { data, error } = await supabase.from('projects').update(body).eq('id', projectId).select().single();
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ status: 'updated', project: data });
+  }
+
+  // DELETE PROJECT
+  if (method === 'DELETE') {
+    const { error } = await supabase.from('projects').delete().eq('id', projectId);
+    if (error) return res.status(500).json({ error: error.message });
+    return res.json({ status: 'deleted' });
   }
 
   res.status(405).json({ error: 'Method not allowed' });
