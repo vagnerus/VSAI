@@ -274,7 +274,7 @@ REGRAS DE OURO:
       user_id: userId,
       role: 'user',
       content: typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || '[Imagem Anexada]'),
-      model: model || 'gemini-2.5-flash',
+      model: activeModel || 'gemini-2.5-flash',
     });
   }
 
@@ -434,7 +434,7 @@ REGRAS DE OURO:
           tool_calls: parsedCalls.length > 0 ? parsedCalls : null,
           tokens_input: totalInputTokens,
           tokens_output: totalOutputTokens,
-          model: model || 'gemini-2.5-flash',
+          model: activeModel || 'gemini-2.5-flash',
         });
       }
 
@@ -490,7 +490,7 @@ REGRAS DE OURO:
       await supabaseAdmin.from('usage_logs').insert({
         user_id: userId,
         session_id: sessionId,
-        model: model || 'gemini-2.5-flash',
+        model: activeModel || 'gemini-2.5-flash',
         tokens_input: totalInputTokens,
         tokens_output: totalOutputTokens,
         cost_usd: usageCost,

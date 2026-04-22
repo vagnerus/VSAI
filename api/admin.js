@@ -19,9 +19,7 @@ export default async function handler(req, res) {
 
   const supabase = getSupabaseAdmin();
   const url = new URL(req.url, `http://${req.headers.host}`);
-  const segments = url.pathname.split('/').filter(Boolean);
-  // Expected path: /api/admin/users or /api/admin?action=users
-  const action = segments[1] || req.query.action || req.query.path?.[0];
+  const action = req.query.action || req.query.route || url.pathname.split('/').pop();
 
   try {
     if (action === 'users') {
