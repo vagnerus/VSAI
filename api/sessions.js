@@ -1,47 +1,53 @@
 import { requireAuth } from './_lib/authMiddleware.js';
-import { getSupabaseClient } from './_lib/supabaseAdmin.js';
+import { query } from './_lib/db.js';
 
 export default async function handler(req, res) {
   const auth = await requireAuth(req, res);
   if (!auth) return;
 
-  const supabase = auth.token ? getSupabaseClient(auth.token) : null;
-  const sessionId = req.query.id || req.body?.id || (req.query.path && req.query.path[0]);
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const id = req.query.id || url.pathname.split('/').pop();
 
   if (req.method === 'GET') {
-    if (!supabase) return res.json({ sessions: [], messages: [] });
-
-    // ─── Case A: Specific Session Detail ──────────────────────
-    if (sessionId) {
-      // In a real app, we'd fetch messages here
-      return res.json({ sessionId, messages: [] });
+    try {
+      if (id && id !== 'sessions') {
+        // Fetch specific session
+        const { rows: sessionRows } = await query('SELECT * FROM sessions WHERE id = $1 AND user_id = $2', [id, auth.user.id]);
+        if (sessionRows.length === 0) return res.status(404).json({ error: 'Sessão não encontrada' });
+        
+        // Fetch messages for session
+        const { rows: messageRows } = await query('SELECT * FROM messages WHERE session_id = $1 ORDER BY created_at ASC', [id]);
+        
+        const sessionData = sessionRows[0];
+        sessionData.messages = messageRows;
+        return res.status(200).json(sessionData);
+      } else {
+        // Fetch all sessions with message count
+        const { rows } = await query(`
+          SELECT s.*, COUNT(m.id) as message_count 
+          FROM sessions s 
+          LEFT JOIN messages m ON s.id = m.session_id 
+          WHERE s.user_id = $1 
+          GROUP BY s.id 
+          ORDER BY s.updated_at DESC
+        `, [auth.user.id]);
+        return res.status(200).json(rows);
+      }
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
     }
-
-    // ─── Case B: List Sessions ───────────────────────────────
-    const limit = parseInt(req.query.limit) || 20;
-    const { data, error } = await supabase
-      .from('sessions')
-      .select('*, messages(count)')
-      .eq('user_id', auth.user.id)
-      .order('updated_at', { ascending: false })
-      .limit(limit);
-
-    if (error) return res.status(500).json({ error: error.message });
-    
-    const formatted = data.map(s => ({
-      ...s,
-      message_count: s.messages?.[0]?.count || 0
-    }));
-
-    return res.json({ sessions: formatted });
   }
 
   if (req.method === 'DELETE') {
-    if (!sessionId || !supabase) return res.status(400).json({ error: 'Session ID required' });
-    const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ deleted: true });
+    try {
+      if (!id) return res.status(400).json({ error: 'ID é obrigatório' });
+      const { rowCount } = await query('DELETE FROM sessions WHERE id = $1 AND user_id = $2', [id, auth.user.id]);
+      if (rowCount === 0) return res.status(404).json({ error: 'Sessão não encontrada' });
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
   }
 
-  res.status(405).json({ error: 'Method not allowed' });
+  return res.status(405).json({ error: 'Method not allowed' });
 }

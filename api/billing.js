@@ -1,6 +1,5 @@
 import Stripe from 'stripe';
 import { requireAuth } from './_lib/authMiddleware.js';
-import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -90,10 +89,8 @@ async function handleWebhook(req, res) {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
-  if (!supabaseAdmin) return res.status(500).json({ error: 'Database not configured' });
-
   try {
+    const { query } = await import('./_lib/db.js');
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
@@ -101,7 +98,7 @@ async function handleWebhook(req, res) {
         const plan = session.metadata?.plan || 'pro';
         if (userId) {
           let tokensLimit = plan === 'pro' ? 500000 : (plan === 'premium' ? 5000000 : 50000);
-          await supabaseAdmin.from('profiles').update({ plan, tokens_limit: tokensLimit }).eq('id', userId);
+          await query('UPDATE profiles SET plan = $1, tokens_limit = $2, updated_at = NOW() WHERE id = $3', [plan, tokensLimit, userId]);
         }
         break;
       }

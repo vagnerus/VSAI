@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from './supabaseAdmin.js';
+import { query } from './db.js';
 
 const PLAN_LIMITS = {
   free: {
@@ -25,21 +25,18 @@ export async function checkRateLimit(userId) {
     return { allowed: true }; // Permite dev local
   }
 
-  const supabase = getSupabaseAdmin();
-  if (!supabase) return { allowed: true }; // Se não há DB configurado, ignora limites
-
   try {
     // Buscar perfil do usuário
-    const { data: profile, error: profileErr } = await supabase
-      .from('profiles')
-      .select('plan, role, tokens_used_month, tokens_limit')
-      .eq('id', userId)
-      .single();
+    const { rows: profileRows } = await query(
+      'SELECT plan, role, tokens_used_month, tokens_limit FROM profiles WHERE id = $1',
+      [userId]
+    );
 
-    if (profileErr || !profile) {
-      console.error('[RateLimiter] Erro ao buscar perfil:', profileErr);
+    if (profileRows.length === 0) {
       return { allowed: true };
     }
+
+    const profile = profileRows[0];
 
     if (profile.role === 'banned') {
       return {
@@ -67,21 +64,19 @@ export async function checkRateLimit(userId) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const { count, error: msgErr } = await supabase
-      .from('messages')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('role', 'user')
-      .gte('created_at', today.toISOString());
+    const { rows: msgRows } = await query(
+      "SELECT COUNT(*) FROM messages WHERE user_id = $1 AND role = 'user' AND created_at >= $2",
+      [userId, today.toISOString()]
+    );
 
-    if (!msgErr && count !== null) {
-      if (count >= limits.maxMessagesPerDay) {
-        return {
-          allowed: false,
-          reason: `Limite de mensagens diárias atingido (${limits.maxMessagesPerDay}/dia no plano ${plan.toUpperCase()}). Retorne amanhã ou faça upgrade.`,
-          plan
-        };
-      }
+    const count = parseInt(msgRows[0].count, 10);
+
+    if (count >= limits.maxMessagesPerDay) {
+      return {
+        allowed: false,
+        reason: `Limite de mensagens diárias atingido (${limits.maxMessagesPerDay}/dia no plano ${plan.toUpperCase()}). Retorne amanhã ou faça upgrade.`,
+        plan
+      };
     }
 
     return { allowed: true, plan };

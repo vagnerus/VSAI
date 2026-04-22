@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabaseClient.js';
 
 const AuthContext = createContext(null);
+const API_BASE = '/api'; // Adjusted for Vercel
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
@@ -15,114 +15,96 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = useCallback(async (userId) => {
+  // Helper to fetch custom API
+  const apiCall = async (path, body) => {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    return data;
+  };
+
+  const loadSessionFromStorage = useCallback(() => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      if (!error && data) setProfile(data);
+      const storedToken = localStorage.getItem('nexus_access_token');
+      const storedUser = localStorage.getItem('nexus_user');
+      
+      if (storedToken && storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setSession({ access_token: storedToken });
+        setUser(parsedUser);
+        setProfile(parsedUser);
+      }
     } catch (e) {
-      console.warn('[Auth] Profile fetch failed:', e);
+      console.warn('[Auth] Failed to load session from storage', e);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    console.log('[Auth] Initializing AuthProvider...');
-    
-    // Safety timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.log('[Auth] Safety timeout triggered, forcing loading to false.');
-      setLoading(false);
-    }, 3000);
-
-    // Get initial session
-    console.log('[Auth] Calling getSession()...');
-    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
-      console.log('[Auth] getSession() resolved!', s ? 'User logged in' : 'No session');
-      setSession(s);
-      setUser(s?.user || null);
-      if (s?.user) {
-        await fetchProfile(s.user.id);
-      }
-      clearTimeout(timeoutId);
-      setLoading(false);
-    }).catch(err => {
-      console.error('[Auth] getSession failed:', err);
-      clearTimeout(timeoutId);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, s) => {
-        console.log('[Auth] onAuthStateChange event:', event);
-        setSession(s);
-        setUser(s?.user || null);
-        if (s?.user) {
-          await fetchProfile(s.user.id);
-        } else {
-          setProfile(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => {
-      clearTimeout(timeoutId);
-      subscription.unsubscribe();
-    };
-  }, [fetchProfile]);
+    console.log('[Auth] Initializing Custom AuthProvider...');
+    loadSessionFromStorage();
+  }, [loadSessionFromStorage]);
 
   const signInWithEmail = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
+    setLoading(true);
+    try {
+      const data = await apiCall('/auth?action=login', { email, password });
+      
+      localStorage.setItem('nexus_access_token', data.session.access_token);
+      localStorage.setItem('nexus_user', JSON.stringify(data.user));
+      
+      setSession(data.session);
+      setUser(data.user);
+      setProfile(data.user);
+      return data;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signUpWithEmail = async (email, password, fullName) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-      },
-    });
-    if (error) throw error;
-    return data;
+    setLoading(true);
+    try {
+      const data = await apiCall('/auth?action=register', { email, password, full_name: fullName });
+      
+      localStorage.setItem('nexus_access_token', data.session.access_token);
+      localStorage.setItem('nexus_user', JSON.stringify(data.user));
+      
+      setSession(data.session);
+      setUser(data.user);
+      setProfile(data.user);
+      return data;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signInWithOAuth = async (provider) => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) throw error;
-    return data;
+    throw new Error('OAuth login não é suportado pelo sistema de banco local ainda.');
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    localStorage.removeItem('nexus_access_token');
+    localStorage.removeItem('nexus_user');
     setUser(null);
     setProfile(null);
     setSession(null);
   };
 
   const resetPassword = async (email) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    if (error) throw error;
+    throw new Error('Recuperação de senha desabilitada no modo autônomo.');
   };
 
   const getAuthHeaders = async () => {
-    const { data: { session: currentSession } } = await supabase.auth.getSession();
-    if (!currentSession) throw new Error('No active session');
+    const token = localStorage.getItem('nexus_access_token');
+    if (!token) throw new Error('No active session');
     return {
-      'Authorization': `Bearer ${currentSession.access_token}`
+      'Authorization': `Bearer ${token}`
     };
   };
 
@@ -140,7 +122,7 @@ export function AuthProvider({ children }) {
     signOut,
     resetPassword,
     getAuthHeaders,
-    refreshProfile: () => user && fetchProfile(user.id),
+    refreshProfile: () => { /* No-op unless we build a /api/auth?action=me endpoint */ },
   };
 
   return (

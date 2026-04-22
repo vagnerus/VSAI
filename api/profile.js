@@ -1,36 +1,33 @@
 import { requireAuth } from './_lib/authMiddleware.js';
-import { getSupabaseClient } from './_lib/supabaseAdmin.js';
+import { query } from './_lib/db.js';
 
 export default async function handler(req, res) {
   const auth = await requireAuth(req, res);
   if (!auth) return;
 
-  const supabase = getSupabaseClient(auth.token);
-  if (!supabase) return res.status(500).json({ error: 'Database not configured' });
-
   if (req.method === 'GET') {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('custom_instructions, plan, tokens_used_month, tokens_limit')
-      .eq('id', auth.user.id)
-      .single();
-
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ profile: data || {} });
+    try {
+      const { rows } = await query(
+        'SELECT custom_instructions, plan, tokens_used_month, tokens_limit FROM profiles WHERE id = $1',
+        [auth.user.id]
+      );
+      return res.json({ profile: rows[0] || {} });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
   }
 
   if (req.method === 'POST') {
     const { custom_instructions } = req.body;
-    
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ custom_instructions })
-      .eq('id', auth.user.id)
-      .select()
-      .single();
-
-    if (error) return res.status(500).json({ error: error.message });
-    return res.json({ status: 'updated', profile: data });
+    try {
+      const { rows } = await query(
+        'UPDATE profiles SET custom_instructions = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
+        [custom_instructions, auth.user.id]
+      );
+      return res.json({ status: 'updated', profile: rows[0] });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
   }
 
   res.status(405).json({ error: 'Method not allowed' });

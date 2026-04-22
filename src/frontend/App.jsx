@@ -76,12 +76,12 @@ const MessageBubble = React.memo(({ message, onCopy }) => {
 async function api(path, options = {}) {
   let token = null;
   try {
-    const mod = await import('./lib/supabaseClient.js');
-    token = await mod.getAuthToken();
-  } catch (e) { /* supabase not available */ }
+    token = localStorage.getItem('nexus_access_token');
+  } catch (e) { /* localStorage not available */ }
 
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
+
 
   try {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -827,7 +827,6 @@ function ChatPage({ projectId }) {
   };
 
   const [selectedProvider, setSelectedProvider] = useState('google');
-  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096, edgePriority: 'auto' });
   const [showSettings, setShowSettings] = useState(false);
 
@@ -889,8 +888,7 @@ function ChatPage({ projectId }) {
       // Get auth token for SSE request
       let authHeaders = { 'Content-Type': 'application/json' };
       try {
-        const mod = await import('./lib/supabaseClient.js');
-        const token = await mod.getAuthToken();
+        const token = localStorage.getItem('nexus_access_token');
         if (token) authHeaders['Authorization'] = `Bearer ${token}`;
       } catch (e) { /* no auth */ }
 

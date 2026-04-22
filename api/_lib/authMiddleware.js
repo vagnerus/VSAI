@@ -1,14 +1,17 @@
 /**
- * NexusAI — Auth Middleware for Vercel Serverless
- * Verifica JWT do Supabase e extrai user info
+ * NexusAI — Custom Auth Middleware
+ * Verifica JWT gerado internamente e extrai user info
  */
 
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { jwtVerify } from 'jose';
+import dotenv from 'dotenv';
 
-let jwks = null;
+dotenv.config();
+
+const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || 'fallback_secret_key');
 
 /**
- * Verifica o token JWT do Supabase
+ * Verifica o token JWT
  * @returns {{ user: { id: string, email: string, role: string } }} | null
  */
 export async function verifyAuth(req) {
@@ -18,29 +21,15 @@ export async function verifyAuth(req) {
   }
 
   const token = authHeader.replace('Bearer ', '');
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || '';
-
-  if (!supabaseUrl) {
-    // No Supabase configured — allow passthrough for local dev
-    return { user: { id: 'local-dev', email: 'dev@local', role: 'admin' } };
-  }
 
   try {
-    // Use JWKS endpoint for verification
-    if (!jwks) {
-      jwks = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`));
-    }
-
-    const { payload } = await jwtVerify(token, jwks, {
-      issuer: `${supabaseUrl}/auth/v1`,
-      audience: 'authenticated',
-    });
+    const { payload } = await jwtVerify(token, SECRET);
 
     return {
       user: {
-        id: payload.sub,
+        id: payload.id,
         email: payload.email,
-        role: payload.role || 'authenticated',
+        role: payload.role || 'user',
       },
       token,
     };
@@ -70,23 +59,18 @@ export async function requireAdmin(req, res) {
   if (!auth) return null;
 
   try {
-    const { getSupabaseAdmin } = await import('./supabaseAdmin.js');
-    const supabase = getSupabaseAdmin();
+    const { query } = await import('./db.js');
     
     // Check role in profiles table
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', auth.user.id)
-      .single();
+    const { rows } = await query('SELECT role FROM profiles WHERE id = $1', [auth.user.id]);
 
-    if (!profile || (profile.role !== 'admin' && profile.role !== 'superadmin')) {
+    if (rows.length === 0 || (rows[0].role !== 'admin' && rows[0].role !== 'superadmin')) {
       res.status(403).json({ error: 'Acesso negado. Apenas administradores.' });
       return null;
     }
 
     // Attach role to auth object
-    auth.user.appRole = profile.role;
+    auth.user.appRole = rows[0].role;
     return auth;
   } catch (err) {
     console.error('[Auth] Error checking admin role:', err);
