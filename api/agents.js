@@ -1,18 +1,13 @@
-/**
- * GET/POST/DELETE /api/agents — Manage autonomous agents
- */
 import { getSupabaseAdmin } from './_lib/supabaseAdmin.js';
-import { verifyAuth } from './_lib/authMiddleware.js';
+import { requireAuth, requireAdmin } from './_lib/authMiddleware.js';
 
 export default async function handler(req, res) {
-  const auth = await verifyAuth(req);
-  if (!auth || auth.role !== 'admin') {
-    return res.status(403).json({ error: 'Acesso negado. Apenas administradores podem gerenciar agentes.' });
-  }
-
-  const supabase = getSupabaseAdmin();
-
+  // Allow GET for all authenticated users to see available agents
   if (req.method === 'GET') {
+    const auth = await requireAuth(req, res);
+    if (!auth) return;
+    
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('agents')
       .select('*')
@@ -21,6 +16,12 @@ export default async function handler(req, res) {
     if (error) return res.status(500).json({ error: error.message });
     return res.status(200).json(data);
   }
+
+  // Require ADMIN for sensitive operations (POST/DELETE)
+  const auth = await requireAdmin(req, res);
+  if (!auth) return;
+
+  const supabase = getSupabaseAdmin();
 
   if (req.method === 'POST') {
     const { name, description, model, system_prompt, tools, icon } = req.body;

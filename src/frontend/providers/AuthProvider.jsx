@@ -39,12 +39,14 @@ export function AuthProvider({ children }) {
 
     // Get initial session
     console.log('[Auth] Calling getSession()...');
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: s } }) => {
       console.log('[Auth] getSession() resolved!', s ? 'User logged in' : 'No session');
-      clearTimeout(timeoutId);
       setSession(s);
       setUser(s?.user || null);
-      if (s?.user) fetchProfile(s.user.id);
+      if (s?.user) {
+        await fetchProfile(s.user.id);
+      }
+      clearTimeout(timeoutId);
       setLoading(false);
     }).catch(err => {
       console.error('[Auth] getSession failed:', err);
