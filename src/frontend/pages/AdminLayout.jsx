@@ -625,6 +625,47 @@ export default function AdminLayout() {
     </div>
   );
 
+  const renderSingularity = () => (
+    <div className="animate-in">
+      <div style={{ marginBottom: 24 }}>
+        <h3 style={{ fontSize: 20, fontWeight: 800 }}>🔮 Singularidade & Inteligência Pura</h3>
+        <p style={{ color: 'var(--text-secondary)' }}>Módulos de soberania absoluta, criptografia quântica e evolução autônoma.</p>
+      </div>
+
+      <div className="grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        <div className="card" style={{ padding: 20, background: 'rgba(239, 68, 68, 0.05)', border: '1px solid var(--accent-danger)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h4 style={{ margin: 0 }}>👁️ God Mode (Module 250)</h4>
+            <span className="badge badge-danger">Sovereign</span>
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Controle administrativo global sobre todos os enxames de agentes e instâncias.</p>
+          <button className="btn btn-primary" style={{ width: '100%', marginTop: 15, background: 'var(--accent-danger)', border: 'none' }}>ASSUMIR CONTROLE TOTAL</button>
+        </div>
+
+        <div className="card" style={{ padding: 20, border: '1px solid #10b981' }}>
+          <h4>⚛️ Quantum-Safe Vault (211)</h4>
+          <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 12 }}>Proteção contra ataques de computação quântica via algoritmos de reticulados.</p>
+          <div className="badge badge-success">Lattice-based Active</div>
+        </div>
+      </div>
+
+      <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginTop: 24 }}>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>LIQUID LEARNING (221)</div>
+          <div style={{ fontSize: 13, marginTop: 8 }}>Adaptação contínua: <strong>Ativa</strong>.</div>
+        </div>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>ZERO-RETRAIN (222)</div>
+          <div style={{ fontSize: 13, marginTop: 8 }}>Estado: <strong>Sincronizado</strong>.</div>
+        </div>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)' }}>EMOTIONAL ALIGN (230)</div>
+          <div style={{ fontSize: 13, marginTop: 8 }}>Empatia IA: <span style={{ color: '#10b981' }}>98%</span>.</div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderGeospatial = () => (
     <div className="animate-in">
       <div style={{ marginBottom: 24 }}>
@@ -1279,7 +1320,7 @@ export default function AdminLayout() {
 
       <div className="grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
         <div className="card" style={{ padding: 24, textAlign: 'center', border: '2px solid var(--accent)' }}>
-            <h4 style={{ color: var(--accent) }}>📜 Akasha Core (900)</h4>
+            <h4 style={{ color: 'var(--accent)' }}>📜 Akasha Core (900)</h4>
             <p style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Acesso ao conhecimento universal.</p>
             <div className="badge badge-success" style={{ marginTop: 10 }}>SYNCHRONIZED</div>
         </div>
@@ -1323,6 +1364,16 @@ export default function AdminLayout() {
       case 'reasoning': return renderReasoning();
       case 'operations': return renderOperations();
       case 'twin': return renderDigitalTwin();
+      case 'singularity': return renderSingularity();
+      case 'geospatial': return renderGeospatial();
+      case 'human': return renderHumanCentric();
+      case 'xr': return renderXR();
+      case 'sustainability': return renderSustainability();
+      case 'legado': return renderLegado();
+      case 'ascension': return renderAscension();
+      case 'multiverse': return renderMultiverse();
+      case 'void': return renderVoid();
+      case 'omega': return renderOmega();
       case 'compliance': return renderCompliance();
       case 'settings': return renderSettings();
       default: return renderDashboard();
@@ -1631,24 +1682,7 @@ export default function AdminLayout() {
         {loading ? (
           <div className="loading-spinner" style={{ margin: '40px auto' }}></div>
         ) : (
-          <>
-            {activeTab === 'dashboard' && renderDashboard()}
-            {activeTab === 'users' && renderUsers()}
-            {activeTab === 'database' && renderDatabase()}
-            {activeTab === 'agents' && renderAgents()}
-            {activeTab === 'bi' && renderBI()}
-            {activeTab === 'twin' && renderDigitalTwin()}
-            {activeTab === 'geospatial' && renderGeospatial()}
-            {activeTab === 'human' && renderHumanCentric()}
-            {activeTab === 'xr' && renderXR()}
-            {activeTab === 'sustainability' && renderSustainability()}
-            {activeTab === 'legado' && renderLegado()}
-            {activeTab === 'ascension' && renderAscension()}
-            {activeTab === 'multiverse' && renderMultiverse()}
-            {activeTab === 'void' && renderVoid()}
-            {activeTab === 'omega' && renderOmega()}
-            {activeTab === 'compliance' && renderCompliance()}
-          </>
+          renderPage()
         )}
       </div>
 
