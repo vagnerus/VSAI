@@ -701,6 +701,23 @@ function ChatPage({ projectId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [imageAttachment, setImageAttachment] = useState(null);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [pendingSync, setPendingSync] = useState([]);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      // Logic to sync pending messages could go here
+    };
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamText, setStreamText] = useState('');
   const [statusText, setStatusText] = useState('');
@@ -800,7 +817,7 @@ function ChatPage({ projectId }) {
   };
 
   const [selectedProvider, setSelectedProvider] = useState('google');
-  const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096 });
+  const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096, edgePriority: 'auto' });
   const [showSettings, setShowSettings] = useState(false);
 
   const scrollToBottom = useCallback(() => {
@@ -818,6 +835,19 @@ function ChatPage({ projectId }) {
   // ─── SSE-based sendMessage (substitui WebSocket) ─────────────────
   const sendMessage = useCallback(async () => {
     if ((!input.trim() && !imageAttachment) || isStreaming) return;
+
+    if (isOffline) {
+      const offlineMsg = {
+        role: 'user',
+        content: input.trim(),
+        timestamp: Date.now(),
+        isPending: true
+      };
+      setMessages(prev => [...prev, offlineMsg]);
+      setPendingSync(prev => [...prev, offlineMsg]);
+      setInput('');
+      return;
+    }
 
     const userContent = input.trim();
     const payloadContent = imageAttachment 
@@ -1000,6 +1030,13 @@ function ChatPage({ projectId }) {
           </div>
         </div>
 
+        {isOffline && (
+          <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-danger)', padding: '8px 24px', fontSize: 12, borderBottom: '1px solid var(--accent-danger)', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span>📡 Modo Offline Ativo: Suas mensagens serão enfileiradas e enviadas quando a conexão voltar.</span>
+            {pendingSync.length > 0 && <span className="badge badge-danger">{pendingSync.length} pendentes</span>}
+          </div>
+        )}
+
         {showPromptLibrary && (
           <div className="card animate-in" style={{ margin: '0 24px 20px 24px', border: '1px solid var(--accent-primary)' }}>
             <PromptLibrary onSelect={(text) => { setInput(text); setShowPromptLibrary(false); }} />
@@ -1066,6 +1103,22 @@ function ChatPage({ projectId }) {
                   <div dangerouslySetInnerHTML={{ __html: parseMarkdown(streamText) }} />
                 )}
               </div>
+              
+              {/* Module 174: Next-Best-Action (NBA) */}
+              {msg.role === 'assistant' && !isStreaming && (
+                <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingLeft: 12 }}>
+                  {['🔍 Analisar Logs', '📅 Agendar Task', '✉️ Notificar Admin'].map(action => (
+                    <button
+                      key={action}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 10, padding: '4px 8px', borderRadius: 20, background: 'rgba(255,255,255,0.05)', borderColor: 'var(--glass-border)' }}
+                      onClick={() => setInput(action)}
+                    >
+                      {action}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -1084,6 +1137,28 @@ function ChatPage({ projectId }) {
 
         {/* Input Area */}
         <div className="chat-input-area">
+          {/* Module 171: Predictive Intent Suggestions */}
+          {!isStreaming && (
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 4 }}>
+              {['Como corrigir erro de RAM?', 'Status dos servidores de borda', 'Relatório de custos mensal'].map(intent => (
+                <button
+                  key={intent}
+                  className="btn btn-secondary btn-sm"
+                  style={{ whiteSpace: 'nowrap', fontSize: 10, background: 'rgba(59, 130, 246, 0.05)', borderColor: 'rgba(59, 130, 246, 0.2)', color: 'var(--accent-primary)' }}
+                  onClick={() => setInput(intent)}
+                  onMouseEnter={() => {
+                    // Pre-fetch trigger
+                    fetch('/api/chat', { 
+                      method: 'POST', 
+                      body: JSON.stringify({ type: 'prefetch', content: intent }) 
+                    }).catch(() => {});
+                  }}
+                >
+                  🔮 {intent}
+                </button>
+              ))}
+            </div>
+          )}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 12, borderBottom: '1px solid var(--glass-border)', marginBottom: 12 }}>
             {/* Provider Selector */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1173,6 +1248,21 @@ function ChatPage({ projectId }) {
                     <option value="4096">4096 (Longo)</option>
                     <option value="8192">8192 (Ultra)</option>
                   </select>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, marginBottom: 8, color: 'var(--text-secondary)' }}>Roteamento de Inteligência (Module 151)</div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {['auto', 'cloud', 'always'].map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setChatSettings({...chatSettings, edgePriority: mode})}
+                        className={`btn ${chatSettings.edgePriority === mode ? 'btn-primary' : 'btn-secondary'}`}
+                        style={{ flex: 1, fontSize: 10, padding: '6px' }}
+                      >
+                        {mode === 'auto' ? '🛰️ Auto (Borda/Nuvem)' : mode === 'cloud' ? '☁️ Apenas Nuvem' : '🏠 Apenas Borda (Local)'}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}

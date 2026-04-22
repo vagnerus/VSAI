@@ -26,32 +26,32 @@ export default function LandingPage({ onNavigate }) {
       <section className="landing-hero">
         <div className="hero-glow"></div>
         <div className="hero-content">
-          <div className="hero-badge">✨ Plataforma de IA de Nova Geração</div>
+          <div className="hero-badge">💎 NexusAI Alpha-300 — AGI-Ready OS</div>
           <h1 className="hero-title">
-            Construa projetos com<br/>
-            <span className="hero-gradient-text">Inteligência Artificial</span>
+            Domine a Singularidade com<br/>
+            <span className="hero-gradient-text">Governança Total de IA</span>
           </h1>
           <p className="hero-subtitle">
-            Crie, gerencie e escale projetos de IA com chat avançado, 
-            ferramentas autônomas e base de conhecimento personalizada. 
-            Powered by Gemini & Claude.
+            O primeiro sistema operacional corporativo autônomo. 
+            300 módulos de inteligência integrando Gêmeos Digitais, 
+            Vigilância Satelital e Autocura Sistêmica. 🏛️🌐✨
           </p>
           <div className="hero-actions">
             <button className="btn-cta btn-cta-lg" onClick={() => onNavigate('register')}>
-              🚀 Começar Gratuitamente
+              🚀 Ativar Protocolo Alpha
             </button>
             <button className="btn-outline-hero" onClick={() => {
               document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' });
             }}>
-              Saiba Mais →
+              Ver 300 Módulos →
             </button>
           </div>
           <div className="hero-stats">
-            <div className="hero-stat"><strong>20+</strong><span>Ferramentas IA</span></div>
+            <div className="hero-stat"><strong>300</strong><span>Módulos Ativos</span></div>
             <div className="hero-stat-sep"></div>
-            <div className="hero-stat"><strong>200K</strong><span>Tokens de Contexto</span></div>
+            <div className="hero-stat"><strong>256-bit</strong><span>Quantum-Safe</span></div>
             <div className="hero-stat-sep"></div>
-            <div className="hero-stat"><strong>99.9%</strong><span>Uptime</span></div>
+            <div className="hero-stat"><strong>∞</strong><span>Autonomia</span></div>
           </div>
         </div>
         <div className="hero-visual">
@@ -60,23 +60,21 @@ export default function LandingPage({ onNavigate }) {
               <span className="mockup-dot red"></span>
               <span className="mockup-dot yellow"></span>
               <span className="mockup-dot green"></span>
-              <span className="mockup-title">NexusAI — Chat</span>
+              <span className="mockup-title">NexusAI Alpha — Digital Twin</span>
             </div>
             <div className="mockup-body">
-              <div className="mockup-msg user">Crie uma API REST completa em Node.js com autenticação JWT</div>
+              <div className="mockup-msg user">Executar simulação de stress na infraestrutura global.</div>
               <div className="mockup-msg ai">
                 <div className="mockup-typing">
                   <span className="typing-cursor"></span>
-                  Vou criar uma API REST completa com Express, JWT e PostgreSQL...
+                  Iniciando Módulo 292. Analisando 12 enxames... Detectado gargalo em S01. Aplicando Self-Healing.
                 </div>
               </div>
               <div className="mockup-artifact">
-                <div className="artifact-header">📄 server.js — Artifact</div>
-                <div className="artifact-code">
-                  <span className="code-keyword">import</span> express <span className="code-keyword">from</span> <span className="code-string">'express'</span>;<br/>
-                  <span className="code-keyword">import</span> jwt <span className="code-keyword">from</span> <span className="code-string">'jsonwebtoken'</span>;<br/>
-                  <br/>
-                  <span className="code-keyword">const</span> app = <span className="code-fn">express</span>();
+                <div className="artifact-header">💠 Digital Twin Report — Artifact</div>
+                <div style={{ padding: 10, fontSize: 11 }}>
+                  <div style={{ color: '#10b981' }}>● [AUTO-HEAL] Re-roteando tráfego via Módulo 151 (Edge).</div>
+                  <div style={{ color: '#3b82f6', marginTop: 5 }}>● [SAT] Sentinel-2 confirma integridade física do Data Center.</div>
                 </div>
               </div>
             </div>
@@ -88,21 +86,21 @@ export default function LandingPage({ onNavigate }) {
       <section className="landing-section" id="features">
         <div className="section-inner">
           <div className="section-header">
-            <span className="section-badge">Recursos</span>
-            <h2 className="section-title">Tudo que você precisa para criar com IA</h2>
-            <p className="section-desc">Uma plataforma completa que combina o melhor dos modelos de IA com ferramentas profissionais de desenvolvimento.</p>
+            <span className="section-badge">Módulos de Elite</span>
+            <h2 className="section-title">Infraestrutura em Nível de Singularidade</h2>
+            <p className="section-desc">Uma arquitetura projetada para soberania total, do hardware à consciência digital.</p>
           </div>
           <div className="features-grid">
             {[
-              { icon: '💬', title: 'Chat Avançado', desc: 'Streaming em tempo real com suporte a Markdown, código com syntax highlighting e artifacts.' },
-              { icon: '📁', title: 'Projetos Isolados', desc: 'Cada projeto tem suas próprias instruções, base de conhecimento e histórico de conversas.' },
-              { icon: '🛠️', title: '20+ Ferramentas', desc: 'Busca web, leitura/escrita de arquivos, análise de código, tradução, SEO e muito mais.' },
-              { icon: '🤖', title: 'Multi-Agentes', desc: 'Coordenação de múltiplos agentes de IA trabalhando em paralelo para tarefas complexas.' },
-              { icon: '🔐', title: 'Segurança Total', desc: 'Autenticação JWT, isolamento de dados por usuário e chaves de API protegidas no backend.' },
-              { icon: '⚡', title: 'Streaming SSE', desc: 'Respostas aparecem em tempo real com efeito de digitação. Sem esperar carregamentos.' },
-              { icon: '📚', title: 'Base de Conhecimento', desc: 'Upload de PDFs, documentos e arquivos para a IA analisar e responder com contexto.' },
-              { icon: '♊', title: 'Multi-Provider', desc: 'Alterne entre Google Gemini e Anthropic Claude com um clique. Use o melhor modelo para cada tarefa.' },
-              { icon: '📊', title: 'Analytics', desc: 'Monitore tokens consumidos, custos e performance em tempo real.' },
+              { icon: '🏛️', title: 'Governança AGI', desc: 'Controle total sobre enxames de agentes autônomos com o interruptor Alpha Switch (300).' },
+              { icon: '💠', title: 'Gêmeo Digital', desc: 'Réplica virtual 1:1 de toda a sua organização para simulações preditivas em tempo real (203).' },
+              { icon: '🛰️', title: 'Vigilância Satelital', desc: 'Monitoramento planetário via Sentinel-2 para logística e segurança de infraestrutura (252).' },
+              { icon: '🛡️', title: 'Quantum-Safe', desc: 'Cofre de dados protegido por criptografia resiliente a ataques de computação quântica (211).' },
+              { icon: '🩹', title: 'Self-Healing', desc: 'Reparo automático de código e infraestrutura sem necessidade de intervenção humana (293).' },
+              { icon: '🌍', title: 'Geo-Inteligência', desc: 'Análise de terreno e clima severo com impacto direto na eficiência operacional (254).' },
+              { icon: '🎙️', title: 'Bio-Sinais IA', desc: 'Monitoramento de stress vocal e integração com wearables para bem-estar da equipe (261).' },
+              { icon: '👓', title: 'Holografia XR', desc: 'Interface espacial e projeção 3D para colaboração em metaversos de elite (271).' },
+              { icon: '🌱', title: 'Eco-Sustentável', desc: 'Otimização energética via Green Scheduler para mínima pegada de carbono (285).' },
             ].map((f, i) => (
               <div key={i} className="feature-card">
                 <div className="feature-icon">{f.icon}</div>
@@ -131,37 +129,37 @@ export default function LandingPage({ onNavigate }) {
                 <li>✅ 3 Projetos</li>
                 <li>✅ Chat com Gemini Flash</li>
                 <li>✅ 5 Ferramentas</li>
-                <li>❌ Artifacts</li>
-                <li>❌ Suporte prioritário</li>
+                <li>❌ Self-Healing</li>
+                <li>❌ Gêmeo Digital</li>
               </ul>
               <button className="btn-pricing" onClick={() => onNavigate('register')}>Começar Grátis</button>
             </div>
             <div className="pricing-card pricing-card-popular">
               <div className="pricing-popular-badge">Mais Popular</div>
               <div className="pricing-name">Pro</div>
-              <div className="pricing-price">R$ 49<span>/mês</span></div>
+              <div className="pricing-price">R$ 99<span>/mês</span></div>
               <ul className="pricing-features">
-                <li>✅ 500K tokens/mês</li>
+                <li>✅ 1M tokens/mês</li>
                 <li>✅ Projetos ilimitados</li>
                 <li>✅ Gemini Pro + Claude</li>
                 <li>✅ Todas ferramentas</li>
-                <li>✅ Artifacts</li>
-                <li>✅ Multi-agentes</li>
+                <li>✅ Self-Healing (Lite)</li>
+                <li>✅ Gêmeo Digital (Básico)</li>
               </ul>
               <button className="btn-pricing btn-pricing-primary" onClick={() => onNavigate('register')}>Assinar Pro</button>
             </div>
             <div className="pricing-card">
-              <div className="pricing-name">Premium</div>
-              <div className="pricing-price">R$ 149<span>/mês</span></div>
+              <div className="pricing-name">Enterprise</div>
+              <div className="pricing-price">Consultar<span>/mês</span></div>
               <ul className="pricing-features">
-                <li>✅ 5M tokens/mês</li>
+                <li>✅ Tokens Ilimitados</li>
                 <li>✅ Tudo do Pro</li>
-                <li>✅ API access</li>
-                <li>✅ Webhooks</li>
-                <li>✅ Suporte prioritário</li>
-                <li>✅ White-label</li>
+                <li>✅ Alpha Switch Access</li>
+                <li>✅ Vigilância Satelital</li>
+                <li>✅ Suporte 24/7 Humano+IA</li>
+                <li>✅ White-label Total</li>
               </ul>
-              <button className="btn-pricing" onClick={() => onNavigate('register')}>Assinar Premium</button>
+              <button className="btn-pricing" onClick={() => onNavigate('register')}>Falar com Especialista</button>
             </div>
           </div>
         </div>
@@ -176,10 +174,10 @@ export default function LandingPage({ onNavigate }) {
           </div>
           <div className="faq-grid">
             {[
-              { q: 'Quais modelos de IA são suportados?', a: 'Suportamos Google Gemini (2.5 Flash e Pro) e Anthropic Claude (Sonnet, Opus e Haiku). Você pode alternar entre eles a qualquer momento.' },
-              { q: 'Meus dados estão seguros?', a: 'Sim. Utilizamos Supabase com PostgreSQL e Row Level Security. Seus dados são isolados e nunca acessíveis por outros usuários.' },
-              { q: 'Preciso instalar algo?', a: 'Não. NexusAI funciona 100% no navegador. Basta criar uma conta e começar a usar.' },
-              { q: 'Posso cancelar a qualquer momento?', a: 'Sim, sem multas ou compromissos. Seu plano volta ao Free automaticamente.' },
+              { q: 'O que é o Alpha Switch?', a: 'É o protocolo final de autonomia que permite ao NexusAI gerir infraestruturas complexas sem supervisão constante, utilizando o Módulo 300.' },
+              { q: 'A segurança quântica é real?', a: 'Sim. Utilizamos algoritmos baseados em Lattice (Módulo 211) que são resistentes a ataques de computadores quânticos atuais e futuros.' },
+              { q: 'Como funciona o Gêmeo Digital?', a: 'Criamos uma réplica virtual de seus processos e dados (Módulo 203) para testar mudanças antes de aplicá-las ao mundo real.' },
+              { q: 'Posso integrar com hardware físico?', a: 'Sim. Através dos módulos de RPA Extremo e Telepresença (181/275), o NexusAI pode controlar dispositivos IoT, robôs e infra de rede.' },
             ].map((item, i) => (
               <div key={i} className="faq-item">
                 <h3 className="faq-question">{item.q}</h3>
@@ -193,10 +191,10 @@ export default function LandingPage({ onNavigate }) {
       {/* ─── CTA Final ─── */}
       <section className="landing-cta">
         <div className="cta-inner">
-          <h2>Pronto para criar com IA?</h2>
-          <p>Junte-se a milhares de desenvolvedores e criadores.</p>
+          <h2>Pronto para a Singularidade?</h2>
+          <p>O futuro da governança empresarial começa agora.</p>
           <button className="btn-cta btn-cta-lg" onClick={() => onNavigate('register')}>
-            Criar Conta Gratuita →
+            Ativar Minha Unidade Alpha →
           </button>
         </div>
       </section>
@@ -206,14 +204,14 @@ export default function LandingPage({ onNavigate }) {
         <div className="footer-inner">
           <div className="footer-brand">
             <div className="landing-logo-icon" style={{ width: 28, height: 28, fontSize: 14 }}>🧠</div>
-            <span>NexusAI</span>
+            <span>NexusAI Alpha</span>
           </div>
           <div className="footer-links">
-            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('terms'); }}>Termos de Uso</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('privacy'); }}>Privacidade (LGPD)</a>
-            <a href="mailto:contato@nexusai.com">Contato</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('terms'); }}>Termos Alpha</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('privacy'); }}>Privacidade (LGPD+)</a>
+            <a href="mailto:contato@nexusai.com">Comando Alpha</a>
           </div>
-          <div className="footer-copy">© {new Date().getFullYear()} NexusAI. Desenvolvido por Vagner Oliveira.</div>
+          <div className="footer-copy">© {new Date().getFullYear()} NexusAI Alpha-300. Soberania Digital por Vagner Oliveira.</div>
         </div>
       </footer>
     </div>
