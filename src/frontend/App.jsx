@@ -827,6 +827,7 @@ function ChatPage({ projectId }) {
   };
 
   const [selectedProvider, setSelectedProvider] = useState('google');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096, edgePriority: 'auto' });
   const [showSettings, setShowSettings] = useState(false);
 
