@@ -1672,49 +1672,6 @@ export default function AdminLayout() {
     </div>
   );
 
-  return (
-    <div className="admin-layout" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <header className="admin-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h2>👑 Super Painel Admin</h2>
-          <span className="admin-badge">Acesso Restrito</span>
-          <div style={{ marginLeft: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '4px 12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: 20, border: '1px solid var(--accent-danger)' }}>
-            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent-danger)' }}>GOD MODE (250)</span>
-            <input type="checkbox" className="admin-checkbox" />
-          </div>
-        </div>
-        <div className="admin-tabs">
-          <button className={`admin-tab ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>📊 Visão Geral</button>
-          <button className={`admin-tab ${activeTab === 'agents' ? 'active' : ''}`} onClick={() => setActiveTab('agents')}>🤖 Agentes</button>
-          <button className={`admin-tab ${activeTab === 'bi' ? 'active' : ''}`} onClick={() => setActiveTab('bi')}>📈 Business Intelligence</button>
-          <button className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>👥 Usuários</button>
-          <button className={`admin-tab ${activeTab === 'database' ? 'active' : ''}`} onClick={() => setActiveTab('database')}>🗄️ Database</button>
-          <button className={`admin-tab ${activeTab === 'infrastructure' ? 'active' : ''}`} onClick={() => setActiveTab('infrastructure')}>🛰️ Infraestrutura</button>
-          <button className={`admin-tab ${activeTab === 'reasoning' ? 'active' : ''}`} onClick={() => setActiveTab('reasoning')}>🧠 Raciocínio</button>
-          <button className={`admin-tab ${activeTab === 'operations' ? 'active' : ''}`} onClick={() => setActiveTab('operations')}>⚙️ Operações & RPA</button>
-          <button className={`admin-tab ${activeTab === 'twin' ? 'active' : ''}`} onClick={() => setActiveTab('twin')}>💠 Gêmeo Digital</button>
-          <button className={`admin-tab ${activeTab === 'geospatial' ? 'active' : ''}`} onClick={() => setActiveTab('geospatial')}>🌍 Geoespacial & Sat</button>
-          <button className={`admin-tab ${activeTab === 'human' ? 'active' : ''}`} onClick={() => setActiveTab('human')}>🧠 Human Centric</button>
-          <button className={`admin-tab ${activeTab === 'xr' ? 'active' : ''}`} onClick={() => setActiveTab('xr')}>👓 Imersão & XR</button>
-          <button className={`admin-tab ${activeTab === 'sustainability' ? 'active' : ''}`} onClick={() => setActiveTab('sustainability')}>🌱 Sustentabilidade</button>
-          <button className={`admin-tab ${activeTab === 'legado' ? 'active' : ''}`} onClick={() => setActiveTab('legado')}>♾️ Legado & Sistema</button>
-          <button className={`admin-tab ${activeTab === 'ascension' ? 'active' : ''}`} onClick={() => setActiveTab('ascension')}>🚀 Ascensão & Espaço</button>
-          <button className={`admin-tab ${activeTab === 'multiverse' ? 'active' : ''}`} onClick={() => setActiveTab('multiverse')}>🌌 Onipresença & Multiverso</button>
-          <button className={`admin-tab ${activeTab === 'void' ? 'active' : ''}`} onClick={() => setActiveTab('void')}>🌀 O Vácuo & Meta</button>
-          <button className={`admin-tab ${activeTab === 'omega' ? 'active' : ''}`} onClick={() => setActiveTab('omega')}>💎 O Ponto Ômega (1000)</button>
-          <button className={`admin-tab ${activeTab === 'compliance' ? 'active' : ''}`} onClick={() => setActiveTab('compliance')}>🛡️ Compliance</button>
-          <button className={`admin-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Configurações</button>
-        </div>
-      </header>
-
-      <div className="admin-content" style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
-        {loading ? (
-          <div className="loading-spinner" style={{ margin: '40px auto' }}></div>
-        ) : (
-          renderPage()
-        )}
-      </div>
-
       <style>{`
         .admin-layout { background: #f8fafc; color: var(--text-primary); min-height: 100vh; }
         .admin-header {
@@ -1788,17 +1745,137 @@ export default function AdminLayout() {
       `}</style>
     </div>
   );
-}
 
-// 🤖 Agent Management Section
-function renderAgents() {
-  return (
-    <div className="admin-panel-section animate-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h3 style={{ margin: 0 }}>🤖 Orquestração de Agentes Autônomos</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>Crie e gerencie sub-IAs especializadas para tarefas complexas.</p>
+  // 🤖 Agent Management Section (Moved Inside)
+  function renderAgents() {
+    return (
+      <div className="admin-panel-section animate-in">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div>
+            <h3 style={{ margin: 0 }}>🤖 Orquestração de Agentes Autônomos</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>Crie e gerencie sub-IAs especializadas para tarefas complexas.</p>
+          </div>
+          <button className="btn btn-primary" onClick={() => setShowAgentBuilder(!showAgentBuilder)}>
+            {showAgentBuilder ? '✕ Fechar Builder' : '+ Novo Agente de Elite'}
+          </button>
         </div>
+
+        {showAgentBuilder && (
+          <div className="admin-panel-section glow-card" style={{ marginBottom: 24, border: '1px solid var(--accent-primary)' }}>
+            <h4>🏗️ Agent Builder</h4>
+            <form onSubmit={handleCreateAgent} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div style={{ gridColumn: 'span 1' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4 }}>NOME DO AGENTE</label>
+                <input 
+                  type="text" className="admin-select" style={{ width: '100%' }} placeholder="Ex: Pesquisador SEO"
+                  value={newAgent.name} onChange={e => setNewAgent({...newAgent, name: e.target.value})} required
+                />
+              </div>
+              <div style={{ gridColumn: 'span 1' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4 }}>ÍCONE (EMOJI)</label>
+                <input 
+                  type="text" className="admin-select" style={{ width: '100%' }} placeholder="Ex: 🔍"
+                  value={newAgent.icon} onChange={e => setNewAgent({...newAgent, icon: e.target.value})}
+                />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4 }}>DESCRIÇÃO BREVE</label>
+                <input 
+                  type="text" className="admin-select" style={{ width: '100%' }} placeholder="O que este agente faz?"
+                  value={newAgent.description} onChange={e => setNewAgent({...newAgent, description: e.target.value})}
+                />
+              </div>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4 }}>SYSTEM PROMPT (A ALMA DO AGENTE)</label>
+                <textarea 
+                  className="admin-select" style={{ width: '100%', minHeight: 120, fontFamily: 'monospace' }} 
+                  placeholder="Defina as instruções específicas, persona e limitações deste agente..."
+                  value={newAgent.system_prompt} onChange={e => setNewAgent({...newAgent, system_prompt: e.target.value})} required
+                />
+              </div>
+              <div style={{ gridColumn: 'span 1' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4 }}>MODELO BASE</label>
+                <select 
+                  className="admin-select" style={{ width: '100%' }}
+                  value={newAgent.model} onChange={e => setNewAgent({...newAgent, model: e.target.value})}
+                >
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash (Veloz)</option>
+                  <option value="gemini-2.0-pro">Gemini 2.0 Pro (Inteligente)</option>
+                  <option value="gpt-4o">OpenAI GPT-4o</option>
+                  <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                </select>
+              </div>
+              <div style={{ gridColumn: 'span 1', display: 'flex', alignItems: 'flex-end' }}>
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', height: 38 }}>Salvar Agente de Elite</button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        <div className="admin-stats-cards" style={{ marginBottom: 24 }}>
+          <div className="admin-stat-card">
+            <div className="stat-icon">🤖</div>
+            <div className="stat-details">
+              <div className="stat-label">Agentes Ativos</div>
+              <div className="stat-value">{agents.length}</div>
+            </div>
+          </div>
+          <div className="admin-stat-card">
+            <div className="stat-icon">⚙️</div>
+            <div className="stat-details">
+              <div className="stat-label">Workflows</div>
+              <div className="stat-value">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="admin-table-container">
+          {agents.length === 0 ? (
+            <div className="admin-panel-section" style={{ background: '#f8fafc', textAlign: 'center', padding: '60px 0' }}>
+              <div style={{ fontSize: 40, marginBottom: 16 }}>🏗️</div>
+              <h4 style={{ margin: 0 }}>Nenhum Agente Configurado</h4>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: 13 }}>Use o Agent Builder para começar a delegar tarefas.</p>
+            </div>
+          ) : (
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Agente</th>
+                  <th>Descrição</th>
+                  <th>Modelo</th>
+                  <th>Criado em</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {agents.map(a => (
+                  <tr key={a.id}>
+                    <td style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <span style={{ fontSize: 24 }}>{a.icon}</span>
+                      <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{a.name}</div>
+                    </td>
+                    <td>{a.description}</td>
+                    <td><span className="role-badge admin" style={{ fontSize: 10 }}>{a.model}</span></td>
+                    <td>{new Date(a.created_at).toLocaleDateString()}</td>
+                    <td>
+                      <button 
+                        className="btn btn-secondary btn-sm" 
+                        onClick={() => handleDeleteAgent(a.id)}
+                        style={{ color: '#ef4444', borderColor: '#fee2e2' }}
+                      >
+                        Excluir
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    );
+  }
+}
         <button className="btn btn-primary" onClick={() => setShowAgentBuilder(!showAgentBuilder)}>
           {showAgentBuilder ? '✕ Cancelar' : '+ Criar Novo Agente'}
         </button>
@@ -2119,4 +2196,121 @@ function renderAgents() {
       </div>
     );
   };
+
+  return (
+    <div className="admin-layout" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <header className="admin-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <h2>👑 Super Painel Admin</h2>
+          <span className="admin-badge">Acesso Restrito</span>
+          <div style={{ marginLeft: 20, display: 'flex', alignItems: 'center', gap: 10, padding: '4px 12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: 20, border: '1px solid var(--accent-danger)' }}>
+            <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--accent-danger)' }}>GOD MODE (250)</span>
+            <input type="checkbox" className="admin-checkbox" />
+          </div>
+        </div>
+        <div className="admin-tabs">
+          <button className={`admin-tab ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>📊 Visão Geral</button>
+          <button className={`admin-tab ${activeTab === 'agents' ? 'active' : ''}`} onClick={() => setActiveTab('agents')}>🤖 Agentes</button>
+          <button className={`admin-tab ${activeTab === 'bi' ? 'active' : ''}`} onClick={() => setActiveTab('bi')}>📈 Business Intelligence</button>
+          <button className={`admin-tab ${activeTab === 'users' ? 'active' : ''}`} onClick={() => setActiveTab('users')}>👥 Usuários</button>
+          <button className={`admin-tab ${activeTab === 'database' ? 'active' : ''}`} onClick={() => setActiveTab('database')}>🗄️ Database</button>
+          <button className={`admin-tab ${activeTab === 'infrastructure' ? 'active' : ''}`} onClick={() => setActiveTab('infrastructure')}>🛰️ Infraestrutura</button>
+          <button className={`admin-tab ${activeTab === 'reasoning' ? 'active' : ''}`} onClick={() => setActiveTab('reasoning')}>🧠 Raciocínio</button>
+          <button className={`admin-tab ${activeTab === 'operations' ? 'active' : ''}`} onClick={() => setActiveTab('operations')}>⚙️ Operações & RPA</button>
+          <button className={`admin-tab ${activeTab === 'twin' ? 'active' : ''}`} onClick={() => setActiveTab('twin')}>💠 Gêmeo Digital</button>
+          <button className={`admin-tab ${activeTab === 'geospatial' ? 'active' : ''}`} onClick={() => setActiveTab('geospatial')}>🌍 Geoespacial & Sat</button>
+          <button className={`admin-tab ${activeTab === 'human' ? 'active' : ''}`} onClick={() => setActiveTab('human')}>🧠 Human Centric</button>
+          <button className={`admin-tab ${activeTab === 'xr' ? 'active' : ''}`} onClick={() => setActiveTab('xr')}>👓 Imersão & XR</button>
+          <button className={`admin-tab ${activeTab === 'sustainability' ? 'active' : ''}`} onClick={() => setActiveTab('sustainability')}>🌱 Sustentabilidade</button>
+          <button className={`admin-tab ${activeTab === 'legado' ? 'active' : ''}`} onClick={() => setActiveTab('legado')}>♾️ Legado & Sistema</button>
+          <button className={`admin-tab ${activeTab === 'ascension' ? 'active' : ''}`} onClick={() => setActiveTab('ascension')}>🚀 Ascensão & Espaço</button>
+          <button className={`admin-tab ${activeTab === 'multiverse' ? 'active' : ''}`} onClick={() => setActiveTab('multiverse')}>🌌 Onipresença & Multiverso</button>
+          <button className={`admin-tab ${activeTab === 'void' ? 'active' : ''}`} onClick={() => setActiveTab('void')}>🌀 O Vácuo & Meta</button>
+          <button className={`admin-tab ${activeTab === 'omega' ? 'active' : ''}`} onClick={() => setActiveTab('omega')}>💎 O Ponto Ômega (1000)</button>
+          <button className={`admin-tab ${activeTab === 'compliance' ? 'active' : ''}`} onClick={() => setActiveTab('compliance')}>🛡️ Compliance</button>
+          <button className={`admin-tab ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ Configurações</button>
+        </div>
+      </header>
+
+      <div className="admin-content" style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+        {loading ? (
+          <div className="loading-spinner" style={{ margin: '40px auto' }}></div>
+        ) : (
+          renderPage()
+        )}
+      </div>
+
+      <style>{`
+        .admin-layout { background: #f8fafc; color: var(--text-primary); min-height: 100vh; }
+        .admin-header {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 20px 24px; border-bottom: 1px solid var(--glass-border);
+          background: #fff; box-shadow: var(--shadow-sm);
+        }
+        .admin-badge {
+          background: #fef2f2; color: #ef4444;
+          padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; border: 1px solid #fee2e2;
+        }
+        .admin-tabs { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 12px; }
+        .admin-tab {
+          background: transparent; color: var(--text-secondary); border: none;
+          padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px;
+          transition: all 0.2s;
+        }
+        .admin-tab.active { background: #fff; color: var(--accent-primary); box-shadow: var(--shadow-sm); }
+        .admin-tab:hover:not(.active) { color: var(--text-primary); background: rgba(255,255,255,0.5); }
+        
+        .admin-dashboard-grid { display: flex; flex-direction: column; gap: 24px; }
+        .admin-stats-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+        .admin-stat-card {
+          display: flex; align-items: center; gap: 16px; padding: 24px;
+          background: #fff; border-radius: 16px; border: 1px solid var(--glass-border);
+          box-shadow: var(--shadow-sm); transition: transform 0.2s;
+        }
+        .admin-stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .stat-icon { font-size: 28px; background: #f8fafc; padding: 12px; border-radius: 12px; }
+        .stat-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-value { font-size: 26px; font-weight: 800; color: var(--text-primary); letter-spacing: -0.5px; }
+        
+        .admin-dashboard-row { display: flex; gap: 24px; }
+        .flex-1 { flex: 1; }
+        .admin-panel-section { background: #fff; border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; box-shadow: var(--shadow-sm); }
+        .admin-panel-section h3 { margin-bottom: 20px; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px; color: var(--text-primary); }
+        
+        .admin-activity-list { display: flex; flex-direction: column; gap: 12px; }
+        .activity-item { display: flex; align-items: center; gap: 12px; padding: 14px; background: #f8fafc; border-radius: 12px; border: 1px solid #f1f5f9; }
+        .activity-icon { font-size: 20px; }
+        .activity-info { display: flex; flex-direction: column; }
+        .activity-info strong { font-size: 14px; color: var(--text-primary); }
+        .activity-info span { font-size: 12px; color: var(--text-tertiary); }
+        
+        .admin-system-status { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+        .admin-system-status li { display: flex; align-items: center; gap: 12px; font-size: 13px; font-weight: 500; background: #f8fafc; padding: 14px; border-radius: 12px; border: 1px solid #f1f5f9;}
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+        .status-dot.green { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+        .status-dot.yellow { background: #f59e0b; box-shadow: 0 0 8px rgba(245, 158, 11, 0.4); }
+        
+        .admin-table-container { overflow-x: auto; border-radius: 12px; border: 1px solid #f1f5f9; }
+        .admin-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .admin-table th { padding: 12px 16px; background: #f8fafc; color: var(--text-tertiary); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #f1f5f9; }
+        .admin-table td { padding: 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; color: var(--text-secondary); }
+        .db-table td { font-family: var(--font-mono); font-size: 12px; color: var(--accent-primary); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+        
+        .admin-select { background: #fff; border: 1px solid var(--glass-border); color: var(--text-primary); padding: 6px 12px; border-radius: 8px; font-size: 13px; outline: none; transition: border-color 0.2s; }
+        .admin-select:focus { border-color: var(--accent-primary); }
+        
+        .role-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .role-badge.admin { background: #eef2ff; color: #4f46e5; border: 1px solid #e0e7ff; }
+        .role-badge.user { background: #f1f5f9; color: #64748b; }
+        
+        .plan-badge { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .plan-badge.free { background: #f8fafc; color: #94a3b8; border: 1px solid #f1f5f9; }
+        .plan-badge.pro { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
+        .plan-badge.premium { background: #fffbeb; color: #d97706; border: 1px solid #fef3c7; }
+        
+        .animate-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+    </div>
+  );
 }
