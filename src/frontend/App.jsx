@@ -283,7 +283,7 @@ function Sidebar({ currentPage, onNavigate, stats, collapsed, onToggle }) {
 
   const navItems = [
     { id: 'dashboard', icon: '📊', label: 'Dashboard' },
-    { id: '', icon: '📁', label: 'Projetos' },
+    { id: 'projects', icon: '📁', label: 'Projetos' },
     { id: 'chat', icon: '💬', label: 'Chat AI', badge: null },
     { id: 'tools', icon: '🛠️', label: 'Ferramentas', badge: stats?.totalTools },
     { id: 'agents', icon: '🤖', label: 'Agentes' },
@@ -1590,7 +1590,7 @@ function DashboardShell({ onSignOut, userProfile }) {
       case 'analytics': return <AnalyticsPage stats={dashboardData.stats} />;
       case 'plugins': return <PluginsPage />;
       case 'settings': return <SettingsPage />;
-      case 'admin': return <AdminLayout onNavigate={setCurrentPage} />;
+      case 'admin': return isAdmin ? <AdminLayout onNavigate={setCurrentPage} /> : <DashboardPage stats={dashboardData.stats} recentSessions={dashboardData.recentSessions} />;
       default: return <DashboardPage stats={dashboardData.stats} recentSessions={dashboardData.recentSessions} />;
     }
   };
