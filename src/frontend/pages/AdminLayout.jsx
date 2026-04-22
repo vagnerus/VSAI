@@ -29,6 +29,7 @@ export default function AdminLayout() {
       const headers = await getAuthHeaders();
       const endpointMap = {
         dashboard: '/admin/analytics',
+        bi: '/admin/analytics',
         users: '/admin/users',
         database: `/admin/db?table=${dbTable}`,
         agents: '/agents'
@@ -43,20 +44,26 @@ export default function AdminLayout() {
 
       const data = await res.json();
       
-      if (activeTab === 'dashboard') {
+      if (activeTab === 'dashboard' || activeTab === 'bi') {
         setStats(data);
-        // Simulate real-time hardware telemetry updates
-        setHardware({
-          cpu: Math.floor(Math.random() * 30) + 20,
-          ram: Math.floor(Math.random() * 20) + 50,
-          gpu: Math.floor(Math.random() * 40) + 40,
-          temp: Math.floor(Math.random() * 15) + 60,
-          disk: 42
-        });
+        if (activeTab === 'dashboard') {
+          // Simulate real-time hardware telemetry updates
+          setHardware({
+            cpu: Math.floor(Math.random() * 30) + 20,
+            ram: Math.floor(Math.random() * 20) + 50,
+            gpu: Math.floor(Math.random() * 40) + 40,
+            temp: Math.floor(Math.random() * 15) + 60,
+            disk: 42
+          });
+        }
       }
       else if (activeTab === 'users') setUsers(data.users || []);
       else if (activeTab === 'database') setDbData(data.data || []);
       else if (activeTab === 'agents') setAgents(data);
+      else {
+        // Fallback for new transcendent tabs that don't have endpoints yet
+        console.log(`[ADMIN] Navegando para aba soberana: ${activeTab}`);
+      }
 
     } catch (err) {
       console.error('[ADMIN_FETCH_ERROR]', err);
@@ -162,6 +169,28 @@ export default function AdminLayout() {
       }
     } catch (err) {
       alert('Erro ao excluir agente.');
+    }
+  };
+
+  const handleCreateAgent = async (e) => {
+    e.preventDefault();
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/agents`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAgent)
+      });
+      if (res.ok) {
+        setNewAgent({ name: '', description: '', model: 'gemini-2.5-flash', system_prompt: '', icon: '🤖' });
+        setShowAgentBuilder(false);
+        fetchData();
+        alert('Agente de Elite criado com sucesso!');
+      } else {
+        alert('Erro ao criar agente.');
+      }
+    } catch (err) {
+      alert('Erro na requisição de criação.');
     }
   };
 
@@ -1889,183 +1918,205 @@ function renderAgents() {
       </div>
     </div>
   );
-}
 
-// 📈 Business Intelligence Section
-function renderBI() {
-  const bi = stats?.bi || { sentiment: { positivo: 0, neutro: 0, negativo: 0 }, hotLeads: [], totalLeads: 0 };
-  const totalSentiment = (bi.sentiment.positivo || 0) + (bi.sentiment.neutro || 0) + (bi.sentiment.negativo || 0) || 1;
-  
-  return (
-    <div className="admin-panel-section animate-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h3 style={{ margin: 0 }}>📈 Business Intelligence & Sentiment Analysis</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>Insights estratégicos baseados no comportamento e satisfação dos usuários.</p>
-        </div>
-      </div>
-
-      <div className="admin-stats-cards" style={{ marginBottom: 24 }}>
-        <div className="admin-stat-card">
-          <div className="stat-icon">😊</div>
-          <div className="stat-details">
-            <div className="stat-label">Sentimento Positivo</div>
-            <div className="stat-value">{Math.round(((bi.sentiment.positivo || 0) / totalSentiment) * 100)}%</div>
-          </div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon">🔥</div>
-          <div className="stat-details">
-            <div className="stat-label">Leads Quentes</div>
-            <div className="stat-value">{bi.totalLeads}</div>
-          </div>
-        </div>
-        <div className="admin-stat-card">
-          <div className="stat-icon">📉</div>
-          <div className="stat-details">
-            <div className="stat-label">Usuários Frustrados</div>
-            <div className="stat-value">{bi.sentiment.negativo || 0}</div>
-          </div>
-        </div>
-      </div>
-      
-      <div className="admin-dashboard-row">
-        <div className="admin-panel-section flex-1">
-          <h4>📊 Distribuição de Sentimento</h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
-            {['positivo', 'neutro', 'negativo'].map(s => (
-              <div key={s}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
-                  <span style={{ textTransform: 'capitalize' }}>{s}</span>
-                  <span>{bi.sentiment[s] || 0} sessões</span>
-                </div>
-                <div style={{ width: '100%', height: 10, background: '#f1f5f9', borderRadius: 5, overflow: 'hidden' }}>
-                  <div style={{ 
-                    height: '100%', 
-                    width: `${((bi.sentiment[s] || 0) / totalSentiment) * 100}%`,
-                    background: s === 'positivo' ? '#10b981' : s === 'neutro' ? '#f59e0b' : '#ef4444',
-                    transition: 'width 1s ease'
-                  }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="admin-panel-section flex-1">
-          <h4>🔥 Hot Leads (Potencial de Venda)</h4>
-          <div className="admin-table-container" style={{ marginTop: 20 }}>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th>Sessão</th>
-                  <th>Score</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bi.hotLeads.length > 0 ? bi.hotLeads.map((lead, i) => (
-                  <tr key={i}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{lead.title || 'Conversa sem título'}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>ID: {lead.user_id?.substring(0,8)}...</div>
-                    </td>
-                    <td><span className="role-badge admin" style={{ background: '#fff7ed', color: '#ea580c', borderColor: '#ffedd5' }}>{lead.lead_score}/10</span></td>
-                    <td><button className="btn btn-secondary btn-sm">Ver Chat</button></td>
-                  </tr>
-                )) : (
-                  <tr><td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 20 }}>Nenhum lead quente identificado ainda.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// 🛡️ Compliance Section
-function renderCompliance() {
-  const [exporting, setExporting] = useState(false);
-
-  const handleExportData = async () => {
-    const userId = window.prompt('Insira o ID do Usuário para Exportação (GDPR/LGPD):');
-    if (!userId) return;
+  const handleBonusTokens = async (userId, userName) => {
+    const amount = window.prompt(`Quantos tokens bônus deseja creditar para ${userName}?`, '50000');
+    if (!amount || isNaN(amount)) return;
     
-    setExporting(true);
     try {
       const headers = await getAuthHeaders();
-      const res = await fetch(`${API_BASE}/admin/db?table=messages&user_id=${userId}`, { headers });
+      const res = await fetch(`${API_BASE}/admin/users`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, bonus_tokens: parseInt(amount) })
+      });
       if (res.ok) {
-        const data = await res.json();
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `nexusai-export-user-${userId}.json`;
-        a.click();
-        alert('Exportação DSR (Data Subject Request) concluída com sucesso!');
+        alert(`Bônus de ${amount} tokens creditado com sucesso!`);
+        fetchData();
       } else {
-        alert('Erro ao buscar dados do usuário.');
+        alert('Erro ao creditar bônus.');
       }
-    } catch (e) {
-      alert('Erro na exportação.');
-    } finally {
-      setExporting(false);
+    } catch (err) {
+      alert('Erro na requisição de bônus.');
     }
   };
 
-  return (
-    <div className="admin-panel-section animate-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h3 style={{ margin: 0 }}>🛡️ Auditoria & Conformidade (Compliance)</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>Controles de privacidade, exportação de dados e segurança enterprise.</p>
+  // 📈 Business Intelligence Section (Moved Inside)
+  const renderBI = () => {
+    const bi = stats?.bi || { sentiment: { positivo: 0, neutro: 0, negativo: 0 }, hotLeads: [], totalLeads: 0 };
+    const totalSentiment = (bi.sentiment.positivo || 0) + (bi.sentiment.neutro || 0) + (bi.sentiment.negativo || 0) || 1;
+    
+    return (
+      <div className="admin-panel-section animate-in">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div>
+            <h3 style={{ margin: 0 }}>📈 Business Intelligence & Sentiment Analysis</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>Insights estratégicos baseados no comportamento e satisfação dos usuários.</p>
+          </div>
+        </div>
+
+        <div className="admin-stats-cards" style={{ marginBottom: 24 }}>
+          <div className="admin-stat-card">
+            <div className="stat-icon">😊</div>
+            <div className="stat-details">
+              <div className="stat-label">Sentimento Positivo</div>
+              <div className="stat-value">{Math.round(((bi.sentiment.positivo || 0) / totalSentiment) * 100)}%</div>
+            </div>
+          </div>
+          <div className="admin-stat-card">
+            <div className="stat-icon">🔥</div>
+            <div className="stat-details">
+              <div className="stat-label">Leads Quentes</div>
+              <div className="stat-value">{bi.totalLeads}</div>
+            </div>
+          </div>
+          <div className="admin-stat-card">
+            <div className="stat-icon">📉</div>
+            <div className="stat-details">
+              <div className="stat-label">Usuários Frustrados</div>
+              <div className="stat-value">{bi.sentiment.negativo || 0}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="admin-dashboard-row">
+          <div className="admin-panel-section flex-1">
+            <h4>📊 Distribuição de Sentimento</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
+              {['positivo', 'neutro', 'negativo'].map(s => (
+                <div key={s}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 6, fontWeight: 600 }}>
+                    <span style={{ textTransform: 'capitalize' }}>{s}</span>
+                    <span>{bi.sentiment[s] || 0} sessões</span>
+                  </div>
+                  <div style={{ width: '100%', height: 10, background: '#f1f5f9', borderRadius: 5, overflow: 'hidden' }}>
+                    <div style={{ 
+                      height: '100%', 
+                      width: `${((bi.sentiment[s] || 0) / totalSentiment) * 100}%`,
+                      background: s === 'positivo' ? '#10b981' : s === 'neutro' ? '#f59e0b' : '#ef4444',
+                      transition: 'width 1s ease'
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="admin-panel-section flex-1">
+            <h4>🔥 Hot Leads (Potencial de Venda)</h4>
+            <div className="admin-table-container" style={{ marginTop: 20 }}>
+              <table className="admin-table">
+                <thead>
+                  <tr>
+                    <th>Sessão</th>
+                    <th>Score</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bi.hotLeads.length > 0 ? bi.hotLeads.map((lead, i) => (
+                    <tr key={i}>
+                      <td>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>{lead.title || 'Conversa sem título'}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>ID: {lead.user_id?.substring(0,8)}...</div>
+                      </td>
+                      <td><span className="role-badge admin" style={{ background: '#fff7ed', color: '#ea580c', borderColor: '#ffedd5' }}>{lead.lead_score}/10</span></td>
+                      <td><button className="btn btn-secondary btn-sm">Ver Chat</button></td>
+                    </tr>
+                  )) : (
+                    <tr><td colSpan="3" style={{ textAlign: 'center', color: 'var(--text-tertiary)', padding: 20 }}>Nenhum lead quente identificado ainda.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
+    );
+  };
 
-      <div className="admin-dashboard-row">
-        <div className="admin-panel-section flex-1">
-          <h4>📦 Direitos do Titular (LGPD/GDPR)</h4>
-          <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 20 }}>Gere um relatório completo de todos os dados armazenados de um usuário específico.</p>
-          <button 
-            className="btn btn-secondary" 
-            style={{ width: '100%', padding: '12px', fontWeight: 700 }}
-            onClick={handleExportData}
-            disabled={exporting}
-          >
-            {exporting ? '📦 Processando...' : '📥 Exportar Todos os Dados (DSR Export)'}
-          </button>
+  // 🛡️ Compliance Section (Moved Inside)
+  const renderCompliance = () => {
+    const [exporting, setExporting] = useState(false);
+
+    const handleExportData = async () => {
+      const userId = window.prompt('Insira o ID do Usuário para Exportação (GDPR/LGPD):');
+      if (!userId) return;
+      
+      setExporting(true);
+      try {
+        const headers = await getAuthHeaders();
+        const res = await fetch(`${API_BASE}/admin/db?table=messages&user_id=${userId}`, { headers });
+        if (res.ok) {
+          const data = await res.json();
+          const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `nexusai-export-user-${userId}.json`;
+          a.click();
+          alert('Exportação DSR (Data Subject Request) concluída com sucesso!');
+        } else {
+          alert('Erro ao buscar dados do usuário.');
+        }
+      } catch (e) {
+        alert('Erro na exportação.');
+      } finally {
+        setExporting(false);
+      }
+    };
+
+    return (
+      <div className="admin-panel-section animate-in">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div>
+            <h3 style={{ margin: 0 }}>🛡️ Auditoria & Conformidade (Compliance)</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>Controles de privacidade, exportação de dados e segurança enterprise.</p>
+          </div>
         </div>
 
-        <div className="admin-panel-section flex-1">
-          <h4>🔒 Segurança Ativa</h4>
-          <div className="admin-activity-list">
-            <div className="activity-item">
-              <div className="activity-icon">🛡️</div>
-              <div className="activity-info">
-                <strong>Filtro de PII (Personally Identifiable Info)</strong>
-                <span>Status: <span style={{ color: '#10b981', fontWeight: 700 }}>ATIVO</span></span>
+        <div className="admin-dashboard-row">
+          <div className="admin-panel-section flex-1">
+            <h4>📦 Direitos do Titular (LGPD/GDPR)</h4>
+            <p style={{ fontSize: 13, color: 'var(--text-tertiary)', marginBottom: 20 }}>Gere um relatório completo de todos os dados armazenados de um usuário específico.</p>
+            <button 
+              className="btn btn-secondary" 
+              style={{ width: '100%', padding: '12px', fontWeight: 700 }}
+              onClick={handleExportData}
+              disabled={exporting}
+            >
+              {exporting ? '📦 Processando...' : '📥 Exportar Todos os Dados (DSR Export)'}
+            </button>
+          </div>
+
+          <div className="admin-panel-section flex-1">
+            <h4>🔒 Segurança Ativa</h4>
+            <div className="admin-activity-list">
+              <div className="activity-item">
+                <div className="activity-icon">🛡️</div>
+                <div className="activity-info">
+                  <strong>Filtro de PII (Personally Identifiable Info)</strong>
+                  <span>Status: <span style={{ color: '#10b981', fontWeight: 700 }}>ATIVO</span></span>
+                </div>
               </div>
-            </div>
-            <div className="activity-item">
-              <div className="activity-icon">✍️</div>
-              <div className="activity-info">
-                <strong>Watermarking (Marca d'água Digital)</strong>
-                <span>Status: <span style={{ color: '#10b981', fontWeight: 700 }}>ATIVO</span></span>
+              <div className="activity-item">
+                <div className="activity-icon">✍️</div>
+                <div className="activity-info">
+                  <strong>Watermarking (Marca d'água Digital)</strong>
+                  <span>Status: <span style={{ color: '#10b981', fontWeight: 700 }}>ATIVO</span></span>
+                </div>
               </div>
-            </div>
-            <div className="activity-item">
-              <div className="activity-icon">📜</div>
-              <div className="activity-info">
-                <strong>Logs de Auditoria Imutáveis</strong>
-                <span>Status: <span style={{ color: '#10b981', fontWeight: 700 }}>ATIVO</span></span>
+              <div className="activity-item">
+                <div className="activity-icon">📜</div>
+                <div className="activity-info">
+                  <strong>Logs de Auditoria Imutáveis</strong>
+                  <span>Status: <span style={{ color: '#10b981', fontWeight: 700 }}>ATIVO</span></span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 }
