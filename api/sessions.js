@@ -19,9 +19,21 @@ export default async function handler(req, res) {
 
     // ─── Case B: List Sessions ───────────────────────────────
     const limit = parseInt(req.query.limit) || 20;
-    const { data, error } = await supabase.from('sessions').select('*').order('updated_at', { ascending: false }).limit(limit);
+    const { data, error } = await supabase
+      .from('sessions')
+      .select('*, messages(count)')
+      .eq('user_id', auth.user.id)
+      .order('updated_at', { ascending: false })
+      .limit(limit);
+
     if (error) return res.status(500).json({ error: error.message });
-    return res.json({ sessions: data || [] });
+    
+    const formatted = data.map(s => ({
+      ...s,
+      message_count: s.messages?.[0]?.count || 0
+    }));
+
+    return res.json({ sessions: formatted });
   }
 
   if (req.method === 'DELETE') {

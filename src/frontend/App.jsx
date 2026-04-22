@@ -83,12 +83,22 @@ async function api(path, options = {}) {
   const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers,
-    body: options.body ? JSON.stringify(options.body) : undefined,
-  });
-  return res.json();
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.warn(`[API_ERROR] ${path}:`, errorData);
+      return { stats: { apiConfigured: false }, error: errorData.error };
+    }
+    return res.json();
+  } catch (err) {
+    console.error(`[API_FETCH_CRITICAL] ${path}:`, err);
+    return { stats: { apiConfigured: false }, error: err.message };
+  }
 }
 
 // ─── Markdown Parser (enhanced Claude-like) ─────────────────
@@ -1420,14 +1430,14 @@ function SessionsPage() {
             </thead>
             <tbody>
               {sessions.map(s => (
-                <tr key={s.sessionId}>
-                  <td><code style={{ fontSize: 11 }}>{s.sessionId.substring(0, 12)}...</code></td>
+                <tr key={s.id}>
+                  <td><code style={{ fontSize: 11 }}>{(s.id || '').substring(0, 12)}...</code></td>
                   <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.firstPrompt || '-'}
+                    {s.title || '-'}
                   </td>
-                  <td>{s.messageCount || 0}</td>
+                  <td>{s.message_count || 0}</td>
                   <td>{formatBytes(s.size || 0)}</td>
-                  <td>{s.lastModified ? new Date(s.lastModified).toLocaleString('pt-BR') : '-'}</td>
+                  <td>{s.updated_at ? new Date(s.updated_at).toLocaleString('pt-BR') : '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -2227,14 +2237,17 @@ function DashboardShell({ onSignOut, userProfile }) {
   const isElectron = !!window.electron;
 
   useEffect(() => {
+    if (!userProfile) return;
     const fetchData = () => {
-      api('/dashboard').then(setDashboardData).catch(() => { });
+      api('/dashboard').then(data => {
+        if (data.stats) setDashboardData(data);
+      }).catch(() => { });
       api('/agents').then(data => { if (Array.isArray(data)) setAgents(data); }).catch(() => { });
     };
     fetchData();
     const interval = setInterval(fetchData, 15000);
     return () => clearInterval(interval);
-  }, []);
+  }, [userProfile]);
 
   useEffect(() => {
     if (isElectron) {
@@ -2297,7 +2310,15 @@ function DashboardShell({ onSignOut, userProfile }) {
               <div className="topbar-user">
                 <span className="topbar-user-name">{userProfile.full_name || userProfile.email}</span>
                 <span className="badge badge-purple" style={{ fontSize: 10 }}>{userProfile.plan || 'free'}</span>
-                <button className="btn btn-secondary btn-sm" onClick={onSignOut}>Sair</button>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onSignOut();
+                  }}
+                >
+                  Sair
+                </button>
               </div>
             )}
           </div>
