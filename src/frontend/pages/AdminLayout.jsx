@@ -1614,6 +1614,97 @@ export default function AdminLayout() {
     </div>
   );
 
+  const renderInfrastructure = () => (
+    <div className="admin-panel-section animate-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div>
+          <h3 style={{ margin: 0 }}>🛰️ Infraestrutura Planetária (Modules 50-150)</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>Monitoramento de clusters, latência global e saúde dos nós Edge.</p>
+        </div>
+        <span className="badge badge-success">Sincronizado</span>
+      </div>
+
+      <div className="admin-stats-cards" style={{ marginBottom: 24 }}>
+        <div className="admin-stat-card">
+          <div className="stat-label">Clusters Ativos</div>
+          <div className="stat-value">12/12</div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="stat-label">Uptime Global</div>
+          <div className="stat-value">99.998%</div>
+        </div>
+        <div className="admin-stat-card">
+          <div className="stat-label">Nós Edge (CDN)</div>
+          <div className="stat-value">2,400+</div>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 20, background: '#0f172a', color: '#38bdf8', fontFamily: 'monospace', fontSize: 12 }}>
+        <div>[SYSTEM_CHECK] Verificando integridade do Cluster S01 (São Paulo)... OK</div>
+        <div>[SYSTEM_CHECK] Latência Média: 14ms... OK</div>
+        <div>[SYSTEM_CHECK] Proteção DDoS: Nível 4 ATIVA... OK</div>
+      </div>
+    </div>
+  );
+
+  const renderReasoning = () => (
+    <div className="admin-panel-section animate-in">
+      <h3 style={{ marginBottom: 24 }}>🧠 Núcleo de Raciocínio (Modules 151-200)</h3>
+      <div className="grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        <div className="card" style={{ padding: 20 }}>
+          <h4>Árvore de Pensamentos (ToT)</h4>
+          <div style={{ height: 150, background: 'rgba(59, 130, 246, 0.05)', borderRadius: 12, border: '1px dashed var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Visualizando caminhos de decisão da IA...</span>
+          </div>
+        </div>
+        <div className="card" style={{ padding: 20 }}>
+          <h4>Modelos Ativos</h4>
+          <div className="admin-activity-list">
+            <div className="activity-item"><span>🚀 Gemini 2.5 Flash (Default)</span></div>
+            <div className="activity-item"><span>🧠 Nexus-Logic-v1 (Reasoning)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderOperations = () => (
+    <div className="admin-panel-section animate-in">
+      <h3 style={{ marginBottom: 24 }}>⚙️ Operações & Automação RPA (Modules 301-400)</h3>
+      <div className="admin-table-container">
+        <table className="admin-table">
+          <thead>
+            <tr><th>Task</th><th>Status</th><th>Eficiência</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Indexação de Logs</td><td><span className="badge badge-success">Concluído</span></td><td>+14%</td></tr>
+            <tr><td>Auto-Healing S02</td><td><span className="badge badge-purple">Em execução</span></td><td>+8%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderSettings = () => (
+    <div className="admin-panel-section animate-in">
+      <h3 style={{ marginBottom: 24 }}>⚙️ Configurações Globais do Sistema</h3>
+      <div className="admin-panel-section">
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--glass-border)' }}>
+          <span>Modo de Manutenção</span>
+          <input type="checkbox" />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--glass-border)' }}>
+          <span>Inscrições Abertas</span>
+          <input type="checkbox" defaultChecked />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0' }}>
+          <span>Versão do OS</span>
+          <span style={{ fontWeight: 700 }}>Alpha-1000 (Transcendence)</span>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderDatabase = () => (
     <div className="admin-panel-section glow-card animate-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
