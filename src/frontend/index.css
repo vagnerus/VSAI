@@ -2456,9 +2456,16 @@ vsai-eg7tg91on-vagnerus-.vercel.app.workspace-error code {
 
 .auth-oauth {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-bottom: 0;
 }
+
+.google-btn-container {
+  min-height: 44px;
+  width: 100%;
+}
+
 
 .auth-oauth-btn {
   flex: 1;
