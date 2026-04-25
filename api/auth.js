@@ -101,7 +101,9 @@ export default async function handler(req, res) {
 
     // ─── LOGIN COM GOOGLE ──────────────────────────────
     if (action === 'google') {
+      console.log('[AUTH_GOOGLE] Iniciando validação de token...');
       if (!google_token) {
+        console.warn('[AUTH_GOOGLE] Token não fornecido.');
         return res.status(400).json({ error: 'Token do Google não fornecido.' });
       }
 
@@ -110,25 +112,28 @@ export default async function handler(req, res) {
       const googleData = await googleRes.json();
 
       if (!googleRes.ok || !googleData.email) {
-        console.error('[AUTH_GOOGLE] Token inválido:', googleData);
+        console.error('[AUTH_GOOGLE] Token inválido ou expirado:', googleData);
         return res.status(400).json({ error: 'Falha ao autenticar com o Google.' });
       }
 
-      const { email: gEmail, name: gName, picture: gPicture } = googleData;
+      const { email: gEmail, name: gName } = googleData;
+      console.log(`[AUTH_GOOGLE] Token válido para: ${gEmail}`);
 
       // Verifica se o usuário já existe no banco
       let { rows } = await query('SELECT * FROM profiles WHERE email = $1', [gEmail]);
       let user;
 
       if (rows.length === 0) {
+        console.log(`[AUTH_GOOGLE] Novo usuário detectado, criando perfil: ${gEmail}`);
         // Cadastrar novo usuário com Google
         const result = await query(
           `INSERT INTO profiles (email, password_hash, full_name, role, plan) 
            VALUES ($1, $2, $3, 'user', 'free') RETURNING id, email, full_name, role, plan`,
-          [gEmail, '', gName || 'Usuário Nexus'] // password_hash vazio = apenas google auth
+          [gEmail, '', gName || 'Usuário Nexus'] 
         );
         user = result.rows[0];
       } else {
+        console.log(`[AUTH_GOOGLE] Usuário existente encontrado: ${gEmail}`);
         user = rows[0];
         if (user.role === 'banned') {
           return res.status(403).json({ error: 'Sua conta foi suspensa.' });
@@ -136,8 +141,9 @@ export default async function handler(req, res) {
       }
 
       const token = await generateToken(user);
-      delete user.password_hash; // Nunca retorne isso pro client
-
+      console.log(`[AUTH_GOOGLE] Login concluído com sucesso para: ${gEmail}`);
+      
+      delete user.password_hash; 
       return res.status(200).json({ user, session: { access_token: token } });
     }
 
@@ -150,6 +156,10 @@ export default async function handler(req, res) {
       console.error(`[PG_ERROR] Código: ${error.code}, Detalhe: ${error.detail || error.message}`);
       return res.status(500).json({ error: `Erro no banco de dados (Cód: ${error.code}).` });
     }
-    return res.status(500).json({ error: 'Erro interno no servidor de autenticação.', details: error.message });
+    return res.status(500).json({ 
+      error: 'Erro interno no servidor de autenticação.', 
+      details: error.message,
+      code: error.code
+    });
   }
 }

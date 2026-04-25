@@ -26,7 +26,8 @@ export function AuthProvider({ children }) {
       const data = await res.json();
       if (!res.ok) {
         console.error(`[API Error] ${path}:`, data);
-        throw new Error(data.error || `HTTP ${res.status}`);
+        const errMsg = data.details ? `${data.error} (${data.details})` : (data.error || `HTTP ${res.status}`);
+        throw new Error(errMsg);
       }
       return data;
     } catch (err) {
@@ -94,16 +95,26 @@ export function AuthProvider({ children }) {
 
   const signInWithGoogle = async (googleToken) => {
     setLoading(true);
+    console.log('[Auth] Iniciando login com Google...');
     try {
       const data = await apiCall('/auth?action=google', { google_token: googleToken });
+      console.log('[Auth] Resposta da API:', data);
       
+      if (!data.session || !data.user) {
+        throw new Error('Resposta da API incompleta (faltando user ou session)');
+      }
+
       localStorage.setItem('nexus_access_token', data.session.access_token);
       localStorage.setItem('nexus_user', JSON.stringify(data.user));
       
       setSession(data.session);
       setUser(data.user);
       setProfile(data.user);
+      console.log('[Auth] Login com Google realizado com sucesso!');
       return data;
+    } catch (err) {
+      console.error('[Auth] Erro crítico no login com Google:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
