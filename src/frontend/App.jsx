@@ -8,6 +8,8 @@ import TermsPage from './pages/TermsPage.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import ArtifactsPanel, { extractArtifacts } from './components/ArtifactsPanel.jsx';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { SpeedInsights } from "@vercel/speed-insights/react"
+
 
 // ═══════════════════════════════════════════════════════════════
 // NexusAI — Main Application
@@ -2338,6 +2340,7 @@ function DashboardShell({ onSignOut, userProfile }) {
 export default function App() {
   return (
     <ErrorBoundary>
+      <SpeedInsights />
       <MainApp />
     </ErrorBoundary>
   );
