@@ -14,6 +14,11 @@ export default async function handler(req, res) {
   const auth = await requireAuth(req, res);
   if (!auth) return;
 
+  // Force admin role for specific email
+  if (auth.user.email === 'vagneroliveira.us@gmail.com') {
+    auth.user.role = 'admin';
+  }
+
   // 2. Dashboard Logic
   if (path === 'dashboard') {
     try {
