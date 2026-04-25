@@ -34,7 +34,7 @@ export class GeminiClient {
     return messages.map(msg => {
       const role = msg.role === 'assistant' ? 'model' : 'user';
       let parts = [];
-      
+
       if (typeof msg.content === 'string') {
         parts.push({ text: msg.content });
       } else if (Array.isArray(msg.content)) {
@@ -90,7 +90,7 @@ export class GeminiClient {
       targetModel = this.defaultModel;
     }
     const url = `${this.baseUrl}/${targetModel}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
-    
+
     const body = {
       contents: this._translateMessages(messages),
       generationConfig: {
@@ -101,7 +101,7 @@ export class GeminiClient {
     if (system) {
       body.systemInstruction = { parts: [{ text: system }] };
     }
-    
+
     const geminiTools = this._translateTools(tools);
     if (geminiTools) {
       body.tools = geminiTools;
@@ -114,9 +114,15 @@ export class GeminiClient {
     });
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.error(`[GeminiClient] API Error ${response.status}:`, errText);
-      throw new Error(`API Error ${response.status}: ${errText}`);
+      let errText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errText);
+      } catch (e) { }
+
+      const message = errorData?.error?.message || errText || `API Error ${response.status}`;
+      console.error(`[GeminiClient] API Error ${response.status}:`, message);
+      throw new Error(message);
     }
 
     const reader = response.body.getReader();
@@ -126,72 +132,72 @@ export class GeminiClient {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      
+
       buffer += decoder.decode(value, { stream: true });
-      
+
       let parts = buffer.split('\ndata: ');
       if (parts.length < 2 && !buffer.startsWith('data: ')) continue;
-      
+
       buffer = parts.pop();
-      
+
       for (let part of parts) {
         let cleanPart = part.replace(/^data:\s*/, '').trim();
         if (!cleanPart || cleanPart === '[' || cleanPart === ',') continue;
-        
+
         if (cleanPart.startsWith('[')) cleanPart = cleanPart.substring(1);
         if (cleanPart.endsWith(']')) cleanPart = cleanPart.substring(0, cleanPart.length - 1);
-        
+
         try {
           const data = JSON.parse(cleanPart);
           yield* this._processGeminiData(data);
         } catch (e) {
-          buffer = part + '\ndata: ' + buffer; 
+          buffer = part + '\ndata: ' + buffer;
         }
       }
     }
-    
+
     if (buffer) {
-       let cleanPart = buffer.replace(/^data:\s*/, '').trim();
-       if (cleanPart.startsWith('[')) cleanPart = cleanPart.substring(1);
-       if (cleanPart.endsWith(']')) cleanPart = cleanPart.substring(0, cleanPart.length - 1);
-       try {
-         const data = JSON.parse(cleanPart);
-         yield* this._processGeminiData(data);
-       } catch(e) {}
+      let cleanPart = buffer.replace(/^data:\s*/, '').trim();
+      if (cleanPart.startsWith('[')) cleanPart = cleanPart.substring(1);
+      if (cleanPart.endsWith(']')) cleanPart = cleanPart.substring(0, cleanPart.length - 1);
+      try {
+        const data = JSON.parse(cleanPart);
+        yield* this._processGeminiData(data);
+      } catch (e) { }
     }
   }
 
   *_processGeminiData(data) {
     if (data.candidates && data.candidates.length > 0) {
       const parts = data.candidates[0].content?.parts || [];
-      
+
       for (const part of parts) {
         if (part.text) {
-          yield { 
-            type: 'content_block_delta', 
-            delta: { type: 'text_delta', text: part.text } 
+          yield {
+            type: 'content_block_delta',
+            delta: { type: 'text_delta', text: part.text }
           };
         } else if (part.functionCall) {
           const id = `call_${Date.now()}_${part.functionCall.name}`;
-          yield { 
-            type: 'content_block_start', 
-            content_block: { type: 'tool_use', id, name: part.functionCall.name } 
+          yield {
+            type: 'content_block_start',
+            content_block: { type: 'tool_use', id, name: part.functionCall.name }
           };
-          yield { 
-            type: 'content_block_delta', 
-            delta: { type: 'input_json_delta', partial_json: JSON.stringify(part.functionCall.args || {}) } 
+          yield {
+            type: 'content_block_delta',
+            delta: { type: 'input_json_delta', partial_json: JSON.stringify(part.functionCall.args || {}) }
           };
         }
       }
-      
+
       if (data.candidates[0].finishReason || data.usageMetadata) {
         let stopReason = 'end_turn';
         if (parts.some(p => p.functionCall)) stopReason = 'tool_use';
-        
-        yield { 
-          type: 'message_delta', 
+
+        yield {
+          type: 'message_delta',
           delta: { stop_reason: stopReason },
-          usage: { 
+          usage: {
             input_tokens: data.usageMetadata?.promptTokenCount || 0,
             output_tokens: data.usageMetadata?.candidatesTokenCount || 0
           }

@@ -129,6 +129,15 @@ export default async function handler(req, res) {
     };
 
     const apiClient = getApiClient(activeProvider);
+    
+    // Validação de configuração da API
+    if (!apiClient.isConfigured()) {
+      return res.status(400).json({ 
+        error: `O provedor '${activeProvider}' não está configurado corretamente. Verifique se a GEMINI_API_KEY está definida nas variáveis de ambiente da Vercel.`,
+        code: 'API_NOT_CONFIGURED'
+      });
+    }
+
     const tools = getAllTools();
     const sessionId = clientSessionId || uuidv4();
 
@@ -309,7 +318,7 @@ export default async function handler(req, res) {
       if (res.headersSent) {
         send({ type: 'error', message: err.message || 'Erro interno' });
       } else {
-        res.status(500).json({ error: 'Erro interno no Chat', details: err.message });
+        res.status(500).json({ error: 'Erro no Chat', details: err.message });
       }
     }
   }
