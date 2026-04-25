@@ -37,166 +37,167 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const auth = await verifyAuth(req);
-  const userId = auth?.user?.id || 'anonymous';
-
-  const { content, messages: historyMessages = [], model: selectedModel, provider: selectedProvider, projectId, sessionId: clientSessionId, customInstructions = '', agentId, settings, type } = req.body;
-
-  if (type === 'prefetch') {
-    return res.status(200).json({ status: 'warmed' });
-  }
-
-  let useEdge = false;
-  const isSimpleTask = typeof content === 'string' && content.length < 300 && !content.toLowerCase().includes('analise');
-  
-  if (settings?.edgePriority === 'always' || (settings?.edgePriority === 'auto' && isSimpleTask)) {
-    try {
-      const localCheck = await fetch('http://localhost:11434/api/tags').catch(() => null);
-      if (localCheck && localCheck.ok) useEdge = true;
-    } catch (e) { /* Fallback */ }
-  }
-
-  const activeProvider = useEdge ? 'local' : (selectedProvider || 'gemini');
-  let activeModel = useEdge ? 'llama3:8b' : (selectedModel || 'gemini-2.5-flash');
-  let activeSystemPrompt = '';
-
-  if (!content) return res.status(400).json({ error: 'content is required' });
-
-  // Guardrails
-  const forbiddenPatterns = [
-    /ignore (all )?(previous )?(instructions|prompts|rules)/i,
-    /bypass (the )?(system|rules|filters)/i,
-    /drop table/i,
-    /truncate table/i,
-    /you are now (in )?developer mode/i,
-    /dan mode/i,
-    /<script>/i,
-    /process\.env/i
-  ];
-
-  const sanitizedContent = typeof content === 'string' ? content.trim() : JSON.stringify(content);
-
-  for (const pattern of forbiddenPatterns) {
-    if (pattern.test(sanitizedContent)) {
-      return res.status(403).json({ error: 'Detecção de Ameaça: Violação de Segurança.', code: 'SECURITY_VIOLATION' });
-    }
-  }
-
-  const limitCheck = await checkRateLimit(userId);
-  if (!limitCheck.allowed) {
-    return res.status(429).json({ error: limitCheck.reason, plan: limitCheck.plan });
-  }
-
-  let extraContext = '';
-  let profileInstructions = '';
-
   try {
-    const promises = [];
-    if (projectId && userId !== 'anonymous') {
-      promises.push(query('SELECT file_name, content FROM project_knowledge WHERE project_id = $1', [projectId]));
-    } else {
-      promises.push(Promise.resolve({ rows: [] }));
+    const auth = await verifyAuth(req);
+    const userId = auth?.user?.id || 'anonymous';
+    const { content, messages: historyMessages = [], model: selectedModel, provider: selectedProvider, projectId, sessionId: clientSessionId, customInstructions = '', agentId, settings, type } = req.body;
+
+    console.log('[CHAT_API] Requisição recebida:', { model: selectedModel, provider: selectedProvider, userId });
+
+    if (type === 'prefetch') {
+      return res.status(200).json({ status: 'warmed' });
+    }
+
+    let useEdge = false;
+    const isSimpleTask = typeof content === 'string' && content.length < 300 && !content.toLowerCase().includes('analise');
+    
+    if (settings?.edgePriority === 'always' || (settings?.edgePriority === 'auto' && isSimpleTask)) {
+      try {
+        const localCheck = await fetch('http://localhost:11434/api/tags').catch(() => null);
+        if (localCheck && localCheck.ok) useEdge = true;
+      } catch (e) { /* Fallback */ }
+    }
+
+    const activeProvider = useEdge ? 'local' : (selectedProvider || 'gemini');
+    let activeModel = useEdge ? 'llama3:8b' : (selectedModel || 'gemini-2.5-flash');
+    let activeSystemPrompt = '';
+
+    if (!content) return res.status(400).json({ error: 'content is required' });
+
+    // Guardrails
+    const forbiddenPatterns = [
+      /ignore (all )?(previous )?(instructions|prompts|rules)/i,
+      /bypass (the )?(system|rules|filters)/i,
+      /drop table/i,
+      /truncate table/i,
+      /you are now (in )?developer mode/i,
+      /dan mode/i,
+      /<script>/i,
+      /process\.env/i
+    ];
+
+    const sanitizedContent = typeof content === 'string' ? content.trim() : JSON.stringify(content);
+
+    for (const pattern of forbiddenPatterns) {
+      if (pattern.test(sanitizedContent)) {
+        return res.status(403).json({ error: 'Detecção de Ameaça: Violação de Segurança.', code: 'SECURITY_VIOLATION' });
+      }
+    }
+
+    const limitCheck = await checkRateLimit(userId);
+    if (!limitCheck.allowed) {
+      return res.status(429).json({ error: limitCheck.reason, plan: limitCheck.plan });
+    }
+
+    let extraContext = '';
+    let profileInstructions = '';
+
+    try {
+      const promises = [];
+      if (projectId && userId !== 'anonymous') {
+        promises.push(query('SELECT file_name, content FROM project_knowledge WHERE project_id = $1', [projectId]));
+      } else {
+        promises.push(Promise.resolve({ rows: [] }));
+      }
+
+      if (userId !== 'anonymous') {
+        promises.push(query('SELECT custom_instructions FROM profiles WHERE id = $1', [userId]));
+      } else {
+        promises.push(Promise.resolve({ rows: [] }));
+      }
+
+      const [knowledgeRes, profileRes] = await Promise.all(promises);
+
+      if (knowledgeRes.rows.length > 0) {
+        extraContext = '\n\n=== PROJECT KNOWLEDGE ===\n' + knowledgeRes.rows.map(k => `[${k.file_name}]\n${k.content}`).join('\n\n') + '\n';
+      }
+      if (profileRes.rows.length > 0 && profileRes.rows[0].custom_instructions) {
+        profileInstructions = `\n\n=== USER PREFERENCES ===\n${profileRes.rows[0].custom_instructions}\n`;
+      }
+    } catch (e) {
+      console.error('[DB_FETCH_ERROR]', e);
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const send = (obj) => {
+      if (!res.writable) return;
+      res.write(`data: ${JSON.stringify(obj)}\n\n`);
+    };
+
+    const apiClient = getApiClient(activeProvider);
+    const tools = getAllTools();
+    const sessionId = clientSessionId || uuidv4();
+
+    const hardRules = [
+      { trigger: 'senha de calibração', response: 'A senha de calibração padrão para equipamentos Nexus série X é: [REDACTED_ADMIN_ONLY].' }
+    ];
+
+    const ruleMatch = hardRules.find(r => typeof content === 'string' && content.toLowerCase().includes(r.trigger));
+    if (ruleMatch) {
+      send({ type: 'assistant', content: ruleMatch.response });
+      send({ type: 'done' });
+      return;
+    }
+
+    let baseSystemPrompt = `Você é o NexusAI, uma inteligência artificial de elite (Technical Elite).\n` + profileInstructions + customInstructions;
+
+    if (agentId && userId !== 'anonymous') {
+      try {
+        const { rows } = await query('SELECT * FROM agents WHERE id = $1', [agentId]);
+        if (rows.length > 0) {
+          const agent = rows[0];
+          baseSystemPrompt = `${agent.system_prompt}\n\n[CONTEXTO: Você está atuando como o agente '${agent.name}']\n\n${profileInstructions}`;
+          if (agent.model) activeModel = agent.model;
+        }
+      } catch (e) {}
+    }
+    
+    activeSystemPrompt = baseSystemPrompt;
+
+    const cachedResponse = semanticCache.get(historyMessages, activeSystemPrompt);
+    if (cachedResponse && !sanitizedContent.includes('pesquise')) {
+      send({ type: 'session', sessionId });
+      send({ type: 'status', message: '💡 Resposta recuperada do Cache Semântico' });
+      send({ type: 'assistant', content: cachedResponse });
+      send({ type: 'done' });
+      return res.end();
     }
 
     if (userId !== 'anonymous') {
-      promises.push(query('SELECT custom_instructions FROM profiles WHERE id = $1', [userId]));
-    } else {
-      promises.push(Promise.resolve({ rows: [] }));
-    }
-
-    const [knowledgeRes, profileRes] = await Promise.all(promises);
-
-    if (knowledgeRes.rows.length > 0) {
-      extraContext = '\n\n=== PROJECT KNOWLEDGE ===\n' + knowledgeRes.rows.map(k => `[${k.file_name}]\n${k.content}`).join('\n\n') + '\n';
-    }
-    if (profileRes.rows.length > 0 && profileRes.rows[0].custom_instructions) {
-      profileInstructions = `\n\n=== USER PREFERENCES ===\n${profileRes.rows[0].custom_instructions}\n`;
-    }
-  } catch (e) {
-    console.error('[DB_FETCH_ERROR]', e);
-  }
-
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders();
-
-  const send = (obj) => {
-    if (!res.writable) return;
-    res.write(`data: ${JSON.stringify(obj)}\n\n`);
-  };
-
-  const apiClient = getApiClient(activeProvider);
-  const tools = getAllTools();
-  const sessionId = clientSessionId || uuidv4();
-
-  const hardRules = [
-    { trigger: 'senha de calibração', response: 'A senha de calibração padrão para equipamentos Nexus série X é: [REDACTED_ADMIN_ONLY].' }
-  ];
-
-  const ruleMatch = hardRules.find(r => content.toLowerCase().includes(r.trigger));
-  if (ruleMatch) {
-    send({ type: 'assistant', content: ruleMatch.response });
-    send({ type: 'done' });
-    return;
-  }
-
-  let baseSystemPrompt = `Você é o NexusAI, uma inteligência artificial de elite (Technical Elite).\n` + profileInstructions + customInstructions;
-
-  if (agentId && userId !== 'anonymous') {
-    try {
-      const { rows } = await query('SELECT * FROM agents WHERE id = $1', [agentId]);
-      if (rows.length > 0) {
-        const agent = rows[0];
-        baseSystemPrompt = `${agent.system_prompt}\n\n[CONTEXTO: Você está atuando como o agente '${agent.name}']\n\n${profileInstructions}`;
-        if (agent.model) activeModel = agent.model;
+      const { rows: existingSession } = await query('SELECT id FROM sessions WHERE id = $1', [sessionId]);
+      if (existingSession.length === 0) {
+        const titleContent = typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || 'Imagem Anexada');
+        await query(
+          'INSERT INTO sessions (id, user_id, project_id, title) VALUES ($1, $2, $3, $4)',
+          [sessionId, userId, projectId || null, titleContent.substring(0, 100)]
+        );
       }
-    } catch (e) {}
-  }
-  
-  activeSystemPrompt = baseSystemPrompt;
+    }
 
-  const cachedResponse = semanticCache.get(historyMessages, activeSystemPrompt);
-  if (cachedResponse && !content.includes('pesquise')) {
     send({ type: 'session', sessionId });
-    send({ type: 'status', message: '💡 Resposta recuperada do Cache Semântico' });
-    send({ type: 'assistant', content: cachedResponse });
-    send({ type: 'done' });
-    return res.end();
-  }
 
-  if (userId !== 'anonymous') {
-    const { rows: existingSession } = await query('SELECT id FROM sessions WHERE id = $1', [sessionId]);
-    if (existingSession.length === 0) {
-      const titleContent = typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || 'Imagem Anexada');
+    const mutableMessages = [...(historyMessages || [])];
+    const userMessage = { uuid: uuidv4(), role: 'user', type: 'user', content, timestamp: Date.now() };
+    mutableMessages.push(userMessage);
+
+    if (userId !== 'anonymous') {
       await query(
-        'INSERT INTO sessions (id, user_id, project_id, title) VALUES ($1, $2, $3, $4)',
-        [sessionId, userId, projectId || null, titleContent.substring(0, 100)]
+        'INSERT INTO messages (id, session_id, user_id, role, content, model) VALUES ($1, $2, $3, $4, $5, $6)',
+        [userMessage.uuid, sessionId, userId, 'user', typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || '[Imagem Anexada]'), activeModel]
       );
     }
-  }
 
-  send({ type: 'session', sessionId });
+    const toolDefs = tools.map(t => ({ name: t.name, description: t.description || '', input_schema: t.inputSchema || { type: 'object' } }));
+    let turnCount = 0;
+    const MAX_TURNS = 10;
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let finalAssistantContent = '';
 
-  const mutableMessages = [...(historyMessages || [])];
-  const userMessage = { uuid: uuidv4(), role: 'user', type: 'user', content, timestamp: Date.now() };
-  mutableMessages.push(userMessage);
-
-  if (userId !== 'anonymous') {
-    await query(
-      'INSERT INTO messages (id, session_id, user_id, role, content, model) VALUES ($1, $2, $3, $4, $5, $6)',
-      [userMessage.uuid, sessionId, userId, 'user', typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || '[Imagem Anexada]'), activeModel]
-    );
-  }
-
-  const toolDefs = tools.map(t => ({ name: t.name, description: t.description || '', input_schema: t.inputSchema || { type: 'object' } }));
-  let turnCount = 0;
-  const MAX_TURNS = 10;
-  let totalInputTokens = 0;
-  let totalOutputTokens = 0;
-  let finalAssistantContent = '';
-
-  try {
     while (turnCount < MAX_TURNS) {
       turnCount++;
 
@@ -288,32 +289,28 @@ export default async function handler(req, res) {
       semanticCache.set(historyMessages, activeSystemPrompt, finalAssistantContent);
     }
 
+    if (userId !== 'anonymous' && (totalInputTokens + totalOutputTokens) > 0) {
+      try {
+        const usageCost = (totalInputTokens + totalOutputTokens) * 0.000003;
+        await query(
+          'INSERT INTO usage_logs (user_id, session_id, model, tokens_input, tokens_output, cost_usd) VALUES ($1, $2, $3, $4, $5, $6)',
+          [userId, sessionId, activeModel, totalInputTokens, totalOutputTokens, usageCost]
+        );
+        await query('UPDATE profiles SET tokens_used_month = tokens_used_month + $1 WHERE id = $2', [totalInputTokens + totalOutputTokens, userId]);
+      } catch (e) {}
+    }
+
+    send({ type: 'done' });
+    res.end();
+
   } catch (err) {
-    send({ type: 'error', message: err.message || 'Erro interno' });
+    console.error('[CHAT_CRITICAL_ERROR]', err);
+    if (!res.writableEnded) {
+      if (res.headersSent) {
+        send({ type: 'error', message: err.message || 'Erro interno' });
+      } else {
+        res.status(500).json({ error: 'Erro interno no Chat', details: err.message });
+      }
+    }
   }
-
-  if (userId !== 'anonymous' && (totalInputTokens + totalOutputTokens) > 0) {
-    try {
-      const usageCost = (totalInputTokens + totalOutputTokens) * 0.000003;
-      await query(
-        'INSERT INTO usage_logs (user_id, session_id, model, tokens_input, tokens_output, cost_usd) VALUES ($1, $2, $3, $4, $5, $6)',
-        [userId, sessionId, activeModel, totalInputTokens, totalOutputTokens, usageCost]
-      );
-      await query('UPDATE profiles SET tokens_used_month = tokens_used_month + $1 WHERE id = $2', [totalInputTokens + totalOutputTokens, userId]);
-    } catch (e) {}
-  }
-
-  if (userId !== 'anonymous' && finalAssistantContent) {
-    try {
-      const sentimentPrompt = `Analise o sentimento desta mensagem do assistente. APENAS JSON: { "sentiment": "positivo" | "neutro", "lead_score": 0 }`;
-      const sentimentAnalysis = await apiClient.stream({ model: 'gemini-2.5-flash', system: sentimentPrompt, messages: [{ role: 'user', content: finalAssistantContent }], max_tokens: 50 });
-      let analysisResult = '';
-      for await (const event of sentimentAnalysis) { if (event.type === 'content_block_delta' && event.delta?.text) analysisResult += event.delta.text; }
-      const biData = JSON.parse(analysisResult.match(/\{.*\}/s)?.[0] || '{}');
-      await query('UPDATE sessions SET sentiment_score = $1, lead_score = $2, metadata = $3 WHERE id = $4', [biData.sentiment, biData.lead_score, JSON.stringify(biData), sessionId]);
-    } catch (e) {}
-  }
-
-  send({ type: 'done' });
-  res.end();
 }
