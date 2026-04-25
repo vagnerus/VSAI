@@ -17,14 +17,22 @@ export function AuthProvider({ children }) {
 
   // Helper to fetch custom API
   const apiCall = async (path, body) => {
-    const res = await fetch(`${API_BASE}${path}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-    return data;
+    try {
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error(`[API Error] ${path}:`, data);
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      return data;
+    } catch (err) {
+      console.error(`[Network/Parse Error] ${path}:`, err);
+      throw err;
+    }
   };
 
   const loadSessionFromStorage = useCallback(() => {
@@ -84,8 +92,28 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const signInWithGoogle = async (googleToken) => {
+    setLoading(true);
+    try {
+      const data = await apiCall('/auth?action=google', { google_token: googleToken });
+      
+      localStorage.setItem('nexus_access_token', data.session.access_token);
+      localStorage.setItem('nexus_user', JSON.stringify(data.user));
+      
+      setSession(data.session);
+      setUser(data.user);
+      setProfile(data.user);
+      return data;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signInWithOAuth = async (provider) => {
-    throw new Error('OAuth login não é suportado pelo sistema de banco local ainda.');
+    if (provider === 'google') {
+      throw new Error('Por favor, use signInWithGoogle passando o token do Google.');
+    }
+    throw new Error('OAuth login não suportado para este provedor.');
   };
 
   const signOut = async () => {
@@ -118,11 +146,12 @@ export function AuthProvider({ children }) {
     plan: profile?.plan || 'free',
     signInWithEmail,
     signUpWithEmail,
+    signInWithGoogle,
     signInWithOAuth,
     signOut,
     resetPassword,
     getAuthHeaders,
-    refreshProfile: () => { /* No-op unless we build a /api/auth?action=me endpoint */ },
+    refreshProfile: () => { /* No-op */ },
   };
 
   return (
