@@ -736,7 +736,7 @@ function ChatPage({ projectId }) {
   const [sessionId, setSessionId] = useState(null);
   const [toolUses, setToolUses] = useState([]);
   const [usage, setUsage] = useState(null);
-  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
+  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentLogs, setAgentLogs] = useState([]);
@@ -804,18 +804,17 @@ function ChatPage({ projectId }) {
       name: 'Google Gemini',
       icon: '🔹',
       models: [
-        { id: 'gemini-2.5-flash', label: '⚡ Gemini 2.5 Flash' },
-        { id: 'gemini-2.5-pro', label: '🧠 Gemini 2.5 Pro' },
-        { id: 'gemini-2.0-flash', label: '🔹 Gemini 2.0 Flash' },
+        { id: 'gemini-1.5-flash', label: '⚡ Gemini 1.5 Flash' },
+        { id: 'gemini-1.5-pro', label: '🧠 Gemini 1.5 Pro' },
+        { id: 'gemini-1.5-flash-8b', label: '🔹 Gemini 1.5 Flash 8B' },
       ]
     },
     openai: {
       name: 'OpenAI GPT',
       icon: '🟢',
       models: [
-        { id: 'gpt-4o', label: '🚀 GPT-4o (Omni)' },
+        { id: 'gpt-4o', label: '🚀 GPT-4o' },
         { id: 'gpt-4-turbo', label: '🔥 GPT-4 Turbo' },
-        { id: 'gpt-3.5-turbo', label: '⚡ GPT-3.5 Turbo' },
       ]
     },
     anthropic: {
@@ -823,7 +822,6 @@ function ChatPage({ projectId }) {
       icon: '🏺',
       models: [
         { id: 'claude-3-5-sonnet-20240620', label: '🎭 Claude 3.5 Sonnet' },
-        { id: 'claude-3-opus-20240229', label: '🐘 Claude 3 Opus' },
       ]
     }
   };
@@ -831,6 +829,38 @@ function ChatPage({ projectId }) {
   const [selectedProvider, setSelectedProvider] = useState('google');
   const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096, edgePriority: 'auto' });
   const [showSettings, setShowSettings] = useState(false);
+
+  // ... rest of state ...
+  
+  // UI do Seletor Compacto
+  const renderAISelector = () => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f8fafc', padding: '6px 12px', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)' }}>
+      <span style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Inteligência:</span>
+      <select 
+        value={`${selectedProvider}:${selectedModel}`}
+        onChange={(e) => {
+          const [p, m] = e.target.value.split(':');
+          setSelectedProvider(p);
+          setSelectedModel(m);
+        }}
+        style={{ background: 'transparent', border: 'none', color: '#1e293b', fontWeight: 700, fontSize: 13, cursor: 'pointer', outline: 'none', flex: 1 }}
+      >
+        {Object.entries(AI_CONFIG).map(([pId, pCfg]) => (
+          <optgroup key={pId} label={pCfg.name}>
+            {pCfg.models.map(m => (
+              <option key={m.id} value={`${pId}:${m.id}`}>{pCfg.icon} {m.label}</option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+      <button 
+        onClick={() => setShowSettings(!showSettings)}
+        style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#475569', transition: 'all 0.2s' }}
+      >
+        ⚙️ {showSettings ? 'Fechar' : 'Ajustes'}
+      </button>
+    </div>
+  );
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1170,61 +1200,8 @@ function ChatPage({ projectId }) {
               ))}
             </div>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingBottom: 12, borderBottom: '1px solid var(--glass-border)', marginBottom: 12 }}>
-            {/* Provider Selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Provedor:</span>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {Object.entries(AI_CONFIG).map(([id, cfg]) => (
-                  <button
-                    key={id}
-                    onClick={() => {
-                      setSelectedProvider(id);
-                      setSelectedModel(cfg.models[0].id);
-                    }}
-                    className={`btn ${selectedProvider === id ? 'btn-primary' : 'btn-secondary'}`}
-                    style={{ fontSize: 10, padding: '4px 10px', borderRadius: 8 }}
-                  >
-                    {cfg.icon} {cfg.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-            
-            {/* Model Selector */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Modelo:</span>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', flex: 1 }}>
-                {AI_CONFIG[selectedProvider].models.map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => setSelectedModel(m.id)}
-                    style={{
-                      fontSize: 11,
-                      padding: '4px 12px',
-                      borderRadius: 6,
-                      border: '1px solid',
-                      cursor: 'pointer',
-                      borderColor: selectedModel === m.id ? 'var(--accent-primary)' : 'var(--glass-border)',
-                      background: selectedModel === m.id ? 'var(--accent-primary-glow)' : '#fff',
-                      color: selectedModel === m.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                      fontWeight: selectedModel === m.id ? 700 : 400,
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
-              <button 
-                onClick={() => setShowSettings(!showSettings)}
-                className="btn btn-secondary"
-                style={{ padding: '6px 12px', fontSize: 12, borderRadius: 8 }}
-                title="Configurações Avançadas"
-              >
-                ⚙️ {showSettings ? 'Fechar' : 'Ajustes'}
-              </button>
-            </div>
+          <div style={{ paddingBottom: 12, borderBottom: '1px solid var(--glass-border)', marginBottom: 12 }}>
+            {renderAISelector()}
 
             {/* Advanced Settings Panel */}
             {showSettings && (

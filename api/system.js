@@ -34,7 +34,7 @@ export default async function handler(req, res) {
           totalMessages: totalMessages || 0,
           totalHooks: 12,
           uptime: Math.floor(process.uptime()),
-          model: 'gemini-2.0-flash',
+          model: 'gemini-1.5-flash',
           apiConfigured: true,
           tokensUsed: p.tokens_used_month || 0,
           tokensLimit: p.tokens_limit || 50000,
@@ -74,12 +74,12 @@ export default async function handler(req, res) {
   if (path === 'config' || path === 'models') {
     return res.json({
       models: [
-        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google', speed: 'ultra' },
+        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google', speed: 'ultra' },
         { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', speed: 'high' },
         { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', speed: 'high' }
       ],
       settings: {
-        defaultModel: 'gemini-2.5-flash',
+        defaultModel: 'gemini-1.5-flash',
         maxTokens: 4096,
         safetyMode: 'enterprise'
       }

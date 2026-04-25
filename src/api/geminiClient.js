@@ -6,7 +6,7 @@
 export class GeminiClient {
   constructor(config = {}) {
     this.apiKey = config.apiKey || '';
-    this.defaultModel = config.model || 'gemini-2.5-flash';
+    this.defaultModel = config.model || 'gemini-1.5-flash';
     this.maxRetries = config.maxRetries || 3;
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
@@ -21,9 +21,9 @@ export class GeminiClient {
 
   getAvailableModels() {
     return [
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Powerful and capable' },
-      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Fast and cost-effective' },
-      { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', description: 'Standard flash model' }
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Powerful and capable' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Fast and cost-effective' },
+      { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash 8B', description: 'Lightweight and fast' }
     ];
   }
 

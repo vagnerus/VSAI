@@ -62,7 +62,7 @@ export function getApiClient(requestedProvider) {
     anthropicApiKey: '',
     openaiApiKey: '',
     defaultProvider: 'gemini',
-    googleModel: 'gemini-2.5-flash',
+    googleModel: 'gemini-1.5-flash',
     anthropicModel: 'claude-3-5-sonnet-20240620',
     openaiModel: 'gpt-4o',
   };
@@ -75,10 +75,13 @@ export function getApiClient(requestedProvider) {
   }
 
   // ENV VARS sempre tem prioridade (Vercel)
-  if (process.env.GEMINI_API_KEY) cfg.geminiApiKey = process.env.GEMINI_API_KEY;
+  if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+    cfg.geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+  }
   if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
   if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;
   if (process.env.DEFAULT_PROVIDER) cfg.defaultProvider = process.env.DEFAULT_PROVIDER;
+  if (process.env.GEMINI_MODEL) cfg.googleModel = process.env.GEMINI_MODEL;
 
   const clients = {
     google: new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel }),

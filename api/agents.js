@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       
       const { rows } = await query(
         'INSERT INTO agents (user_id, name, description, system_prompt, model, icon) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-        [auth.user.id, name, description, system_prompt, model || 'gemini-2.5-flash', icon || '🤖']
+        [auth.user.id, name, description, system_prompt, model || 'gemini-1.5-flash', icon || '🤖']
       );
       return res.status(201).json(rows[0]);
     } catch (err) {

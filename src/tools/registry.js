@@ -98,9 +98,9 @@ export const TokenCalculatorTool = buildTool({
   },
   async call(input) {
     const estimatedTokens = Math.ceil(input.text.length / 4);
-    const model = input.model || 'gemini-2.5-flash';
+    const model = input.model || 'gemini-1.5-flash';
     const rates = {
-      'gemini-2.5-flash': 0.075, 'gemini-2.5-pro': 1.25, 'gemini-2.0-flash': 0.075,
+      'gemini-1.5-flash': 0.075, 'gemini-1.5-pro': 1.25, 'gemini-1.5-flash-8b': 0.03,
       'claude-sonnet-4-20250514': 3, 'claude-3-opus-20240229': 15, 'claude-3-5-haiku-20241022': 0.25,
     };
     const costPer1M = rates[model] || 0.075;

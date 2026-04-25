@@ -13,7 +13,7 @@ export default function AdminLayout() {
   const [alphaActive, setAlphaActive] = useState(false);
   const [agents, setAgents] = useState([]);
   const [showAgentBuilder, setShowAgentBuilder] = useState(false);
-  const [newAgent, setNewAgent] = useState({ name: '', description: '', model: 'gemini-2.5-flash', system_prompt: '', icon: '🤖' });
+  const [newAgent, setNewAgent] = useState({ name: '', description: '', model: 'gemini-1.5-flash', system_prompt: '', icon: '🤖' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { getAuthHeaders } = useAuth();
@@ -124,7 +124,7 @@ export default function AdminLayout() {
         const created = await res.json();
         setAgents([created, ...agents]);
         setShowAgentBuilder(false);
-        setNewAgent({ name: '', description: '', model: 'gemini-2.5-flash', system_prompt: '', icon: '🤖' });
+        setNewAgent({ name: '', description: '', model: 'gemini-1.5-flash', system_prompt: '', icon: '🤖' });
         alert('Agente criado!');
       }
     } catch (err) { alert('Erro na conexão.'); }

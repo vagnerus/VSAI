@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS agents (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     system_prompt TEXT NOT NULL,
-    model VARCHAR(100) DEFAULT 'gemini-2.5-flash',
+    model VARCHAR(100) DEFAULT 'gemini-1.5-flash',
     icon VARCHAR(50) DEFAULT '🤖',
     is_public BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
