@@ -941,7 +941,10 @@ function ChatPage({ projectId }) {
         }),
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || `HTTP ${response.status}`);
+      }
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
