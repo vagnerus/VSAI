@@ -8,9 +8,11 @@ const { Pool } = pg;
 // postgresql://irmao_user:12345@187.45.255.14:5432/VSAI
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // SSL pode ser necessário dependendo da configuração do P4Admin. 
-  // Descomente a linha abaixo se der erro de SSL (self-signed certificate)
-  // ssl: { rejectUnauthorized: false }
+  // Se a URL contiver sslmode=disable, desativa o SSL completamente.
+  // Caso contrário, se contiver sslmode=require ou no-verify, usa SSL flexível.
+  ssl: process.env.DATABASE_URL?.includes('sslmode=disable') 
+    ? false 
+    : (process.env.DATABASE_URL?.includes('sslmode=') ? { rejectUnauthorized: false } : false)
 });
 
 pool.on('error', (err, client) => {
