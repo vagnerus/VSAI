@@ -18,6 +18,7 @@ export default function LoginPage({ mode: initialMode = 'login', onNavigate }) {
     if (mode === 'forgot') return;
 
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+    console.log('[Google Auth] Client ID:', clientId ? 'Detectado' : 'AUSENTE');
     
     if (!clientId) {
       console.warn('VITE_GOOGLE_CLIENT_ID não encontrado no .env. Login do Google não funcionará.');
@@ -39,16 +40,21 @@ export default function LoginPage({ mode: initialMode = 'login', onNavigate }) {
 
     const initializeGoogleSignIn = () => {
       if (!window.google) return;
-      window.google.accounts.id.initialize({
-        client_id: clientId,
-        callback: handleGoogleResponse,
-      });
+      
+      try {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: handleGoogleResponse,
+        });
 
-      if (googleButtonRef.current) {
-        window.google.accounts.id.renderButton(
-          googleButtonRef.current,
-          { theme: 'outline', size: 'large', text: 'continue_with', width: '100%' }
-        );
+        if (googleButtonRef.current) {
+          window.google.accounts.id.renderButton(
+            googleButtonRef.current,
+            { theme: 'outline', size: 'large', text: 'continue_with', width: '100%' }
+          );
+        }
+      } catch (err) {
+        console.error('[Google Auth] Erro ao renderizar botão:', err);
       }
     };
 
