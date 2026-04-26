@@ -1485,7 +1485,7 @@ tr:hover td {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #94a3b8; /* Lighter color for better contrast */
+  color: var(--text-secondary); /* Darker for better contrast */
   margin-bottom: 8px;
   font-weight: 700;
 }
@@ -2521,33 +2521,32 @@ tr:hover td {
   display: block;
   font-size: 13px;
   font-weight: 700;
-  color: #e2e8f0; /* Crisp white-grey for labels */
-  margin-bottom: 10px;
+  color: var(--text-primary); /* Dark color for visibility on light card */
+  margin-bottom: 8px;
   letter-spacing: 0.02em;
 }
 
 .auth-field input {
   width: 100%;
-  padding: 14px 16px;
-  background: rgba(15, 23, 42, 0.6); /* Deep slate background */
-  border: 1px solid rgba(139, 92, 246, 0.3); /* Subtle purple border */
+  padding: 12px 16px;
+  background: var(--bg-elevated); /* Lighter background for light theme */
+  border: 1px solid var(--glass-border);
   border-radius: 12px;
-  color: #ffffff;
+  color: var(--text-primary); /* Dark text for better contrast */
   font-family: var(--font-sans);
   font-size: 15px;
   outline: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .auth-field input:focus {
   border-color: var(--accent-primary);
-  background: rgba(15, 23, 42, 0.8);
-  box-shadow: 0 0 0 4px var(--accent-primary-glow), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: var(--bg-secondary);
+  box-shadow: 0 0 0 4px var(--accent-primary-glow);
 }
 
 .auth-field input::placeholder {
-  color: #64748b;
+  color: var(--text-tertiary);
 }
 
 .auth-forgot-link {
