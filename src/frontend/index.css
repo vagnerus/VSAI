@@ -1378,7 +1378,7 @@ tr:hover td {
   font-size: 13px;
 }
 
-vsai-eg7tg91on-vagnerus-.vercel.app.workspace-error code {
+.workspace-error code {
   color: var(--accent-danger);
   word-break: break-all;
 }
@@ -1502,24 +1502,7 @@ vsai-eg7tg91on-vagnerus-.vercel.app.workspace-error code {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.workspace-error code {
-  color: var(--accent-danger);
-  word-break: break-all;
-}
-  animation: slideInRight 0.3s ease-out;
-}
 
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
 
 .activity-time {
   font-size: 10px;
@@ -3244,6 +3227,7 @@ vsai-eg7tg91on-vagnerus-.vercel.app.workspace-error code {
   background: linear-gradient(90deg, var(--text-primary), var(--text-secondary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .admin-panel-section {

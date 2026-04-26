@@ -1,13 +1,12 @@
 /**
  * GeminiClient — REST Wrapper for the Google Gemini API.
- * Emulates the Anthropic stream event format to maintain compatibility with QueryEngine.
+ * Emulates the Anthropic stream event format to maintain compatibility.
  */
 
 export class GeminiClient {
   constructor(config = {}) {
     this.apiKey = config.apiKey || '';
     this.defaultModel = config.model || 'gemini-1.5-flash';
-    this.maxRetries = config.maxRetries || 3;
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
 
     if (!this.apiKey) {
@@ -21,62 +20,83 @@ export class GeminiClient {
 
   getAvailableModels() {
     return [
-      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Powerful and capable' },
-      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Fast and cost-effective' },
+      { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Fast and versatile' },
+      { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Most capable model' },
       { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash 8B', description: 'Lightweight and fast' }
     ];
   }
 
   /**
-   * Translates Anthropic messages to Gemini format.
+   * Translates messages from the internal format (Anthropic-like) to Gemini format.
    */
   _translateMessages(messages) {
-    return messages.map(msg => {
-      const role = msg.role === 'assistant' ? 'model' : 'user';
+    const contents = [];
+    
+    messages.forEach(msg => {
+      let role = msg.role === 'assistant' ? 'model' : 'user';
       let parts = [];
 
       if (typeof msg.content === 'string') {
         parts.push({ text: msg.content });
       } else if (Array.isArray(msg.content)) {
-        for (const block of msg.content) {
-          if (block.type === 'text') {
-            parts.push({ text: block.text });
-          } else if (block.type === 'image_url') {
-            const base64Data = block.image_url.url.split(',')[1];
-            const mimeType = block.image_url.url.match(/data:(.*?);base64/)?.[1] || 'image/jpeg';
+        msg.content.forEach(c => {
+          if (c.type === 'text') parts.push({ text: c.text });
+          if (c.type === 'image_url') {
+            const base64Data = c.image_url.url.split(',')[1];
+            const mimeType = c.image_url.url.split(';')[0].split(':')[1];
             parts.push({
-              inlineData: {
-                data: base64Data,
-                mimeType: mimeType
-              }
-            });
-          } else if (block.type === 'tool_use') {
-            parts.push({
-              functionCall: {
-                name: block.name,
-                args: block.input || {}
-              }
-            });
-          } else if (block.type === 'tool_result') {
-            // CRITICAL FIX: Gemini expects the function NAME, not a tool_use_id.
-            // We use msg.toolName which should be populated by QueryEngine.
-            parts.push({
-              functionResponse: {
-                name: msg.toolName || block.name || "unknown_tool",
-                response: typeof block.content === 'string' ? { result: block.content } : block.content
+              inline_data: {
+                mime_type: mimeType,
+                data: base64Data
               }
             });
           }
+          if (c.type === 'tool_use') {
+            parts.push({
+              functionCall: {
+                name: c.name,
+                args: c.input
+              }
+            });
+          }
+          if (c.type === 'tool_result') {
+            parts.push({
+              functionResponse: {
+                name: c.name,
+                response: { content: c.content }
+              }
+            });
+          }
+        });
+      }
+
+      if (msg.type === 'tool_result') {
+        role = 'user';
+        parts.push({
+          functionResponse: {
+            name: msg.toolName,
+            response: { content: msg.content }
+          }
+        });
+      }
+
+      if (parts.length > 0) {
+        const lastContent = contents[contents.length - 1];
+        if (lastContent && lastContent.role === role) {
+          lastContent.parts.push(...parts);
+        } else {
+          contents.push({ role, parts });
         }
       }
-      return { role, parts };
     });
+
+    return contents;
   }
 
   _translateTools(tools) {
     if (!tools || tools.length === 0) return undefined;
     return [{
-      functionDeclarations: tools.map(t => ({
+      function_declarations: tools.map(t => ({
         name: t.name,
         description: t.description || '',
         parameters: t.inputSchema || t.input_schema || { type: 'object', properties: {} }
@@ -84,22 +104,21 @@ export class GeminiClient {
     }];
   }
 
-  async *stream({ model, max_tokens, system, messages, tools }) {
-    let targetModel = model || this.defaultModel;
-    if (targetModel.startsWith('claude') || targetModel.startsWith('gpt')) {
-      targetModel = this.defaultModel;
-    }
+  async *stream({ model, max_tokens, system, messages, tools, temperature, top_p }) {
+    const targetModel = model || this.defaultModel;
     const url = `${this.baseUrl}/${targetModel}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
-
+    
     const body = {
       contents: this._translateMessages(messages),
       generationConfig: {
-        maxOutputTokens: max_tokens || 8192
+        maxOutputTokens: max_tokens || 4096,
+        temperature: temperature ?? 0.7,
+        topP: top_p ?? 0.9,
       }
     };
 
     if (system) {
-      body.systemInstruction = { parts: [{ text: system }] };
+      body.system_instruction = { parts: [{ text: system }] };
     }
 
     const geminiTools = this._translateTools(tools);
@@ -114,15 +133,8 @@ export class GeminiClient {
     });
 
     if (!response.ok) {
-      let errText = await response.text();
-      let errorData;
-      try {
-        errorData = JSON.parse(errText);
-      } catch (e) { }
-
-      const message = errorData?.error?.message || errText || `API Error ${response.status}`;
-      console.error(`[GeminiClient] API Error ${response.status}:`, message);
-      throw new Error(message);
+      const errText = await response.text();
+      throw new Error(`Gemini Error ${response.status}: ${errText}`);
     }
 
     const reader = response.body.getReader();
@@ -132,76 +144,69 @@ export class GeminiClient {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
+      
       buffer += decoder.decode(value, { stream: true });
+      let lines = buffer.split('\n');
+      buffer = lines.pop();
 
-      let parts = buffer.split('\ndata: ');
-      if (parts.length < 2 && !buffer.startsWith('data: ')) continue;
-
-      buffer = parts.pop();
-
-      for (let part of parts) {
-        let cleanPart = part.replace(/^data:\s*/, '').trim();
-        if (!cleanPart || cleanPart === '[' || cleanPart === ',') continue;
-
-        if (cleanPart.startsWith('[')) cleanPart = cleanPart.substring(1);
-        if (cleanPart.endsWith(']')) cleanPart = cleanPart.substring(0, cleanPart.length - 1);
+      for (const line of lines) {
+        const cleanLine = line.replace(/^data: /, '').trim();
+        if (!cleanLine) continue;
 
         try {
-          const data = JSON.parse(cleanPart);
-          yield* this._processGeminiData(data);
-        } catch (e) {
-          buffer = part + '\ndata: ' + buffer;
-        }
-      }
-    }
+          const data = JSON.parse(cleanLine);
+          const candidate = data.candidates?.[0];
+          const part = candidate?.content?.parts?.[0];
 
-    if (buffer) {
-      let cleanPart = buffer.replace(/^data:\s*/, '').trim();
-      if (cleanPart.startsWith('[')) cleanPart = cleanPart.substring(1);
-      if (cleanPart.endsWith(']')) cleanPart = cleanPart.substring(0, cleanPart.length - 1);
-      try {
-        const data = JSON.parse(cleanPart);
-        yield* this._processGeminiData(data);
-      } catch (e) { }
-    }
-  }
-
-  *_processGeminiData(data) {
-    if (data.candidates && data.candidates.length > 0) {
-      const parts = data.candidates[0].content?.parts || [];
-
-      for (const part of parts) {
-        if (part.text) {
-          yield {
-            type: 'content_block_delta',
-            delta: { type: 'text_delta', text: part.text }
-          };
-        } else if (part.functionCall) {
-          const id = `call_${Date.now()}_${part.functionCall.name}`;
-          yield {
-            type: 'content_block_start',
-            content_block: { type: 'tool_use', id, name: part.functionCall.name }
-          };
-          yield {
-            type: 'content_block_delta',
-            delta: { type: 'input_json_delta', partial_json: JSON.stringify(part.functionCall.args || {}) }
-          };
-        }
-      }
-
-      if (data.candidates[0].finishReason || data.usageMetadata) {
-        let stopReason = 'end_turn';
-        if (parts.some(p => p.functionCall)) stopReason = 'tool_use';
-
-        yield {
-          type: 'message_delta',
-          delta: { stop_reason: stopReason },
-          usage: {
-            input_tokens: data.usageMetadata?.promptTokenCount || 0,
-            output_tokens: data.usageMetadata?.candidatesTokenCount || 0
+          if (part?.text) {
+            yield { 
+              type: 'content_block_delta', 
+              delta: { type: 'text_delta', text: part.text } 
+            };
           }
-        };
+
+          if (part?.functionCall) {
+            yield { 
+              type: 'content_block_start', 
+              content_block: { 
+                type: 'tool_use', 
+                id: `call_${Math.random().toString(36).substring(2, 11)}`, 
+                name: part.functionCall.name 
+              } 
+            };
+            yield { 
+              type: 'content_block_delta', 
+              delta: { 
+                type: 'input_json_delta', 
+                partial_json: JSON.stringify(part.functionCall.args) 
+              } 
+            };
+          }
+
+          if (candidate?.finishReason === 'STOP' || candidate?.finishReason === 'MAX_TOKENS') {
+            yield {
+              type: 'message_delta',
+              delta: { stop_reason: 'end_turn' }
+            };
+          } else if (candidate?.finishReason === 'FUNCTION_CALL') {
+            yield {
+              type: 'message_delta',
+              delta: { stop_reason: 'tool_use' }
+            };
+          }
+
+          if (data.usageMetadata) {
+            yield {
+              type: 'message_delta',
+              usage: {
+                input_tokens: data.usageMetadata.promptTokenCount,
+                output_tokens: data.usageMetadata.candidatesTokenCount
+              }
+            };
+          }
+        } catch (e) {
+          // Incomplete JSON or other parsing error
+        }
       }
     }
   }

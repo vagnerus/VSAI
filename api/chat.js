@@ -19,7 +19,7 @@ function formatMessagesForAPI(messages) {
     if (m.type === 'tool_result') {
       return {
         role: 'user',
-        content: [{ type: 'tool_result', tool_use_id: m.toolUseId, content: m.content, is_error: m.isError }],
+        content: [{ type: 'tool_result', tool_use_id: m.toolUseId, content: m.content, is_error: m.isError, name: m.toolName }],
       };
     }
     if (m.role === 'assistant' && m.toolCalls?.length > 0) {

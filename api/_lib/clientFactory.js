@@ -2,6 +2,7 @@ import { config } from 'dotenv';
 import { GeminiClient } from '../../src/api/geminiClient.js';
 import { AnthropicClient } from '../../src/api/anthropicClient.js';
 import { OpenAIClient } from '../../src/api/openaiClient.js';
+import { OllamaClient } from '../../src/api/ollamaClient.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -61,10 +62,12 @@ export function getApiClient(requestedProvider) {
     geminiApiKey: '',
     anthropicApiKey: '',
     openaiApiKey: '',
+    ollamaHost: '',
     defaultProvider: 'gemini',
     googleModel: 'gemini-1.5-flash',
     anthropicModel: 'claude-3-5-sonnet-20240620',
     openaiModel: 'gpt-4o',
+    ollamaModel: 'llama3:8b',
   };
 
   if (fs.existsSync(CONFIG_PATH)) {
@@ -80,13 +83,16 @@ export function getApiClient(requestedProvider) {
   }
   if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
   if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;
+  if (process.env.OLLAMA_HOST) cfg.ollamaHost = process.env.OLLAMA_HOST;
   if (process.env.DEFAULT_PROVIDER) cfg.defaultProvider = process.env.DEFAULT_PROVIDER;
   if (process.env.GEMINI_MODEL) cfg.googleModel = process.env.GEMINI_MODEL;
+  if (process.env.OLLAMA_MODEL) cfg.ollamaModel = process.env.OLLAMA_MODEL;
 
   const clients = {
     google: new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel }),
     anthropic: new AnthropicClient({ apiKey: cfg.anthropicApiKey, model: cfg.anthropicModel }),
-    openai: new OpenAIClient({ apiKey: cfg.openaiApiKey, model: cfg.openaiModel })
+    openai: new OpenAIClient({ apiKey: cfg.openaiApiKey, model: cfg.openaiModel }),
+    local: new OllamaClient({ host: cfg.ollamaHost, model: cfg.ollamaModel })
   };
 
   // Roteamento Dinâmico: O provedor pedido é o Primário. O padrão vira Fallback.
