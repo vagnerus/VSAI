@@ -1683,9 +1683,9 @@ function AnalyticsPage({ stats }) {
               <tr><th>Modelo</th><th>Descrição</th><th>Input /1M</th><th>Output /1M</th></tr>
             </thead>
             <tbody>
-              <tr><td>Gemini 2.5 Flash</td><td>Rápido e econômico — modelo padrão</td><td>$0.075</td><td>$0.30</td></tr>
-              <tr><td>Gemini 2.5 Pro</td><td>Mais poderoso para tarefas complexas</td><td>$1.25</td><td>$5.00</td></tr>
-              <tr><td>Gemini 2.0 Flash</td><td>Alternativa estável e rápida</td><td>$0.075</td><td>$0.30</td></tr>
+              <tr><td>Gemini 2.0 Flash</td><td>Ultra-rápido e gratuito — padrão</td><td>$0.00</td><td>$0.00</td></tr>
+              <tr><td>Gemini 1.5 Pro</td><td>Mais poderoso para tarefas complexas</td><td>$1.25</td><td>$5.00</td></tr>
+              <tr><td>Gemini 1.5 Flash</td><td>Alternativa estável e rápida</td><td>$0.00</td><td>$0.00</td></tr>
             </tbody>
           </table>
         </div>
@@ -2113,6 +2113,15 @@ function SettingsPage() {
             <div style={{ fontWeight: 600 }}>Anthropic Claude</div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>Melhor para codificação (Sonnet 3.5)</div>
           </div>
+          <div
+            className={`tool-card ${config.defaultProvider === 'local' ? 'active' : ''}`}
+            style={{ flex: 1, padding: 15, cursor: 'pointer', border: config.defaultProvider === 'local' ? '2px solid var(--purple-main)' : '1px solid var(--glass-border)' }}
+            onClick={() => setConfig({ ...config, defaultProvider: 'local' })}
+          >
+            <div style={{ fontSize: 24, marginBottom: 8 }}>🏠</div>
+            <div style={{ fontWeight: 600 }}>Local (Ollama)</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>100% Grátis e Privado (Offline)</div>
+          </div>
         </div>
       </div>
 
@@ -2137,9 +2146,9 @@ function SettingsPage() {
                 value={config.googleModel}
                 onChange={e => setConfig({ ...config, googleModel: e.target.value })}
               >
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Otimizado)</option>
-                <option value="gemini-2.5-pro">Gemini 2.5 Pro (Poderoso)</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Estável)</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Mais Rápido)</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro (Mais Inteligente)</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Padrão Grátis)</option>
               </select>
             </div>
           </div>
@@ -2169,6 +2178,32 @@ function SettingsPage() {
                 <option value="claude-3-opus-20240229">Claude 3 Opus (Extremo)</option>
                 <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Ultra Rápido)</option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header"><div className="card-title">🏠 Local Ollama Config</div></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label className="label">Ollama Host</label>
+              <input
+                type="text"
+                className="input"
+                value={config.ollamaHost}
+                onChange={e => setConfig({ ...config, ollamaHost: e.target.value })}
+                placeholder="http://localhost:11434"
+              />
+            </div>
+            <div>
+              <label className="label">Modelo Local</label>
+              <input
+                type="text"
+                className="input"
+                value={config.ollamaModel}
+                onChange={e => setConfig({ ...config, ollamaModel: e.target.value })}
+                placeholder="llama3:8b"
+              />
             </div>
           </div>
         </div>
