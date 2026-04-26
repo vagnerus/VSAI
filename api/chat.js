@@ -121,7 +121,7 @@ export default async function handler(req, res) {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
+    if (typeof res.flushHeaders === 'function') res.flushHeaders();
 
     const send = (obj) => {
       if (!res.writable) return;
@@ -176,16 +176,19 @@ export default async function handler(req, res) {
       return res.end();
     }
 
-    if (userId !== 'anonymous') {
-      const { rows: existingSession } = await query('SELECT id FROM sessions WHERE id = $1', [sessionId]);
-      if (existingSession.length === 0) {
-        const titleContent = typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || 'Imagem Anexada');
-        await query(
-          'INSERT INTO sessions (id, user_id, project_id, title) VALUES ($1, $2, $3, $4)',
-          [sessionId, userId, projectId || null, titleContent.substring(0, 100)]
-        );
+      try {
+        const { rows: existingSession } = await query('SELECT id FROM sessions WHERE id = $1', [sessionId]);
+        if (existingSession.length === 0) {
+          const titleContent = typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || 'Imagem Anexada');
+          await query(
+            'INSERT INTO sessions (id, user_id, project_id, title) VALUES ($1, $2, $3, $4)',
+            [sessionId, userId, projectId || null, titleContent.substring(0, 100)]
+          );
+        }
+      } catch (dbErr) {
+        console.error('[CHAT_DB_ERROR] Falha ao criar sessão:', dbErr);
+        // Continue anyway to allow the chat to work even if DB is down
       }
-    }
 
     send({ type: 'session', sessionId });
 
@@ -318,7 +321,12 @@ export default async function handler(req, res) {
       if (res.headersSent) {
         send({ type: 'error', message: err.message || 'Erro interno' });
       } else {
-        res.status(500).json({ error: 'Erro no Chat', details: err.message });
+        console.error('[CHAT_500]', err);
+        res.status(500).json({ 
+          error: 'Erro no Servidor de Chat', 
+          details: err.message,
+          stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+        });
       }
     }
   }

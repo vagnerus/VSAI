@@ -137,77 +137,98 @@ export class GeminiClient {
       throw new Error(`Gemini Error ${response.status}: ${errText}`);
     }
 
-    const reader = response.body.getReader();
+    const bodyReader = response.body.getReader ? response.body.getReader() : null;
+    const nodeStream = !bodyReader ? response.body : null;
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      
-      buffer += decoder.decode(value, { stream: true });
-      let lines = buffer.split('\n');
-      buffer = lines.pop();
+    if (bodyReader) {
+      while (true) {
+        const { done, value } = await bodyReader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value, { stream: true });
+        let lines = buffer.split('\n');
+        buffer = lines.pop();
 
-      for (const line of lines) {
-        const cleanLine = line.replace(/^data: /, '').trim();
-        if (!cleanLine) continue;
+        for (const line of lines) {
+          yield* this._processSSELine(line);
+        }
+      }
+    } else if (nodeStream) {
+      for await (const chunk of nodeStream) {
+        buffer += decoder.decode(chunk, { stream: true });
+        let lines = buffer.split('\n');
+        buffer = lines.pop();
 
-        try {
-          const data = JSON.parse(cleanLine);
-          const candidate = data.candidates?.[0];
-          const part = candidate?.content?.parts?.[0];
-
-          if (part?.text) {
-            yield { 
-              type: 'content_block_delta', 
-              delta: { type: 'text_delta', text: part.text } 
-            };
-          }
-
-          if (part?.functionCall) {
-            yield { 
-              type: 'content_block_start', 
-              content_block: { 
-                type: 'tool_use', 
-                id: `call_${Math.random().toString(36).substring(2, 11)}`, 
-                name: part.functionCall.name 
-              } 
-            };
-            yield { 
-              type: 'content_block_delta', 
-              delta: { 
-                type: 'input_json_delta', 
-                partial_json: JSON.stringify(part.functionCall.args) 
-              } 
-            };
-          }
-
-          if (candidate?.finishReason === 'STOP' || candidate?.finishReason === 'MAX_TOKENS') {
-            yield {
-              type: 'message_delta',
-              delta: { stop_reason: 'end_turn' }
-            };
-          } else if (candidate?.finishReason === 'FUNCTION_CALL') {
-            yield {
-              type: 'message_delta',
-              delta: { stop_reason: 'tool_use' }
-            };
-          }
-
-          if (data.usageMetadata) {
-            yield {
-              type: 'message_delta',
-              usage: {
-                input_tokens: data.usageMetadata.promptTokenCount,
-                output_tokens: data.usageMetadata.candidatesTokenCount
-              }
-            };
-          }
-        } catch (e) {
-          // Incomplete JSON or other parsing error
+        for (const line of lines) {
+          yield* this._processSSELine(line);
         }
       }
     }
+  }
+
+  /**
+   * Helper to process a single SSE line and yield events.
+   */
+  *_processSSELine(line) {
+    const cleanLine = line.replace(/^data: /, '').trim();
+    if (!cleanLine) return;
+
+    try {
+      const data = JSON.parse(cleanLine);
+      const candidate = data.candidates?.[0];
+      const part = candidate?.content?.parts?.[0];
+
+      if (part?.text) {
+        yield { 
+          type: 'content_block_delta', 
+          delta: { type: 'text_delta', text: part.text } 
+        };
+      }
+
+      if (part?.functionCall) {
+        yield { 
+          type: 'content_block_start', 
+          content_block: { 
+            type: 'tool_use', 
+            id: `call_${Math.random().toString(36).substring(2, 11)}`, 
+            name: part.functionCall.name 
+          } 
+        };
+        yield { 
+          type: 'content_block_delta', 
+          delta: { 
+            type: 'input_json_delta', 
+            partial_json: JSON.stringify(part.functionCall.args) 
+          } 
+        };
+      }
+
+      if (candidate?.finishReason === 'STOP' || candidate?.finishReason === 'MAX_TOKENS') {
+        yield {
+          type: 'message_delta',
+          delta: { stop_reason: 'end_turn' }
+        };
+      } else if (candidate?.finishReason === 'FUNCTION_CALL') {
+        yield {
+          type: 'message_delta',
+          delta: { stop_reason: 'tool_use' }
+        };
+      }
+
+      if (data.usageMetadata) {
+        yield {
+          type: 'message_delta',
+          usage: {
+            input_tokens: data.usageMetadata.promptTokenCount,
+            output_tokens: data.usageMetadata.candidatesTokenCount
+          }
+        };
+      }
+    } catch (e) {
+      // Incomplete JSON or other parsing error
+    }
+  }
   }
 }
