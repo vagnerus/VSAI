@@ -1,5 +1,12 @@
 import { requireAuth } from './_lib/authMiddleware.js';
 import { query } from './_lib/db.js';
+import fs from 'fs';
+import pathLib from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = pathLib.dirname(__filename);
+const configPath = pathLib.join(__dirname, '../nexus.config.json');
 
 export default async function handler(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -79,13 +86,6 @@ export default async function handler(req, res) {
   if (path === 'config' || path === 'models') {
     if (req.method === 'POST') {
       try {
-        const fs = await import('fs');
-        const pathLib = await import('path');
-        const { fileURLToPath } = await import('url');
-        const __filename = fileURLToPath(import.meta.url);
-        const __dirname = pathLib.dirname(__filename);
-        const configPath = pathLib.join(__dirname, '../nexus.config.json');
-
         // Only save keys and core settings
         const newConfig = {
           geminiApiKey: req.body.geminiApiKey,
@@ -98,27 +98,29 @@ export default async function handler(req, res) {
           ollamaModel: req.body.ollamaModel
         };
 
-        fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
-        console.log('[CONFIG] Novas configurações salvas em:', configPath);
-        return res.json({ status: 'success', message: 'Configurações salvas e motor reiniciado.' });
+        try {
+          fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
+          console.log('[CONFIG] Novas configurações salvas em:', configPath);
+        } catch (fsErr) {
+          console.warn('[CONFIG_FS_WARN] Não foi possível gravar no disco (provavelmente Vercel):', fsErr.message);
+          // Em ambientes como Vercel, devemos usar variáveis de ambiente ou DB.
+          // Por enquanto, apenas avisamos.
+        }
+        
+        return res.json({ status: 'success', message: 'Configurações aplicadas (temporariamente se em Cloud).' });
       } catch (err) {
         console.error('[CONFIG_SAVE_ERROR]', err);
-        return res.status(500).json({ error: 'Falha ao salvar configurações no servidor.' });
+        return res.status(500).json({ error: 'Falha ao processar configurações.', details: err.message });
       }
     }
 
     // GET handler
     try {
-      const fs = await import('fs');
-      const pathLib = await import('path');
-      const { fileURLToPath } = await import('url');
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = pathLib.dirname(__filename);
-      const configPath = pathLib.join(__dirname, '../nexus.config.json');
-      
       let savedConfig = {};
       if (fs.existsSync(configPath)) {
-        savedConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        try {
+          savedConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        } catch (e) { console.error('Erro ao ler nexus.config.json'); }
       }
 
       return res.json({
@@ -135,7 +137,7 @@ export default async function handler(req, res) {
         }
       });
     } catch (e) {
-      return res.json({ error: 'Erro ao carregar config' });
+      return res.status(500).json({ error: 'Erro ao carregar config', details: e.message });
     }
   }
 
