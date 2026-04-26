@@ -77,18 +77,66 @@ export default async function handler(req, res) {
 
   // 5. System Config & Models
   if (path === 'config' || path === 'models') {
-    return res.json({
-      models: [
-        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google', speed: 'ultra' },
-        { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', speed: 'high' },
-        { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', speed: 'high' }
-      ],
-      settings: {
-        defaultModel: 'gemini-1.5-flash',
-        maxTokens: 4096,
-        safetyMode: 'enterprise'
+    if (req.method === 'POST') {
+      try {
+        const fs = await import('fs');
+        const pathLib = await import('path');
+        const { fileURLToPath } = await import('url');
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = pathLib.dirname(__filename);
+        const configPath = pathLib.join(__dirname, '../nexus.config.json');
+
+        // Only save keys and core settings
+        const newConfig = {
+          geminiApiKey: req.body.geminiApiKey,
+          anthropicApiKey: req.body.anthropicApiKey,
+          openaiApiKey: req.body.openaiApiKey,
+          defaultProvider: req.body.defaultProvider,
+          googleModel: req.body.googleModel,
+          anthropicModel: req.body.anthropicModel,
+          ollamaHost: req.body.ollamaHost,
+          ollamaModel: req.body.ollamaModel
+        };
+
+        fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
+        console.log('[CONFIG] Novas configurações salvas em:', configPath);
+        return res.json({ status: 'success', message: 'Configurações salvas e motor reiniciado.' });
+      } catch (err) {
+        console.error('[CONFIG_SAVE_ERROR]', err);
+        return res.status(500).json({ error: 'Falha ao salvar configurações no servidor.' });
       }
-    });
+    }
+
+    // GET handler
+    try {
+      const fs = await import('fs');
+      const pathLib = await import('path');
+      const { fileURLToPath } = await import('url');
+      const __filename = fileURLToPath(import.meta.url);
+      const __dirname = pathLib.dirname(__filename);
+      const configPath = pathLib.join(__dirname, '../nexus.config.json');
+      
+      let savedConfig = {};
+      if (fs.existsSync(configPath)) {
+        savedConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      }
+
+      return res.json({
+        ...savedConfig,
+        models: [
+          { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google', speed: 'ultra' },
+          { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', speed: 'high' },
+          { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', speed: 'high' }
+        ],
+        settings: {
+          defaultModel: savedConfig.googleModel || 'gemini-1.5-flash',
+          maxTokens: 4096,
+          safetyMode: 'enterprise'
+        }
+      });
+    } catch (e) {
+      return res.json({ error: 'Erro ao carregar config' });
+    }
   }
 
   // Default system status
