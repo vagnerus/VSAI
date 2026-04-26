@@ -3,13 +3,30 @@ import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 
+import os from 'os';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const CACHE_DIR = path.join(__dirname, '../../data/cache');
 
-// Garantir que o diretório de cache existe
-if (!fs.existsSync(CACHE_DIR)) {
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
+// No Vercel, usamos /tmp para cache ou desativamos se falhar
+let CACHE_DIR = path.join(__dirname, '../../data/cache');
+let cacheEnabled = true;
+
+try {
+  if (!fs.existsSync(CACHE_DIR)) {
+    fs.mkdirSync(CACHE_DIR, { recursive: true });
+  }
+} catch (e) {
+  console.warn('[SemanticCache] Falha ao criar diretório local, tentando /tmp:', e.message);
+  CACHE_DIR = path.join(os.tmpdir(), 'nexus-cache');
+  try {
+    if (!fs.existsSync(CACHE_DIR)) {
+      fs.mkdirSync(CACHE_DIR, { recursive: true });
+    }
+  } catch (e2) {
+    console.error('[SemanticCache] Falha crítica ao criar diretório de cache:', e2.message);
+    cacheEnabled = false;
+  }
 }
 
 class SemanticCache {
@@ -27,6 +44,7 @@ class SemanticCache {
   }
 
   get(messages, systemPrompt) {
+    if (!cacheEnabled) return null;
     const key = this._generateKey(messages, systemPrompt);
     const cachePath = path.join(CACHE_DIR, `${key}.json`);
 
@@ -40,7 +58,7 @@ class SemanticCache {
           return data.response;
         } else {
           // Expired
-          fs.unlinkSync(cachePath);
+          try { fs.unlinkSync(cachePath); } catch {}
         }
       } catch (e) {
         return null;
@@ -50,6 +68,7 @@ class SemanticCache {
   }
 
   set(messages, systemPrompt, response) {
+    if (!cacheEnabled) return;
     const key = this._generateKey(messages, systemPrompt);
     const cachePath = path.join(CACHE_DIR, `${key}.json`);
 
@@ -61,7 +80,7 @@ class SemanticCache {
       fs.writeFileSync(cachePath, JSON.stringify(data), 'utf8');
       console.log(`[SemanticCache] Saved key: ${key.substring(0, 8)}`);
     } catch (e) {
-      console.error('[SemanticCache] Error saving:', e);
+      // Ignora erro de gravação silenciosamente
     }
   }
 }

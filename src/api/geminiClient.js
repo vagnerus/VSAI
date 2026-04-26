@@ -137,8 +137,8 @@ export class GeminiClient {
       throw new Error(`Gemini Error ${response.status}: ${errText}`);
     }
 
-    const bodyReader = response.body.getReader ? response.body.getReader() : null;
-    const nodeStream = !bodyReader ? response.body : null;
+    const bodyReader = (response.body && response.body.getReader) ? response.body.getReader() : null;
+    const nodeStream = !bodyReader ? (response.body || null) : null;
     const decoder = new TextDecoder('utf-8');
     let buffer = '';
 
