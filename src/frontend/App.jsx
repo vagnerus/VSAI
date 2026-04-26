@@ -1148,21 +1148,7 @@ function ChatPage({ projectId }) {
                 )}
               </div>
               
-              {/* Module 174: Next-Best-Action (NBA) */}
-              {msg.role === 'assistant' && !isStreaming && (
-                <div style={{ display: 'flex', gap: 8, marginTop: 12, paddingLeft: 12 }}>
-                  {['🔍 Analisar Logs', '📅 Agendar Task', '✉️ Notificar Admin'].map(action => (
-                    <button
-                      key={action}
-                      className="btn btn-secondary btn-sm"
-                      style={{ fontSize: 10, padding: '4px 8px', borderRadius: 20, background: 'rgba(255,255,255,0.05)', borderColor: 'var(--glass-border)' }}
-                      onClick={() => setInput(action)}
-                    >
-                      {action}
-                    </button>
-                  ))}
-                </div>
-              )}
+
             </div>
           )}
 
