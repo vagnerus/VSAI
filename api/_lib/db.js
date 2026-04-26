@@ -6,13 +6,14 @@ const { Pool } = pg;
 
 // Inicializa a conexão com o PostgreSQL usando a DATABASE_URL
 // postgresql://irmao_user:12345@187.45.255.14:5432/VSAI
+const dbUrl = process.env.DATABASE_URL || '';
+const isRemoteIrmao = dbUrl.includes('187.45.255.14');
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Se a URL contiver sslmode=disable, desativa o SSL completamente.
-  // Caso contrário, se contiver sslmode=require ou no-verify, usa SSL flexível.
-  ssl: process.env.DATABASE_URL?.includes('sslmode=disable') 
+  connectionString: dbUrl,
+  ssl: (isRemoteIrmao || dbUrl.includes('sslmode=disable')) 
     ? false 
-    : (process.env.DATABASE_URL?.includes('sslmode=') ? { rejectUnauthorized: false } : false)
+    : (dbUrl.includes('sslmode=') ? { rejectUnauthorized: false } : false)
 });
 
 pool.on('error', (err, client) => {
@@ -37,6 +38,7 @@ export const query = async (text, params) => {
   } catch (error) {
     console.error(`[DB_ERROR] Query falhou:`, text);
     console.error(error.message);
+    console.error(error.stack);
     throw error;
   }
 };

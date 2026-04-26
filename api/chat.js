@@ -325,7 +325,7 @@ export default async function handler(req, res) {
         res.status(500).json({ 
           error: 'Erro no Servidor de Chat', 
           details: err.message,
-          stack: process.env.NODE_ENV === 'development' ? err.stack : undefined 
+          stack: err.stack 
         });
       }
     }
