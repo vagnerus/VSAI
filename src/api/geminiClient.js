@@ -230,5 +230,4 @@ export class GeminiClient {
       // Incomplete JSON or other parsing error
     }
   }
-  }
 }
