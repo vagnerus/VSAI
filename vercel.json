@@ -18,6 +18,7 @@
     { "source": "/api/sessions", "destination": "/api/sessions" },
     { "source": "/api/agents/:id", "destination": "/api/agents?id=:id" },
     { "source": "/api/agents", "destination": "/api/agents" },
+    { "source": "/api/test-debug", "destination": "/api/test-debug" },
     { "source": "/api/(.*)", "destination": "/api/system?route=$1" },
     { "source": "/painel", "destination": "/painel.html" },
     { "source": "/auth/callback", "destination": "/api/auth/callback" },
