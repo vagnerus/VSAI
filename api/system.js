@@ -12,19 +12,22 @@ export default async function handler(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const path = req.query.route || url.pathname.split('/').pop();
 
-  // 1. Health Check (No Auth needed)
+  // 1. Health & Vector Diagnostic Check
   if (path === 'health') {
     return res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  }
+  if (path === 'test-vector') {
+    try {
+      await query('CREATE EXTENSION IF NOT EXISTS vector;');
+      return res.status(200).json({ status: 'SUCCESS', message: 'Extensão pgvector está ATIVADA e suportada no banco!' });
+    } catch (err) {
+      return res.status(200).json({ status: 'FAILED', message: 'Banco de dados não suporta pgvector.', error: err.message });
+    }
   }
 
   // Auth needed for everything else
   const auth = await requireAuth(req, res);
   if (!auth) return;
-
-  // Force admin role for specific email
-  if (auth.user.email === 'vagneroliveira.us@gmail.com') {
-    auth.user.role = 'admin';
-  }
 
   // 2. Dashboard Logic
   if (path === 'dashboard') {
@@ -99,15 +102,26 @@ export default async function handler(req, res) {
         };
 
         try {
-          fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
-          console.log('[CONFIG] Novas configurações salvas em:', configPath);
-        } catch (fsErr) {
-          console.warn('[CONFIG_FS_WARN] Não foi possível gravar no disco (provavelmente Vercel):', fsErr.message);
-          // Em ambientes como Vercel, devemos usar variáveis de ambiente ou DB.
-          // Por enquanto, apenas avisamos.
+          // Garante que a coluna config existe na tabela profiles
+          await query(`
+            DO $$ 
+            BEGIN 
+              IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='config') THEN 
+                ALTER TABLE profiles ADD COLUMN config JSONB DEFAULT '{}'::jsonb;
+              END IF; 
+            END $$;
+          `);
+          
+          await query(`
+            UPDATE profiles SET config = $1 WHERE id = $2
+          `, [newConfig, auth.user.id]);
+          
+          console.log(`[CONFIG] Novas configurações salvas para o usuário ${auth.user.id}`);
+        } catch (dbErr) {
+          console.warn('[CONFIG_DB_WARN] Não foi possível gravar no banco:', dbErr.message);
         }
         
-        return res.json({ status: 'success', message: 'Configurações aplicadas (temporariamente se em Cloud).' });
+        return res.json({ status: 'success', message: 'Configurações aplicadas e salvas no banco de dados.' });
       } catch (err) {
         console.error('[CONFIG_SAVE_ERROR]', err);
         return res.status(500).json({ error: 'Falha ao processar configurações.', details: err.message });
@@ -117,11 +131,21 @@ export default async function handler(req, res) {
     // GET handler
     try {
       let savedConfig = {};
-      if (fs.existsSync(configPath)) {
-        try {
-          savedConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-        } catch (e) { console.error('Erro ao ler nexus.config.json'); }
-      }
+      try {
+        await query(`
+          DO $$ 
+          BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='config') THEN 
+              ALTER TABLE profiles ADD COLUMN config JSONB DEFAULT '{}'::jsonb;
+            END IF; 
+          END $$;
+        `);
+        
+        const resDb = await query('SELECT config FROM profiles WHERE id = $1', [auth.user.id]);
+        if (resDb.rows.length > 0 && resDb.rows[0].config) {
+          savedConfig = resDb.rows[0].config;
+        }
+      } catch (e) { console.error('Erro ao ler config do perfil', e.message); }
 
       return res.json({
         ...savedConfig,

@@ -176,7 +176,7 @@ export default function AdminLayout() {
           <tbody>
             {users.map(u => (
               <tr key={u.id}>
-                <td>{u.full_name || u.id.substring(0,8)}</td>
+                <td>{u.full_name || (u.id || '').substring(0,8)}</td>
                 <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
                 <td>{u.plan}</td>
                 <td>{u.tokens_used_month?.toLocaleString()}</td>

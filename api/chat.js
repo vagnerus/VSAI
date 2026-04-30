@@ -120,7 +120,7 @@ export default async function handler(req, res) {
     }
 
     // B4 Fix: Validate API BEFORE setting SSE headers
-    const apiClient = getApiClient(activeProvider);
+    const apiClient = await getApiClient(activeProvider, userId === 'anonymous' ? null : userId);
     
     if (!apiClient.isConfigured()) {
       return res.status(400).json({ 
@@ -168,7 +168,7 @@ export default async function handler(req, res) {
     
     activeSystemPrompt = baseSystemPrompt;
 
-    const cachedResponse = semanticCache.get(historyMessages, activeSystemPrompt);
+    const cachedResponse = await semanticCache.get(historyMessages, activeSystemPrompt);
     if (cachedResponse && !sanitizedContent.includes('pesquise')) {
       send({ type: 'session', sessionId });
       send({ type: 'status', message: '💡 Resposta recuperada do Cache Semântico' });
@@ -309,7 +309,7 @@ export default async function handler(req, res) {
     }
     
     if (finalAssistantContent && turnCount < MAX_TURNS) {
-      semanticCache.set(historyMessages, activeSystemPrompt, finalAssistantContent);
+      await semanticCache.set(historyMessages, activeSystemPrompt, finalAssistantContent);
     }
 
     if (userId !== 'anonymous' && (totalInputTokens + totalOutputTokens) > 0) {

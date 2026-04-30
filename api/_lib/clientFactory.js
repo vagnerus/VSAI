@@ -3,6 +3,8 @@ import { GeminiClient } from '../../src/api/geminiClient.js';
 import { AnthropicClient } from '../../src/api/anthropicClient.js';
 import { OpenAIClient } from '../../src/api/openaiClient.js';
 import { OllamaClient } from '../../src/api/ollamaClient.js';
+
+import { query } from './db.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -57,7 +59,7 @@ class GatewayClient {
   }
 }
 
-export function getApiClient(requestedProvider) {
+export async function getApiClient(requestedProvider, userId = null) {
   let cfg = {
     geminiApiKey: '',
     anthropicApiKey: '',
@@ -70,11 +72,33 @@ export function getApiClient(requestedProvider) {
     ollamaModel: 'llama3:8b',
   };
 
-  if (fs.existsSync(CONFIG_PATH)) {
-    try {
-      const saved = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-      cfg = { ...cfg, ...saved };
-    } catch {}
+  try {
+    // 1. Fallback Global (system_settings)
+    await query(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        id VARCHAR(50) PRIMARY KEY,
+        config JSONB NOT NULL
+      )
+    `);
+    const sysRes = await query('SELECT config FROM system_settings WHERE id = $1', ['main']);
+    if (sysRes.rows.length > 0) {
+      cfg = { ...cfg, ...sysRes.rows[0].config };
+    }
+
+    // 2. Personal Config (profiles)
+    if (userId) {
+      const userRes = await query('SELECT config FROM profiles WHERE id = $1', [userId]);
+      if (userRes.rows.length > 0 && userRes.rows[0].config) {
+        const userCfg = userRes.rows[0].config;
+        // Merge over global, but only if the user actually set a key (not empty string)
+        if (userCfg.geminiApiKey) cfg.geminiApiKey = userCfg.geminiApiKey;
+        if (userCfg.anthropicApiKey) cfg.anthropicApiKey = userCfg.anthropicApiKey;
+        if (userCfg.openaiApiKey) cfg.openaiApiKey = userCfg.openaiApiKey;
+        if (userCfg.defaultProvider) cfg.defaultProvider = userCfg.defaultProvider;
+      }
+    }
+  } catch (err) {
+    console.warn('[DB_CONFIG_WARN] Failed to load config from DB:', err.message);
   }
 
   // ENV VARS sempre tem prioridade (Vercel)

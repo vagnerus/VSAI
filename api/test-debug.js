@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const client = getApiClient('google');
+    const client = await getApiClient('gemini');
     const isConfig = client.isConfigured();
     debug.gemini = isConfig ? 'Configured' : 'NOT Configured';
     

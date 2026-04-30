@@ -1,53 +1,39 @@
 /**
  * SemanticCache — Caches AI responses based on conversation context hash.
- *
- * B13 Fix: Removed race condition (existsSync + readFileSync → try/catch atomic read).
- * Added: In-memory LRU cache to reduce filesystem I/O.
- * Added: Max entries enforcement and automatic eviction.
+ * Migrated to PostgreSQL to support distributed Vercel environments.
  */
 
-import fs from 'fs';
-import path from 'path';
 import crypto from 'crypto';
-import { fileURLToPath } from 'url';
-import os from 'os';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// No Vercel, usamos /tmp para cache ou desativamos se falhar
-let CACHE_DIR = path.join(__dirname, '../../data/cache');
-let cacheEnabled = true;
-
-try {
-  if (!fs.existsSync(CACHE_DIR)) {
-    fs.mkdirSync(CACHE_DIR, { recursive: true });
-  }
-} catch (e) {
-  console.warn('[SemanticCache] Falha ao criar diretório local, tentando /tmp:', e.message);
-  CACHE_DIR = path.join(os.tmpdir(), 'nexus-cache');
-  try {
-    if (!fs.existsSync(CACHE_DIR)) {
-      fs.mkdirSync(CACHE_DIR, { recursive: true });
-    }
-  } catch (e2) {
-    console.error('[SemanticCache] Falha crítica ao criar diretório de cache:', e2.message);
-    cacheEnabled = false;
-  }
-}
-
-const MAX_MEMORY_ENTRIES = 200;
-const MAX_DISK_ENTRIES = 1000;
+import { query } from './db.js';
 
 class SemanticCache {
-  constructor(ttl = 3600 * 24) { // Padrão: 24 horas
-    this.ttl = ttl;
-    this.memoryCache = new Map(); // In-memory LRU
-    this.accessOrder = []; // LRU tracking
+  constructor(ttlSeconds = 3600 * 24) { // Padrão: 24 horas
+    this.ttlSeconds = ttlSeconds;
+    this.initialized = false;
+  }
+
+  async _init() {
+    if (this.initialized) return;
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS query_cache (
+          hash VARCHAR(64) PRIMARY KEY,
+          prompt JSONB NOT NULL,
+          response TEXT NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+      `);
+      
+      // Cleanup de caches antigos em background
+      query(`DELETE FROM query_cache WHERE created_at < NOW() - INTERVAL '${this.ttlSeconds} seconds'`).catch(() => {});
+      
+      this.initialized = true;
+    } catch (e) {
+      console.warn('[SemanticCache] Falha ao inicializar tabela:', e.message);
+    }
   }
 
   _generateKey(messages, systemPrompt) {
-    // Cria um hash baseado no prompt do sistema e nas últimas mensagens
     const content = JSON.stringify({
       system: systemPrompt,
       messages: (messages || []).slice(-3).map(m => ({ role: m.role, content: m.content }))
@@ -56,142 +42,49 @@ class SemanticCache {
   }
 
   /**
-   * Get a cached response.
-   * B13 Fix: Uses try/catch for atomic read instead of existsSync + readFileSync.
+   * Get a cached response asynchronously.
    */
-  get(messages, systemPrompt) {
-    if (!cacheEnabled) return null;
-    const key = this._generateKey(messages, systemPrompt);
-    const now = Math.floor(Date.now() / 1000);
-
-    // 1. Check in-memory LRU first
-    if (this.memoryCache.has(key)) {
-      const entry = this.memoryCache.get(key);
-      if (now - entry.timestamp < this.ttl) {
-        this._touchLRU(key);
-        console.log(`[SemanticCache] Memory hit: ${key.substring(0, 8)}`);
-        return entry.response;
-      }
-      // Expired — remove from memory
-      this.memoryCache.delete(key);
-      this.accessOrder = this.accessOrder.filter(k => k !== key);
-    }
-
-    // 2. Check disk
-    const cachePath = path.join(CACHE_DIR, `${key}.json`);
+  async get(messages, systemPrompt) {
+    await this._init();
     try {
-      const raw = fs.readFileSync(cachePath, 'utf8');
-      const data = JSON.parse(raw);
-
-      if (now - data.timestamp < this.ttl) {
-        // Promote to memory cache
-        this._setMemory(key, data);
-        console.log(`[SemanticCache] Disk hit: ${key.substring(0, 8)}`);
-        return data.response;
+      const hash = this._generateKey(messages, systemPrompt);
+      const res = await query('SELECT response FROM query_cache WHERE hash = $1 AND created_at >= NOW() - INTERVAL \'$2 seconds\'', [hash, this.ttlSeconds]);
+      
+      if (res.rows.length > 0) {
+        console.log('[SemanticCache] 🟢 Cache Hit (PostgreSQL):', hash);
+        return res.rows[0].response;
       }
-
-      // Expired — try to remove (non-blocking)
-      try { fs.unlinkSync(cachePath); } catch { /* ignore */ }
+      return null;
     } catch (e) {
-      // File doesn't exist or is corrupt — not an error
+      console.error('[SemanticCache] Erro de leitura DB:', e.message);
+      return null;
     }
-
-    return null;
   }
 
   /**
-   * Store a response in cache (memory + disk).
+   * Set a cached response asynchronously.
    */
-  set(messages, systemPrompt, response) {
-    if (!cacheEnabled || !response) return;
-    const key = this._generateKey(messages, systemPrompt);
+  async set(messages, systemPrompt, responseText) {
+    await this._init();
+    if (!responseText || responseText.length < 10) return; // Não faz cache de respostas vazias ou minúsculas
 
-    const data = {
-      timestamp: Math.floor(Date.now() / 1000),
-      response
-    };
-
-    // Store in memory
-    this._setMemory(key, data);
-
-    // Store on disk (non-blocking)
-    const cachePath = path.join(CACHE_DIR, `${key}.json`);
     try {
-      fs.writeFileSync(cachePath, JSON.stringify(data), 'utf8');
-      console.log(`[SemanticCache] Saved: ${key.substring(0, 8)}`);
+      const hash = this._generateKey(messages, systemPrompt);
+      const promptData = JSON.stringify({
+        system: systemPrompt,
+        messages: (messages || []).slice(-3).map(m => ({ role: m.role, content: m.content }))
+      });
+      
+      await query(`
+        INSERT INTO query_cache (hash, prompt, response, created_at) 
+        VALUES ($1, $2, $3, NOW()) 
+        ON CONFLICT (hash) DO UPDATE SET response = $3, created_at = NOW()
+      `, [hash, promptData, responseText]);
+      
+      console.log('[SemanticCache] 💾 Cache Saved (PostgreSQL):', hash);
     } catch (e) {
-      // Ignore write errors silently (e.g., read-only filesystem)
+      console.error('[SemanticCache] Erro ao salvar no DB:', e.message);
     }
-
-    // Periodic disk cleanup
-    this._evictDiskIfNeeded();
-  }
-
-  /**
-   * In-memory LRU helpers
-   */
-  _setMemory(key, data) {
-    if (this.memoryCache.size >= MAX_MEMORY_ENTRIES) {
-      // Evict oldest entry
-      const oldest = this.accessOrder.shift();
-      if (oldest) this.memoryCache.delete(oldest);
-    }
-    this.memoryCache.set(key, data);
-    this._touchLRU(key);
-  }
-
-  _touchLRU(key) {
-    this.accessOrder = this.accessOrder.filter(k => k !== key);
-    this.accessOrder.push(key);
-  }
-
-  /**
-   * Evict expired entries from disk if too many files.
-   */
-  _evictDiskIfNeeded() {
-    try {
-      const files = fs.readdirSync(CACHE_DIR).filter(f => f.endsWith('.json'));
-      if (files.length <= MAX_DISK_ENTRIES) return;
-
-      const now = Math.floor(Date.now() / 1000);
-      let evicted = 0;
-
-      for (const file of files) {
-        if (evicted >= files.length - MAX_DISK_ENTRIES) break;
-        const filePath = path.join(CACHE_DIR, file);
-        try {
-          const raw = fs.readFileSync(filePath, 'utf8');
-          const data = JSON.parse(raw);
-          if (now - data.timestamp >= this.ttl) {
-            fs.unlinkSync(filePath);
-            evicted++;
-          }
-        } catch {
-          // Corrupt file — delete it
-          try { fs.unlinkSync(filePath); evicted++; } catch { /* ignore */ }
-        }
-      }
-
-      if (evicted > 0) {
-        console.log(`[SemanticCache] Evicted ${evicted} expired entries from disk.`);
-      }
-    } catch {
-      // Directory read failed — skip cleanup
-    }
-  }
-
-  /**
-   * Clear all cache (memory + disk).
-   */
-  clear() {
-    this.memoryCache.clear();
-    this.accessOrder = [];
-    try {
-      const files = fs.readdirSync(CACHE_DIR).filter(f => f.endsWith('.json'));
-      for (const file of files) {
-        try { fs.unlinkSync(path.join(CACHE_DIR, file)); } catch { /* ignore */ }
-      }
-    } catch { /* ignore */ }
   }
 }
 
