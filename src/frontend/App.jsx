@@ -539,11 +539,11 @@ function Sidebar({ currentPage, onNavigate, stats, agents = [], selectedAgent, s
               <span style={{ textTransform: 'uppercase' }}>PLANO {stats.plan || 'FREE'}</span>
               <span>{Math.round(((stats.tokensUsed || 0) / stats.tokensLimit) * 100)}%</span>
             </div>
-            <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+            <div style={{ width: '100%', height: 6, background: 'rgba(0,0,0,0.05)', borderRadius: 4, overflow: 'hidden' }}>
               <div style={{ 
                 height: '100%', 
                 width: `${Math.min(((stats.tokensUsed || 0) / stats.tokensLimit) * 100, 100)}%`, 
-                background: ((stats.tokensUsed || 0) / stats.tokensLimit) > 0.8 ? 'linear-gradient(90deg, #ef4444, #b91c1c)' : 'linear-gradient(90deg, #6c3bef, #8b5cf6)', 
+                background: ((stats.tokensUsed || 0) / stats.tokensLimit) > 0.8 ? 'linear-gradient(90deg, #ef4444, #b91c1c)' : 'var(--silver-liquid)', 
                 transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' 
               }} />
             </div>
@@ -586,15 +586,15 @@ function DashboardPage({ stats, recentSessions }) {
             href="/painel"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-cta btn-cta-lg"
-            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}
+            className="btn-liquid"
+            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 32px' }}
           >
             🚀 Abrir Painel do Usuário
           </a>
           <button
             className="btn-ghost"
             onClick={() => { navigator.clipboard.writeText(window.location.origin + '/painel'); alert('Link copiado!'); }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '14px 28px', fontSize: 15, borderRadius: 12 }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '16px 32px', fontSize: 15, borderRadius: 12, border: '1px solid var(--platinum-light)', background: 'none', cursor: 'pointer', fontWeight: 600 }}
           >
             📋 Copiar Link do Painel
           </button>
