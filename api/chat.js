@@ -228,27 +228,36 @@ export default async function handler(req, res) {
       let toolCalls = [];
       let stopReason = 'end_turn';
 
-      for await (const event of stream) {
-        if (!res.writable) break;
-        if (event.type === 'content_block_delta') {
-          if (event.delta?.type === 'text_delta') {
-            assistantContent += event.delta.text;
-            send({ type: 'stream', text: event.delta.text });
-          } else if (event.delta?.type === 'input_json_delta') {
-            const last = toolCalls[toolCalls.length - 1];
-            if (last) last.input += event.delta.partial_json;
-          }
-        } else if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
-          toolCalls.push({ id: event.content_block.id, name: event.content_block.name, input: '' });
-        } else if (event.type === 'message_delta') {
-          stopReason = event.delta?.stop_reason || stopReason;
-          if (event.usage) {
-            totalInputTokens += event.usage.input_tokens || 0;
-            totalOutputTokens += event.usage.output_tokens || 0;
-            send({ type: 'usage', usage: { inputTokens: event.usage.input_tokens, outputTokens: event.usage.output_tokens } });
+      send({ type: 'stream', text: `\n[DEBUG] Iniciando provedor: ${activeModel}\n` });
+
+      try {
+        for await (const event of stream) {
+          if (!res.writable) break;
+          if (event.type === 'content_block_delta') {
+            if (event.delta?.type === 'text_delta') {
+              assistantContent += event.delta.text;
+              send({ type: 'stream', text: event.delta.text });
+            } else if (event.delta?.type === 'input_json_delta') {
+              const last = toolCalls[toolCalls.length - 1];
+              if (last) last.input += event.delta.partial_json;
+            }
+          } else if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
+            toolCalls.push({ id: event.content_block.id, name: event.content_block.name, input: '' });
+          } else if (event.type === 'message_delta') {
+            stopReason = event.delta?.stop_reason || stopReason;
+            if (event.usage) {
+              totalInputTokens += event.usage.input_tokens || 0;
+              totalOutputTokens += event.usage.output_tokens || 0;
+              send({ type: 'usage', usage: { inputTokens: event.usage.input_tokens, outputTokens: event.usage.output_tokens } });
+            }
           }
         }
+      } catch (streamError) {
+        send({ type: 'stream', text: `\n\n[DEBUG ERROR] Falha no stream: ${streamError.message}\n` });
+        throw streamError;
       }
+
+      send({ type: 'stream', text: `\n[DEBUG] Stream concluído. Bytes recebidos: ${assistantContent.length}\n` });
 
       const parsedCalls = toolCalls.map(tc => {
         try { return { ...tc, input: JSON.parse(tc.input) }; } catch { return { ...tc, input: {} }; }
