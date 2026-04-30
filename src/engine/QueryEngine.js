@@ -330,7 +330,7 @@ export async function* query({ engine, messages, systemPrompt, tools, maxTurns, 
         } else if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
           toolCalls.push({ id: event.content_block.id, name: event.content_block.name, input: '' });
         } else if (event.type === 'message_delta') {
-          stopReason = event.delta.stop_reason || stopReason;
+          stopReason = event.delta?.stop_reason || stopReason;
           if (event.usage) yield { type: 'usage', ...event.usage };
         }
       }

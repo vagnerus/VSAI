@@ -81,7 +81,7 @@ export async function getApiClient(requestedProvider, userId = null) {
     openaiApiKey: '',
     ollamaHost: '',
     defaultProvider: 'gemini',
-    googleModel: 'gemini-1.5-flash',
+    googleModel: 'gemini-2.5-flash',
     anthropicModel: 'claude-3-5-sonnet-20240620',
     openaiModel: 'gpt-4o',
     ollamaModel: 'llama3:8b',

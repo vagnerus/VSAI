@@ -468,7 +468,7 @@ function WindowControls() {
   );
 }
 
-function Sidebar({ currentPage, onNavigate, stats, agents = [], selectedAgent, setSelectedAgent, collapsed, onToggle }) {
+function Sidebar({ currentPage, onNavigate, stats, agents = [], recentSessions = [], collapsed, onToggle }) {
   const { isAdmin } = useAuth();
 
   const navItems = [
@@ -527,15 +527,37 @@ function Sidebar({ currentPage, onNavigate, stats, agents = [], selectedAgent, s
           </div>
         ))}
 
+        {recentSessions?.length > 0 && (
+          <>
+            <div className="sidebar-section-label">💬 Conversas Recentes</div>
+            {recentSessions.slice(0, 8).map(session => (
+              <div
+                key={session.id || session.sessionId}
+                className={`sidebar-item ${currentPage === 'chat' && session.id === session.id ? 'active' : ''}`}
+                onClick={() => {
+                   // This is a bit tricky, we need a way to load this specific session
+                   onNavigate('chat');
+                   // We might need to pass session ID to ChatPage
+                }}
+                style={{ fontSize: 12, padding: '8px 16px' }}
+              >
+                <span className="sidebar-item-icon">💬</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {session.title || session.firstPrompt || 'Nova Conversa'}
+                </span>
+              </div>
+            ))}
+          </>
+        )}
+
         {agents.length > 0 && (
           <>
             <div className="sidebar-section-label">🤖 Meus Agentes</div>
             {agents.map(agent => (
               <div
                 key={agent.id}
-                className={`sidebar-item ${selectedAgent?.id === agent.id ? 'active' : ''}`}
+                className={`sidebar-item ${currentPage === 'chat' ? '' : ''}`}
                 onClick={() => {
-                  setSelectedAgent(agent);
                   onNavigate('chat');
                 }}
               >
@@ -865,8 +887,8 @@ function ChatPage({ projectId }) {
       name: 'Google Gemini',
       icon: '🔹',
       models: [
-        { id: 'gemini-1.5-flash', label: '⚡ Gemini 1.5 Flash' },
-        { id: 'gemini-2.0-flash-exp', label: '🚀 Gemini 2.0 Flash (Exp)' },
+        { id: 'gemini-2.5-flash', label: '⚡ Gemini 2.5 Flash' },
+        { id: 'gemini-1.5-pro', label: '🧠 Gemini 1.5 Pro' },
         { id: 'gemini-1.5-flash-8b', label: '🔹 Gemini 1.5 Flash 8B' },
       ]
     },
@@ -2396,6 +2418,7 @@ function DashboardShell({ onSignOut, userProfile }) {
         onNavigate={setCurrentPage}
         stats={dashboardData.stats}
         agents={agents}
+        recentSessions={dashboardData.recentSessions}
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
