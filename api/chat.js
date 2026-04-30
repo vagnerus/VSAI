@@ -156,6 +156,7 @@ export default async function handler(req, res) {
     const send = (obj) => {
       if (!res.writable) return;
       res.write(`data: ${JSON.stringify(obj)}\n\n`);
+      if (typeof res.flush === 'function') res.flush();
     };
 
     const tools = getAllTools();

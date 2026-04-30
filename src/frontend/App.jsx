@@ -776,6 +776,38 @@ function ChatPage({ projectId }) {
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
+
+  // 🎙️ Speech Recognition Logic
+  const startRecording = useCallback(() => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return alert('Seu navegador não suporta reconhecimento de voz.');
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = 'pt-BR';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => setIsRecording(true);
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(prev => prev + ' ' + transcript);
+    };
+    recognition.onerror = () => setIsRecording(false);
+    recognition.onend = () => setIsRecording(false);
+
+    recognition.start();
+  }, []);
+
+  // 🔊 Speech Synthesis Logic
+  const speak = useCallback((text) => {
+    if (!voiceEnabled || !window.speechSynthesis) return;
+    const utterance = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, '').replace(/[*#]/g, ''));
+    utterance.lang = 'pt-BR';
+    utterance.rate = 1.0;
+    window.speechSynthesis.speak(utterance);
+  }, [voiceEnabled]);
 
   useEffect(() => {
     fetchAgents();
@@ -833,8 +865,8 @@ function ChatPage({ projectId }) {
       name: 'Google Gemini',
       icon: '🔹',
       models: [
-        { id: 'gemini-2.5-flash', label: '⚡ Gemini 2.5 Flash' },
-        { id: 'gemini-1.5-pro', label: '🧠 Gemini 1.5 Pro' },
+        { id: 'gemini-1.5-flash', label: '⚡ Gemini 1.5 Flash' },
+        { id: 'gemini-2.0-flash-exp', label: '🚀 Gemini 2.0 Flash (Exp)' },
         { id: 'gemini-1.5-flash-8b', label: '🔹 Gemini 1.5 Flash 8B' },
       ]
     },
@@ -1023,6 +1055,7 @@ function ChatPage({ projectId }) {
                   toolCalls: msg.toolCalls,
                   timestamp: Date.now(),
                 }]);
+                if (voiceEnabled) speak(msg.content);
                 break;
               case 'tool_result':
                 setToolUses(prev => prev.map(t =>
@@ -1121,6 +1154,9 @@ function ChatPage({ projectId }) {
                 🔤 {(usage.inputTokens + usage.outputTokens).toLocaleString()} tokens
               </span>
             )}
+            <button className="btn btn-secondary btn-sm" onClick={() => setVoiceEnabled(!voiceEnabled)} style={{ marginRight: 8 }}>
+              {voiceEnabled ? '🔊 Voz Ativa' : '🔇 Voz Muda'}
+            </button>
             <button className="btn btn-secondary btn-sm" onClick={() => setShowPromptLibrary(!showPromptLibrary)} style={{ marginRight: 8 }}>📚 Prompts</button>
             <button className="btn btn-secondary btn-sm" onClick={exportChat} style={{ marginRight: 8 }}>📤 Exportar (.md)</button>
             <button className="btn btn-secondary btn-sm" onClick={newChat}>+ Nova</button>
@@ -1308,6 +1344,14 @@ function ChatPage({ projectId }) {
               <span style={{ fontSize: 18 }}>📎</span>
               <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
             </label>
+            <button 
+              onClick={startRecording}
+              className={`voice-btn ${isRecording ? 'recording' : ''}`}
+              title="Gravar Voz"
+              style={{ background: 'transparent', border: 'none', padding: '0 12px', cursor: 'pointer', fontSize: 18, color: isRecording ? 'var(--accent-danger)' : 'var(--text-secondary)' }}
+            >
+              {isRecording ? '🛑' : '🎤'}
+            </button>
             <textarea
               ref={textareaRef}
               placeholder="Digite sua mensagem... (Enter para enviar, Shift+Enter para nova linha)"

@@ -11,6 +11,8 @@ import { AgentTool } from './AgentTool.js';
 import { SendMessageTool } from './SendMessageTool.js';
 import { TaskStopTool } from './TaskStopTool.js';
 import { WindowsServiceTool } from './WindowsServiceTool.js';
+import { codeInterpreter } from './CodeInterpreter.js';
+import { pluginTool } from './PluginTool.js';
 
 // ─── Detectar ambiente ───────────────────────────────────────
 const isVercel = !!process.env.VERCEL;
@@ -527,6 +529,8 @@ export function getAllTools() {
     FormatDataTool,
     CalculateTool,
     RegexTool,
+    codeInterpreter,
+    pluginTool,
     // Agent tools (multi-agent orchestration)
     AgentTool,
     SendMessageTool,

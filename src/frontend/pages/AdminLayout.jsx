@@ -56,6 +56,7 @@ export default function AdminLayout() {
       else if (activeTab === 'database') setDbData(data.data || []);
       else if (activeTab === 'agents') setAgents(data);
       else if (activeTab === 'memory') setMemories(data.memories || []);
+      else if (activeTab === 'plugins') setPlugins(data.plugins || []);
     } catch (err) {
       console.error('[ADMIN_FETCH_ERROR]', err);
       setError(`Falha ao carregar dados: ${err.message}`);
@@ -261,6 +262,21 @@ export default function AdminLayout() {
       })}
       {memories.length === 0 && <div className="empty-state">Nenhuma memória processada pelo VSAI ainda.</div>}
     </div>
+    </div>
+  );
+
+  const renderPlugins = () => (
+    <div className="admin-panel-section animate-in">
+      <h3>🔌 No-Code Plugins (External APIs)</h3>
+      <p style={{ fontSize: 13, opacity: 0.7, marginBottom: 20 }}>Conecte o VSAI a qualquer API externa sem escrever código.</p>
+      
+      <div className="plugin-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+        <div className="plugin-card add-new" style={{ border: '2px dashed var(--border-platinum)', borderRadius: 16, padding: 30, textAlign: 'center', cursor: 'pointer' }}>
+          <div style={{ fontSize: 32, marginBottom: 10 }}>➕</div>
+          <div style={{ fontWeight: 800 }}>Novo Plugin</div>
+          <div style={{ fontSize: 11, opacity: 0.6 }}>Integrar nova API REST</div>
+        </div>
+      </div>
     </div>
   );
 

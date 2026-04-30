@@ -50,7 +50,7 @@ class GatewayClient {
         console.log(`[Gateway] Switching to fallback API (${this.fallback.constructor.name})...`);
         yield { 
           type: 'content_block_delta', 
-          delta: { type: 'text_delta', text: '\n\n> ⚠️ *Nota: O provedor primário falhou ou está indisponível. Alternando automaticamente para o provedor reserva...*\n\n' } 
+          delta: { type: 'text_delta', text: '\n\n> ⚠️ *Nota: O provedor primário falhou ou está indisponível. Alternando para o provedor reserva...*\n\n' } 
         };
         
         try {
@@ -81,7 +81,7 @@ export async function getApiClient(requestedProvider, userId = null) {
     openaiApiKey: '',
     ollamaHost: '',
     defaultProvider: 'gemini',
-    googleModel: 'gemini-2.5-flash',
+    googleModel: 'gemini-1.5-flash',
     anthropicModel: 'claude-3-5-sonnet-20240620',
     openaiModel: 'gpt-4o',
     ollamaModel: 'llama3:8b',
@@ -104,7 +104,8 @@ export async function getApiClient(requestedProvider, userId = null) {
     if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
       cfg.geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     } else {
-      cfg.geminiApiKey = 'AIzaSyBPnB8_dQFz7dv3e_Ag3PqJKUdqMQv26Bg'; // Chave padrao fornecida pelo usuario
+      // B12 Fix: Updated to the most recent working key found in .env
+      cfg.geminiApiKey = 'AIzaSyBEveF4TEVwId_qDiehsy9FBY34-K0Gw44'; 
     }
     if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;
