@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusAI — A Nova Era da Inteligência Metálica</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .metallic-gradient {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f8fafc 100%);
+            background-size: 200% 200%;
+            animation: metallic-shine 5s ease infinite;
+        }
+        @keyframes metallic-shine {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+        .metallic-btn {
+            background: linear-gradient(145deg, #ffffff, #e2e8f0);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.05), -4px -4px 10px rgba(255, 255, 255, 0.8);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .metallic-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 6px 6px 15px rgba(0, 0, 0, 0.08), -6px -6px 15px rgba(255, 255, 255, 0.9);
+            border-color: #cbd5e1;
+        }
+        .floating {
+            animation: floating 3s ease-in-out infinite;
+        }
+        @keyframes floating {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+            100% { transform: translateY(0px); }
+        }
+    </style>
+</head>
+<body class="bg-white text-slate-900 selection:bg-slate-200">
+
+    <!-- Header -->
+    <header class="fixed top-0 w-full z-50 glass border-b border-slate-100">
+        <nav class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-10 h-10 metallic-gradient rounded-xl flex items-center justify-center shadow-lg border border-white">
+                    <i data-lucide="cpu" class="w-6 h-6 text-slate-700"></i>
+                </div>
+                <span class="text-xl font-black tracking-tighter text-slate-800 uppercase">Nexus<span class="text-slate-400">AI</span></span>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
+                <a href="#features" class="hover:text-slate-900 transition-colors">Recursos</a>
+                <a href="#solutions" class="hover:text-slate-900 transition-colors">Soluções</a>
+                <a href="#testimonials" class="hover:text-slate-900 transition-colors">Depoimentos</a>
+                <a href="#pricing" class="hover:text-slate-900 transition-colors">Preços</a>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <button class="hidden sm:block text-sm font-bold text-slate-700 hover:text-slate-900">Entrar</button>
+                <button class="metallic-btn px-6 py-2.5 rounded-full text-sm font-bold text-slate-700">
+                    Começar Agora
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="relative pt-40 pb-24 overflow-hidden">
+        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-[radial-gradient(circle_at_center,_rgba(226,232,240,0.4)_0%,_transparent_70%)] pointer-events-none"></div>
+        
+        <div class="max-w-7xl mx-auto px-6 relative">
+            <div class="text-center max-w-4xl mx-auto mb-20">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-50 border border-slate-200 mb-6 animate-bounce">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-500"></span>
+                    </span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest text-slate-500">Novo: Versão 2.5 Metallic</span>
+                </div>
+                <h1 class="text-6xl md:text-8xl font-black tracking-tight text-slate-900 leading-[0.9] mb-8">
+                    A Inteligência <br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-slate-400 to-slate-800">Forjada em Prata</span>
+                </h1>
+                <p class="text-xl text-slate-500 mb-12 max-w-2xl mx-auto leading-relaxed font-medium">
+                    Experimente a ferramenta de IA mais sofisticada do mercado. Velocidade de resposta instantânea com um design que define o novo padrão de luxo digital.
+                </p>
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    <button class="metallic-btn px-10 py-5 rounded-2xl text-lg font-black text-slate-800 w-full sm:w-auto shadow-2xl">
+                        Teste Grátis por 14 dias
+                    </button>
+                    <button class="px-10 py-5 rounded-2xl text-lg font-bold text-slate-600 hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200 w-full sm:w-auto">
+                        Ver Demo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Hero Image / Mockup -->
+            <div class="relative max-w-5xl mx-auto">
+                <div class="absolute -inset-4 bg-gradient-to-b from-slate-200/50 to-transparent blur-3xl opacity-50 -z-10"></div>
+                <div class="metallic-gradient p-2 rounded-3xl shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-slate-200 floating">
+                    <div class="rounded-2xl overflow-hidden bg-white">
+                        <img src="./landing_metallic_mockup_1777527212428.png" alt="NexusAI Dashboard" class="w-full h-auto">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-32 bg-white">
+        <div class="max-w-7xl mx-auto px-6 text-center mb-20">
+            <h2 class="text-sm font-black uppercase tracking-[0.3em] text-slate-400 mb-4">Por que o NexusAI?</h2>
+            <h3 class="text-4xl md:text-5xl font-extrabold text-slate-900">Recursos que brilham</h3>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- Feature 1 -->
+            <div class="group p-8 rounded-[32px] bg-slate-50 border border-slate-100 hover:border-slate-300 hover:bg-white transition-all duration-500 shadow-xl shadow-slate-100/50 hover:shadow-2xl">
+                <div class="w-16 h-16 metallic-gradient rounded-2xl flex items-center justify-center mb-8 shadow-lg border border-white group-hover:scale-110 transition-transform">
+                    <i data-lucide="zap" class="w-8 h-8 text-slate-700"></i>
+                </div>
+                <h4 class="text-2xl font-bold text-slate-900 mb-4">Velocidade Cromo</h4>
+                <p class="text-slate-500 leading-relaxed font-medium">
+                    Processamento em milissegundos com a nova arquitetura Gemini 2.5 Flash. Sem atrasos, apenas resultados.
+                </p>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="group p-8 rounded-[32px] bg-slate-50 border border-slate-100 hover:border-slate-300 hover:bg-white transition-all duration-500 shadow-xl shadow-slate-100/50 hover:shadow-2xl">
+                <div class="w-16 h-16 metallic-gradient rounded-2xl flex items-center justify-center mb-8 shadow-lg border border-white group-hover:scale-110 transition-transform">
+                    <i data-lucide="shield-check" class="w-8 h-8 text-slate-700"></i>
+                </div>
+                <h4 class="text-2xl font-bold text-slate-900 mb-4">Segurança Prata</h4>
+                <p class="text-slate-500 leading-relaxed font-medium">
+                    Criptografia de ponta a ponta e isolamento total de projetos. Seus dados são sua propriedade.
+                </p>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="group p-8 rounded-[32px] bg-slate-50 border border-slate-100 hover:border-slate-300 hover:bg-white transition-all duration-500 shadow-xl shadow-slate-100/50 hover:shadow-2xl">
+                <div class="w-16 h-16 metallic-gradient rounded-2xl flex items-center justify-center mb-8 shadow-lg border border-white group-hover:scale-110 transition-transform">
+                    <i data-lucide="layers" class="w-8 h-8 text-slate-700"></i>
+                </div>
+                <h4 class="text-2xl font-bold text-slate-900 mb-4">Multi-Agentes</h4>
+                <p class="text-slate-500 leading-relaxed font-medium">
+                    Coordene múltiplos modelos de IA simultaneamente para tarefas complexas e fluxos de trabalho avançados.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section id="testimonials" class="py-32 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
+                <div>
+                    <h2 class="text-sm font-black uppercase tracking-[0.3em] text-slate-400 mb-4">Prova Social</h2>
+                    <h3 class="text-5xl font-black text-slate-900 leading-tight mb-8">O que dizem os mestres da tecnologia</h3>
+                    <div class="flex gap-4 mb-12">
+                        <div class="flex -space-x-4">
+                            <div class="w-12 h-12 rounded-full border-4 border-white bg-slate-300"></div>
+                            <div class="w-12 h-12 rounded-full border-4 border-white bg-slate-400"></div>
+                            <div class="w-12 h-12 rounded-full border-4 border-white bg-slate-500"></div>
+                        </div>
+                        <div class="text-sm">
+                            <p class="font-bold text-slate-900">+5.000 usuários ativos</p>
+                            <p class="text-slate-500">Empresas que mudaram o jogo</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="relative">
+                    <div class="absolute -top-10 -left-10 text-9xl text-slate-200 font-serif">“</div>
+                    <div class="bg-white p-12 rounded-[40px] shadow-2xl border border-slate-100 relative">
+                        <p class="text-2xl text-slate-700 font-medium leading-relaxed italic mb-8">
+                            "A transição para o NexusAI foi como sair de uma ferramenta rudimentar para um assistente de luxo. O design metálico não é apenas estética, é funcionalidade pura."
+                        </p>
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-full metallic-gradient border-2 border-white"></div>
+                            <div>
+                                <p class="font-black text-slate-900">Vagner Santos</p>
+                                <p class="text-sm font-bold text-slate-400 uppercase tracking-widest">CTO @ TechGlobal</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-white pt-24 pb-12 border-t border-slate-100">
+        <div class="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
+            <div class="col-span-1 md:col-span-2">
+                <div class="flex items-center gap-2 mb-8">
+                    <div class="w-8 h-8 metallic-gradient rounded-lg flex items-center justify-center shadow border border-white">
+                        <i data-lucide="cpu" class="w-4 h-4 text-slate-700"></i>
+                    </div>
+                    <span class="text-lg font-black tracking-tighter text-slate-800 uppercase">Nexus<span class="text-slate-400">AI</span></span>
+                </div>
+                <p class="text-slate-500 max-w-sm mb-8 leading-relaxed font-medium">
+                    Elevando a produtividade humana através da inteligência artificial de elite. Design, performance e segurança em um só lugar.
+                </p>
+                <div class="flex gap-4">
+                    <a href="#" class="w-10 h-10 metallic-gradient rounded-full flex items-center justify-center shadow border border-white text-slate-600 hover:text-slate-900 transition-colors">
+                        <i data-lucide="twitter" class="w-5 h-5"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 metallic-gradient rounded-full flex items-center justify-center shadow border border-white text-slate-600 hover:text-slate-900 transition-colors">
+                        <i data-lucide="github" class="w-5 h-5"></i>
+                    </a>
+                    <a href="#" class="w-10 h-10 metallic-gradient rounded-full flex items-center justify-center shadow border border-white text-slate-600 hover:text-slate-900 transition-colors">
+                        <i data-lucide="linkedin" class="w-5 h-5"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <div>
+                <h5 class="text-sm font-black uppercase tracking-widest text-slate-900 mb-8">Produto</h5>
+                <ul class="space-y-4 text-slate-500 font-semibold text-sm">
+                    <li><a href="#" class="hover:text-slate-900">Recursos</a></li>
+                    <li><a href="#" class="hover:text-slate-900">API</a></li>
+                    <li><a href="#" class="hover:text-slate-900">Preços</a></li>
+                    <li><a href="#" class="hover:text-slate-900">Changelog</a></li>
+                </ul>
+            </div>
+
+            <div>
+                <h5 class="text-sm font-black uppercase tracking-widest text-slate-900 mb-8">Legal</h5>
+                <ul class="space-y-4 text-slate-500 font-semibold text-sm">
+                    <li><a href="#" class="hover:text-slate-900">Privacidade</a></li>
+                    <li><a href="#" class="hover:text-slate-900">Termos</a></li>
+                    <li><a href="#" class="hover:text-slate-900">Segurança</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="max-w-7xl mx-auto px-6 pt-12 border-t border-slate-50 flex flex-col md:row items-center justify-between gap-6">
+            <p class="text-sm font-bold text-slate-400">© 2026 NexusAI Intelligence Systems. Todos os direitos reservados.</p>
+            <div class="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-slate-300">
+                <span>Handcrafted in the future</span>
+                <span class="w-1 h-1 bg-slate-200 rounded-full"></span>
+                <span>Metallic Edition</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        lucide.createIcons();
+        
+        // Header scroll effect
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 50) {
+                header.classList.add('py-2');
+                header.classList.remove('py-4');
+            } else {
+                header.classList.add('py-4');
+                header.classList.remove('py-2');
+            }
+        });
+    </script>
+</body>
+</html>
