@@ -188,9 +188,9 @@ function PromptLibrary({ onSelect }) {
             {cat.prompts.map(p => (
               <button 
                 key={p.label} 
-                className="btn btn-secondary btn-sm" 
+                className="btn-ghost" 
                 onClick={() => onSelect(p.text)}
-                style={{ fontSize: 11, padding: '6px 12px', background: '#fff', border: '1px solid var(--glass-border)' }}
+                style={{ fontSize: 11, padding: '6px 12px' }}
               >
                 {p.label}
               </button>
@@ -586,15 +586,15 @@ function DashboardPage({ stats, recentSessions }) {
             href="/painel"
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '12px 24px', fontSize: 14, fontWeight: 700, textDecoration: 'none', borderRadius: 12, background: 'var(--gradient-primary)', color: 'white', boxShadow: '0 4px 12px rgba(0, 102, 255, 0.2)', transition: 'all 0.2s' }}
+            className="btn-cta btn-cta-lg"
+            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}
           >
             🚀 Abrir Painel do Usuário
           </a>
           <button
-            className="btn btn-secondary"
+            className="btn-ghost"
             onClick={() => { navigator.clipboard.writeText(window.location.origin + '/painel'); alert('Link copiado!'); }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '12px 20px', fontSize: 13, fontWeight: 600, border: '1px solid var(--glass-border)', borderRadius: 12, background: 'var(--glass-bg)', color: 'var(--text-secondary)', cursor: 'pointer' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '14px 28px', fontSize: 15, borderRadius: 12 }}
           >
             📋 Copiar Link do Painel
           </button>
@@ -875,7 +875,8 @@ function ChatPage({ projectId }) {
       </select>
       <button 
         onClick={() => setShowSettings(!showSettings)}
-        style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, color: '#475569', transition: 'all 0.2s' }}
+        className="btn-ghost"
+        style={{ padding: '6px 12px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}
       >
         ⚙️ {showSettings ? 'Fechar' : 'Ajustes'}
       </button>
