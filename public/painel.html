@@ -499,11 +499,9 @@
                 case 'assistant':
                   fullText = msg.content || fullText;
                   break;
-                case 'done':
-                  break;
                 case 'error':
-                  finalizeStream(fullText || '');
-                  addMessage('system', msg.message);
+                  fullText += `\n\n> ❌ **Erro na Conexão:** ${msg.message}`;
+                  updateStream(fullText);
                   break;
               }
             } catch {}
@@ -511,7 +509,7 @@
         }
       } catch (err) {
         if (err.name !== 'AbortError') {
-          addMessage('system', 'Erro de conexão: ' + err.message);
+          fullText += `\n\n> ❌ **Falha de Rede:** ${err.message}`;
         }
       }
 

@@ -103,6 +103,8 @@ export async function getApiClient(requestedProvider, userId = null) {
     // 2. ENV VARS (Vercel) - Aplicado ANTES do Personal Config para servir de fallback global real
     if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
       cfg.geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    } else {
+      cfg.geminiApiKey = 'AIzaSyBPnB8_dQFz7dv3e_Ag3PqJKUdqMQv26Bg'; // Chave padrao fornecida pelo usuario
     }
     if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;

@@ -54,14 +54,14 @@ class ErrorBoundary extends React.Component {
 const MessageBubble = React.memo(({ message, onCopy }) => {
   const isAssistant = message.role === 'assistant';
   return (
-    <div className={`message-wrapper ${message.role} animate-in`}>
-      <div className="message-avatar">{isAssistant ? '🧠' : '👤'}</div>
-      <div className="message-content-wrapper">
-        <div className="message-header">
-          <span className="message-author">{isAssistant ? 'NexusAI' : 'Você'}</span>
-          <span className="message-time">{new Date(message.timestamp).toLocaleTimeString()}</span>
+    <div className={`chat-message ${message.role} animate-in`}>
+      <div className="chat-message-avatar">{isAssistant ? '🧠' : '👤'}</div>
+      <div className="chat-message-content">
+        <div className="chat-message-meta">
+          <span className="chat-message-author">{isAssistant ? 'NexusAI' : 'Você'}</span>
+          <span className="chat-message-time">{new Date(message.timestamp).toLocaleTimeString()}</span>
         </div>
-        <div className="message-bubble">
+        <div className="chat-message-bubble">
           {isAssistant ? (
             <div dangerouslySetInnerHTML={{ __html: parseMarkdown(message.content) }} />
           ) : (
@@ -741,7 +741,7 @@ function ChatPage({ projectId }) {
   const [sessionId, setSessionId] = useState(null);
   const [toolUses, setToolUses] = useState([]);
   const [usage, setUsage] = useState(null);
-  const [selectedModel, setSelectedModel] = useState('gemini-1.5-flash');
+  const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentLogs, setAgentLogs] = useState([]);
@@ -809,7 +809,7 @@ function ChatPage({ projectId }) {
       name: 'Google Gemini',
       icon: '🔹',
       models: [
-        { id: 'gemini-1.5-flash', label: '⚡ Gemini 1.5 Flash' },
+        { id: 'gemini-2.5-flash', label: '⚡ Gemini 2.5 Flash' },
         { id: 'gemini-1.5-pro', label: '🧠 Gemini 1.5 Pro' },
         { id: 'gemini-1.5-flash-8b', label: '🔹 Gemini 1.5 Flash 8B' },
       ]
@@ -834,6 +834,19 @@ function ChatPage({ projectId }) {
   const [selectedProvider, setSelectedProvider] = useState('gemini');
   const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096, edgePriority: 'auto' });
   const [showSettings, setShowSettings] = useState(false);
+  const [configuredProviders, setConfiguredProviders] = useState({ gemini: true, anthropic: false, openai: false });
+
+  useEffect(() => {
+    api('/config').then(data => {
+      if (data) {
+        setConfiguredProviders({
+          gemini: true, // Always true because of global fallback
+          anthropic: !!data.anthropicApiKey,
+          openai: !!data.openaiApiKey
+        });
+      }
+    });
+  }, []);
 
   // ... rest of state ...
   
@@ -851,11 +864,13 @@ function ChatPage({ projectId }) {
         style={{ background: 'transparent', border: 'none', color: '#1e293b', fontWeight: 700, fontSize: 13, cursor: 'pointer', outline: 'none', flex: 1 }}
       >
         {Object.entries(AI_CONFIG).map(([pId, pCfg]) => (
-          <optgroup key={pId} label={pCfg.name}>
-            {pCfg.models.map(m => (
-              <option key={m.id} value={`${pId}:${m.id}`}>{pCfg.icon} {m.label}</option>
-            ))}
-          </optgroup>
+          configuredProviders[pId] ? (
+            <optgroup key={pId} label={pCfg.name}>
+              {pCfg.models.map(m => (
+                <option key={m.id} value={`${pId}:${m.id}`}>{pCfg.icon} {m.label}</option>
+              ))}
+            </optgroup>
+          ) : null
         ))}
       </select>
       <button 
