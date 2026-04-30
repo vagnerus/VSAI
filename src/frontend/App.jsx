@@ -804,6 +804,7 @@ function ChatPage({ projectId }) {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Refs to break circular dependencies
   const sendMessageRef = useRef(null);
@@ -1218,9 +1219,10 @@ function ChatPage({ projectId }) {
   };
 
   return (
-    <div className={`chat-layout-wrapper ${showArtifacts ? 'with-artifacts' : ''}`}>
+    <div className={`chat-layout-wrapper ${showArtifacts ? 'with-artifacts' : ''} ${isSidebarOpen ? 'sidebar-open' : ''}`}>
       {projectId && (
-        <div className="chat-sidebar-workspace">
+        <div className={`chat-sidebar-workspace ${isSidebarOpen ? 'mobile-visible' : ''}`}>
+          <div className="mobile-sidebar-close" onClick={() => setIsSidebarOpen(false)}>✕</div>
           <WorkspaceExplorer projectId={projectId} />
         </div>
       )}
@@ -1228,6 +1230,7 @@ function ChatPage({ projectId }) {
         {/* Chat Header */}
         <div style={{ padding: '12px 24px', borderBottom: '1px solid var(--glass-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button className="mobile-menu-toggle" onClick={() => setIsSidebarOpen(true)}>☰</button>
             <span style={{ fontSize: 20 }}>💬</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>
@@ -1257,8 +1260,8 @@ function ChatPage({ projectId }) {
             <button className="btn btn-secondary btn-sm" onClick={() => setVoiceEnabled(!voiceEnabled)} style={{ marginRight: 8 }}>
               {voiceEnabled ? '🔊 Voz Ativa' : '🔇 Voz Muda'}
             </button>
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowPromptLibrary(!showPromptLibrary)} style={{ marginRight: 8 }}>📚 Prompts</button>
-            <button className="btn btn-secondary btn-sm" onClick={exportChat} style={{ marginRight: 8 }}>📤 Exportar (.md)</button>
+            <button className="btn btn-secondary btn-sm mobile-hide" onClick={() => setShowPromptLibrary(!showPromptLibrary)} style={{ marginRight: 8 }}>📚 Prompts</button>
+            <button className="btn btn-secondary btn-sm mobile-hide" onClick={exportChat} style={{ marginRight: 8 }}>📤 Exportar (.md)</button>
             <button className="btn btn-secondary btn-sm" onClick={newChat}>+ Nova</button>
           </div>
         </div>

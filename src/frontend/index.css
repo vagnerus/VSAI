@@ -3561,3 +3561,104 @@ tr:hover td {
   outline: none;
   border-color: var(--accent-primary);
 }
+
+/* ── Mobile Responsiveness (Singularity Phase) ── */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.mobile-sidebar-close {
+  display: none;
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  z-index: 1001;
+}
+
+@media (max-width: 1024px) {
+  .chat-layout-wrapper {
+    flex-direction: column;
+  }
+
+  .chat-sidebar-workspace {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    bottom: 0;
+    width: 280px;
+    z-index: 1000;
+    background: var(--bg-primary);
+    box-shadow: 20px 0 50px rgba(0,0,0,0.3);
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border-right: 1px solid var(--glass-border);
+  }
+
+  .chat-sidebar-workspace.mobile-visible {
+    left: 0;
+  }
+
+  .mobile-menu-toggle {
+    display: block;
+  }
+
+  .mobile-sidebar-close {
+    display: block;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  .chat-container {
+    height: 100dvh;
+    border-left: none;
+  }
+
+  /* Header adjustments */
+  .chat-container > div:first-child {
+    padding: 10px 16px !important;
+  }
+
+  .chat-container .badge {
+    display: none; /* Hide token count on mobile to save space */
+  }
+
+  /* Input area adjustments */
+  .chat-input-area {
+    padding: 12px 16px !important;
+  }
+
+  .chat-input-wrapper {
+    padding: 8px 12px !important;
+  }
+
+  .chat-message {
+    max-width: 90% !important;
+  }
+  
+  .camera-preview-container {
+    margin: 8px 12px !important;
+    max-width: 100% !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .chat-input-wrapper textarea {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+  
+  .chat-send-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+}
