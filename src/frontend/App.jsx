@@ -804,6 +804,167 @@ function ChatPage({ projectId }) {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  
+  // Refs to break circular dependencies
+  const sendMessageRef = useRef(null);
+  const startRecordingRef = useRef(null);
+  const speakRef = useRef(null);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  // ─── SSE-based sendMessage (substitui WebSocket) ─────────────────
+  const sendMessage = useCallback(async (overrideInput) => {
+    const finalInput = (typeof overrideInput === 'string' ? overrideInput : input).trim();
+    if ((!finalInput && !imageAttachment) || isStreaming) return;
+
+    if (isOffline) {
+      const offlineMsg = {
+        role: 'user',
+        content: input.trim(),
+        timestamp: Date.now(),
+        isPending: true
+      };
+      setMessages(prev => [...prev, offlineMsg]);
+      setPendingSync(prev => [...prev, offlineMsg]);
+      setInput('');
+      return;
+    }
+
+    const userContent = finalInput;
+    const payloadContent = imageAttachment 
+      ? [
+          { type: 'image_url', image_url: { url: imageAttachment } },
+          { type: 'text', text: userContent || 'O que você vê nesta imagem?' }
+        ]
+      : userContent;
+
+    setInput('');
+    setImageAttachment(null);
+    setIsStreaming(true);
+    setStreamText('');
+    setToolUses([]);
+    setStatusText('');
+
+    setMessages(prev => [...prev, {
+      role: 'user',
+      content: payloadContent,
+      timestamp: Date.now(),
+    }]);
+
+    // Abort controller para cancelar
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    try {
+      // Get auth token for SSE request
+      let authHeaders = { 'Content-Type': 'application/json' };
+      try {
+        const token = localStorage.getItem('nexus_access_token');
+        if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+      } catch (e) { /* no auth */ }
+
+      const response = await fetch(`${API_BASE}/chat`, {
+        method: 'POST',
+        headers: authHeaders,
+        signal: controller.signal,
+        body: JSON.stringify({
+          content: userContent,
+          messages: messages
+            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .map(m => ({ role: m.role, content: m.content })),
+          model: selectedModel,
+          provider: selectedProvider,
+          projectId,
+          agentId: selectedAgent?.id,
+          settings: chatSettings,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.details || `HTTP ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          try {
+            const msg = JSON.parse(line.slice(6));
+            
+            switch (msg.type) {
+              case 'session':
+                setSessionId(msg.sessionId);
+                break;
+              case 'stream':
+                setStreamText(prev => prev + msg.text);
+                break;
+              case 'assistant':
+                setStreamText('');
+                setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  content: msg.content,
+                  toolCalls: msg.toolCalls,
+                  timestamp: Date.now(),
+                }]);
+                if (voiceEnabled) speakRef.current?.(msg.content);
+                break;
+              case 'tool_result':
+                setToolUses(prev => prev.map(t =>
+                  t.name === msg.toolName ? { ...t, result: msg.content, isError: msg.isError, status: 'completed' } : t
+                ));
+                break;
+              case 'status':
+                setAgentLogs(prev => [...prev, { message: msg.message, toolName: msg.toolName, timestamp: Date.now() }].slice(-50));
+                setStatusText(msg.message || '');
+                break;
+              case 'usage':
+                setUsage(msg.usage);
+                break;
+              case 'done':
+                setIsStreaming(false);
+                setStreamText('');
+                setToolUses([]);
+                break;
+              case 'error':
+                setIsStreaming(false);
+                // INSTEAD of deleting streamText, we push whatever we have to messages so the user can see it!
+                setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  content: streamText + `\n\n> ❌ **Erro na Conexão:** ${msg.message}`,
+                  isError: true,
+                  timestamp: Date.now(),
+                }]);
+                setStreamText('');
+                setErrorState({ message: msg.message, errorId: msg.errorId });
+                break;
+            }
+          } catch { }
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        setMessages(prev => [...prev, { role: 'system', content: `Erro de conexão: ${err.message}`, timestamp: Date.now() }]);
+      }
+    } finally {
+      setIsStreaming(false);
+      setStreamText('');
+    }
+  }, [input, isStreaming, messages, sessionId, projectId, selectedModel, selectedProvider, selectedAgent, chatSettings]);
+
+  useEffect(() => { sendMessageRef.current = sendMessage; }, [sendMessage]);
 
   // 🎙️ Speech Recognition Logic
   const startRecording = useCallback((autoSubmit = false) => {
@@ -822,7 +983,7 @@ function ChatPage({ projectId }) {
         // Direct state update is safer than functional update here for immediate submission
         const finalInput = transcript.trim();
         if (finalInput) {
-          sendMessage(finalInput);
+          sendMessageRef.current?.(finalInput);
         }
       } else {
         setInput(prev => prev + ' ' + transcript);
@@ -832,7 +993,9 @@ function ChatPage({ projectId }) {
     recognition.onend = () => setIsRecording(false);
 
     recognition.start();
-  }, [messages, selectedModel, selectedProvider, chatSettings, projectId, selectedAgent]); // Dependencies for sendMessage inside
+  }, [input]); // Minor dependency to keep it fresh enough, but we use the ref for sendMessage
+
+  useEffect(() => { startRecordingRef.current = startRecording; }, [startRecording]);
 
   // 🔊 Speech Synthesis Logic
   const speak = useCallback((text) => {
@@ -847,13 +1010,15 @@ function ChatPage({ projectId }) {
     utterance.onend = () => {
       if (isCallMode) {
         // Automatic restart of the loop
-        setTimeout(() => startRecording(true), 500);
+        setTimeout(() => startRecordingRef.current?.(true), 500);
       }
     };
     
     window.speechSynthesis.cancel(); // Stop current speech
     window.speechSynthesis.speak(utterance);
-  }, [voiceEnabled, isCallMode, startRecording]);
+  }, [voiceEnabled, isCallMode]); // We use the ref for startRecording
+
+  useEffect(() => { speakRef.current = speak; }, [speak]);
 
   // 📷 Camera Logic
   const toggleCamera = async () => {
@@ -1015,9 +1180,6 @@ function ChatPage({ projectId }) {
     </div>
   );
 
-  const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, []);
 
   useEffect(() => {
     scrollToBottom();
@@ -1027,155 +1189,6 @@ function ChatPage({ projectId }) {
     }
   }, [messages, streamText, scrollToBottom]);
 
-  // ─── SSE-based sendMessage (substitui WebSocket) ─────────────────
-  const sendMessage = useCallback(async (overrideInput) => {
-    const finalInput = (typeof overrideInput === 'string' ? overrideInput : input).trim();
-    if ((!finalInput && !imageAttachment) || isStreaming) return;
-
-    if (isOffline) {
-      const offlineMsg = {
-        role: 'user',
-        content: input.trim(),
-        timestamp: Date.now(),
-        isPending: true
-      };
-      setMessages(prev => [...prev, offlineMsg]);
-      setPendingSync(prev => [...prev, offlineMsg]);
-      setInput('');
-      return;
-    }
-
-    const userContent = finalInput;
-    const payloadContent = imageAttachment 
-      ? [
-          { type: 'image_url', image_url: { url: imageAttachment } },
-          { type: 'text', text: userContent || 'O que você vê nesta imagem?' }
-        ]
-      : userContent;
-
-    setInput('');
-    setImageAttachment(null);
-    setIsStreaming(true);
-    setStreamText('');
-    setToolUses([]);
-    setStatusText('');
-
-    setMessages(prev => [...prev, {
-      role: 'user',
-      content: payloadContent,
-      timestamp: Date.now(),
-    }]);
-
-    // Abort controller para cancelar
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    try {
-      // Get auth token for SSE request
-      let authHeaders = { 'Content-Type': 'application/json' };
-      try {
-        const token = localStorage.getItem('nexus_access_token');
-        if (token) authHeaders['Authorization'] = `Bearer ${token}`;
-      } catch (e) { /* no auth */ }
-
-      const response = await fetch(`${API_BASE}/chat`, {
-        method: 'POST',
-        headers: authHeaders,
-        signal: controller.signal,
-        body: JSON.stringify({
-          content: userContent,
-          messages: messages
-            .filter(m => m.role === 'user' || m.role === 'assistant')
-            .map(m => ({ role: m.role, content: m.content })),
-          model: selectedModel,
-          provider: selectedProvider,
-          projectId,
-          agentId: selectedAgent?.id,
-          settings: chatSettings,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || errorData.details || `HTTP ${response.status}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
-          try {
-            const msg = JSON.parse(line.slice(6));
-            
-            switch (msg.type) {
-              case 'session':
-                setSessionId(msg.sessionId);
-                break;
-              case 'stream':
-                setStreamText(prev => prev + msg.text);
-                break;
-              case 'assistant':
-                setStreamText('');
-                setMessages(prev => [...prev, {
-                  role: 'assistant',
-                  content: msg.content,
-                  toolCalls: msg.toolCalls,
-                  timestamp: Date.now(),
-                }]);
-                if (voiceEnabled) speak(msg.content);
-                break;
-              case 'tool_result':
-                setToolUses(prev => prev.map(t =>
-                  t.name === msg.toolName ? { ...t, result: msg.content, isError: msg.isError, status: 'completed' } : t
-                ));
-                break;
-              case 'status':
-                setAgentLogs(prev => [...prev, { message: msg.message, toolName: msg.toolName, timestamp: Date.now() }].slice(-50));
-                setStatusText(msg.message || '');
-                break;
-              case 'usage':
-                setUsage(msg.usage);
-                break;
-              case 'done':
-                setIsStreaming(false);
-                setStreamText('');
-                setToolUses([]);
-                break;
-              case 'error':
-                setIsStreaming(false);
-                // INSTEAD of deleting streamText, we push whatever we have to messages so the user can see it!
-                setMessages(prev => [...prev, {
-                  role: 'assistant',
-                  content: streamText + `\n\n> ❌ **Erro na Conexão:** ${msg.message}`,
-                  isError: true,
-                  timestamp: Date.now(),
-                }]);
-                setStreamText('');
-                setErrorState({ message: msg.message, errorId: msg.errorId });
-                break;
-            }
-          } catch { }
-        }
-      }
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        setMessages(prev => [...prev, { role: 'system', content: `Erro de conexão: ${err.message}`, timestamp: Date.now() }]);
-      }
-    } finally {
-      setIsStreaming(false);
-      setStreamText('');
-    }
-  }, [input, isStreaming, messages, sessionId, projectId, selectedModel, selectedProvider, selectedAgent, chatSettings]);
 
   const handleAbort = () => {
     abortControllerRef.current?.abort();
