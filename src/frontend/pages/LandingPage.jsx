@@ -42,7 +42,7 @@ export default function LandingPage({ onNavigate }) {
 
       {/* ─── Hero Section ─── */}
       <section className="hero-metallic">
-        <div style={{ maxWidth: 1200, margin: '0 auto', px: 20 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 20px' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 16px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 100, marginBottom: 32 }}>
             <span style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 2 }}>⚡ Novo: Versão 2.5 Metallic</span>
           </div>

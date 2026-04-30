@@ -10,17 +10,17 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg-primary: #050508;
-      --bg-secondary: #0a0a0f;
-      --bg-card: rgba(255,255,255,0.03);
+      --bg-primary: #f8fafc;
+      --bg-secondary: #ffffff;
+      --bg-card: #ffffff;
       --bg-user-msg: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-      --bg-ai-msg: #11111a;
-      --text-primary: #f0f0f5;
-      --text-secondary: #94a3b8;
+      --bg-ai-msg: #ffffff;
+      --text-primary: #0f172a;
+      --text-secondary: #475569;
       --accent: #8b5cf6;
-      --accent-glow: rgba(139,92,246,0.3);
-      --border: rgba(255,255,255,0.08);
-      --radius: 18px;
+      --accent-glow: rgba(139,92,246,0.15);
+      --border: rgba(0,0,0,0.06);
+      --radius: 20px;
       --radius-sm: 12px;
       --font: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
@@ -138,7 +138,8 @@
       border-radius: var(--radius) var(--radius) 4px var(--radius);
       padding: 14px 20px;
       font-size: 14px; line-height: 1.65;
-      box-shadow: 0 4px 24px rgba(139,92,246,0.2);
+      color: #ffffff;
+      box-shadow: 0 4px 24px rgba(139,92,246,0.1);
     }
     .msg-ai .msg-bubble {
       background: var(--bg-ai-msg);
@@ -165,12 +166,13 @@
     .msg-bubble h2 { font-size: 16px; }
     .msg-bubble h3 { font-size: 14px; }
     .msg-bubble code {
-      background: rgba(0,0,0,0.3);
+      background: #f1f5f9;
       padding: 2px 6px; border-radius: 4px;
       font-size: 13px; font-family: 'Fira Code', monospace;
     }
     .msg-bubble pre {
-      background: rgba(0,0,0,0.4);
+      background: #f1f5f9;
+      border: 1px solid var(--border);
       padding: 14px; border-radius: 8px;
       overflow-x: auto; margin: 10px 0;
     }
