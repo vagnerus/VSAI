@@ -4,7 +4,7 @@ export default function LandingPage({ onNavigate }) {
   return (
     <div className="landing-page-metallic" style={{ background: 'var(--bg-primary)' }}>
       {/* ─── Header / Navbar ─── */}
-      <nav className="navbar-fixed" style={{ position: 'fixed', top: 0, left: 0, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', height: 'var(--topbar-height)', background: 'var(--bg-secondary)', backdropFilter: 'var(--glass-blur)', borderBottom: '1px solid var(--platinum-light)', z-index: 1000 }}>
+      <nav className="navbar-fixed" style={{ position: 'fixed', top: 0, left: 0, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', height: 'var(--topbar-height)', background: 'var(--bg-secondary)', backdropFilter: 'var(--glass-blur)', borderBottom: '1px solid var(--platinum-light)', zIndex: 1000 }}>
         <div className="flex items-center gap-2">
           <div className="logo-icon-shell">
             <span style={{ fontSize: 20 }}>🧠</span>
