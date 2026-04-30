@@ -228,10 +228,6 @@ export default async function handler(req, res) {
       let toolCalls = [];
       let stopReason = 'end_turn';
 
-      const debugStart = `\n[DEBUG] Iniciando provedor: ${activeModel}\n`;
-      assistantContent += debugStart;
-      send({ type: 'stream', text: debugStart });
-
       try {
         for await (const event of stream) {
           if (!res.writable) break;
@@ -255,27 +251,17 @@ export default async function handler(req, res) {
           }
         }
       } catch (streamError) {
-        const debugErr = `\n\n[DEBUG ERROR] Falha no stream: ${streamError.message}\n`;
-        assistantContent += debugErr;
-        send({ type: 'stream', text: debugErr });
+        const errText = `\n\n[STREAM_ERROR] Ocorreu uma falha no stream: ${streamError.message}\n`;
+        assistantContent += errText;
+        send({ type: 'stream', text: errText });
         throw streamError;
       }
-
-      const debugEnd = `\n[DEBUG] Stream concluído. Bytes recebidos: ${assistantContent.length}\n`;
-      assistantContent += debugEnd;
-      send({ type: 'stream', text: debugEnd });
 
       const parsedCalls = toolCalls.map(tc => {
         try { return { ...tc, input: JSON.parse(tc.input) }; } catch { return { ...tc, input: {} }; }
       });
 
       finalAssistantContent += assistantContent;
-
-      // Hallucination check
-      const hallucinationCheck = aiManager.checkHallucinations(assistantContent);
-      if (!hallucinationCheck.isClean) {
-        send({ type: 'guardrail', warnings: hallucinationCheck.warnings });
-      }
 
       const assistantMsg = {
         uuid: uuidv4(),
@@ -288,19 +274,40 @@ export default async function handler(req, res) {
 
       mutableMessages.push(assistantMsg);
       send({ type: 'assistant', content: assistantContent, toolCalls: parsedCalls, uuid: assistantMsg.uuid });
-
-      // Record success with AIManager
       aiManager.recordSuccess(activeProvider);
-      aiManager.recordTokenUsage(activeProvider, totalInputTokens, totalOutputTokens);
 
-      if (userId !== 'anonymous') {
-        await query(
-          'INSERT INTO messages (id, session_id, user_id, role, content, tool_calls, tokens_input, tokens_output, model) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-          [assistantMsg.uuid, sessionId, userId, 'assistant', assistantContent, parsedCalls.length > 0 ? JSON.stringify(parsedCalls) : null, totalInputTokens, totalOutputTokens, activeModel]
-        );
+      if (stopReason !== 'tool_use' || parsedCalls.length === 0) {
+        // This is the final turn, send done and then do DB writes
+        send({ type: 'done' });
+        res.end(); // End the response for the client
+
+        // --- Fire-and-forget DB operations ---
+        (async () => {
+          try {
+            if (userId !== 'anonymous') {
+              await query(
+                'INSERT INTO messages (id, session_id, user_id, role, content, tool_calls, tokens_input, tokens_output, model) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+                [assistantMsg.uuid, sessionId, userId, 'assistant', assistantContent, parsedCalls.length > 0 ? JSON.stringify(parsedCalls) : null, totalInputTokens, totalOutputTokens, activeModel]
+              );
+            }
+            if (finalAssistantContent && turnCount < MAX_TURNS) {
+              await semanticCache.set(historyMessages, activeSystemPrompt, finalAssistantContent);
+            }
+            if (userId !== 'anonymous' && (totalInputTokens + totalOutputTokens) > 0) {
+                const usageCost = (totalInputTokens + totalOutputTokens) * 0.000003;
+                await query(
+                  'INSERT INTO usage_logs (user_id, session_id, model, tokens_input, tokens_output, cost_usd) VALUES ($1, $2, $3, $4, $5, $6)',
+                  [userId, sessionId, activeModel, totalInputTokens, totalOutputTokens, usageCost]
+                );
+                await query('UPDATE profiles SET tokens_used_month = tokens_used_month + $1 WHERE id = $2', [totalInputTokens + totalOutputTokens, userId]);
+            }
+          } catch(e) {
+            console.error('[CHAT_DB_ASYNC_ERROR] Falha na escrita assíncrona no DB:', e);
+          }
+        })();
+        // --- End of Fire-and-forget ---
+        break; // Exit the while loop
       }
-
-      if (stopReason !== 'tool_use' || parsedCalls.length === 0) break;
 
       for (const tc of parsedCalls) {
         send({ type: 'status', message: `Usando ferramenta: ${tc.name}...`, toolName: tc.name });
@@ -322,24 +329,6 @@ export default async function handler(req, res) {
         send({ type: 'tool_result', toolName: tc.name, content: toolResultMsg.content, isError: toolResultMsg.isError });
       }
     }
-    
-    if (finalAssistantContent && turnCount < MAX_TURNS) {
-      await semanticCache.set(historyMessages, activeSystemPrompt, finalAssistantContent);
-    }
-
-    if (userId !== 'anonymous' && (totalInputTokens + totalOutputTokens) > 0) {
-      try {
-        const usageCost = (totalInputTokens + totalOutputTokens) * 0.000003;
-        await query(
-          'INSERT INTO usage_logs (user_id, session_id, model, tokens_input, tokens_output, cost_usd) VALUES ($1, $2, $3, $4, $5, $6)',
-          [userId, sessionId, activeModel, totalInputTokens, totalOutputTokens, usageCost]
-        );
-        await query('UPDATE profiles SET tokens_used_month = tokens_used_month + $1 WHERE id = $2', [totalInputTokens + totalOutputTokens, userId]);
-      } catch (e) {}
-    }
-
-    send({ type: 'done' });
-    res.end();
 
   } catch (err) {
     console.error('[CHAT_CRITICAL_ERROR]', err);
