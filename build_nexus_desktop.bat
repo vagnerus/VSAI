@@ -1,6 +1,6 @@
 @echo off
 echo ==========================================
-echo   NexusAI Desktop - Gerador One-Click
+echo   VSAI - IA Desktop - Gerador One-Click
 echo ==========================================
 echo.
 cd /d "%~dp0"
@@ -17,7 +17,7 @@ call npm run dist
 echo.
 echo ==========================================
 echo   PROCESSO CONCLUIDO! 
-echo   O NexusAI.exe esta na pasta:
-echo   .\dist_electron\NexusAI.exe
+echo   O VSAI - IA.exe esta na pasta:
+echo   .\dist_electron\VSAI - IA.exe
 echo ==========================================
 pause

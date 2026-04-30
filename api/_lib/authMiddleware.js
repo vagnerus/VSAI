@@ -1,5 +1,5 @@
 /**
- * NexusAI — Custom Auth Middleware
+ * VSAI - IA — Custom Auth Middleware
  * Verifica JWT gerado internamente e extrai user info
  */
 

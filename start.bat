@@ -1,5 +1,5 @@
 @echo off
-title NexusAI - Servidor e Painel
+title VSAI - IA - Servidor e Painel
 color 0A
 
 echo ========================================================

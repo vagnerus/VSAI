@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NexusAI — Assistente Inteligente</title>
+  <title>VSAI - IA — Assistente Inteligente</title>
   <meta name="description" content="Assistente de IA avançado com Gemini. Faça perguntas, gere código, traduza textos e muito mais.">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -291,7 +291,7 @@
     <div class="header-brand">
       <div class="header-logo">🧠</div>
       <div>
-        <div class="header-name">NexusAI</div>
+        <div class="header-name">VSAI - IA</div>
         <div class="header-sub">Assistente Inteligente</div>
       </div>
     </div>
@@ -305,7 +305,7 @@
   <div class="messages" id="messages">
     <div class="welcome" id="welcome">
       <div class="welcome-icon">🧠</div>
-      <h2>Olá! Sou o NexusAI</h2>
+      <h2>Olá! Sou o VSAI - IA</h2>
       <p>Posso ajudar com perguntas, gerar código, traduzir textos, criar conteúdo, analisar dados e muito mais.</p>
       <div class="suggestions">
         <div class="suggestion" onclick="useSuggestion('Gere um código HTML de uma landing page moderna')">💻 Gerar código</div>
@@ -322,7 +322,7 @@
       <textarea id="input" rows="1" placeholder="Digite sua mensagem..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
       <button class="send-btn" id="sendBtn" onclick="send()" disabled>➤</button>
     </div>
-    <div class="input-footer">NexusAI pode cometer erros. Verifique informações importantes.</div>
+    <div class="input-footer">VSAI - IA pode cometer erros. Verifique informações importantes.</div>
   </div>
 
   <script>
@@ -375,7 +375,7 @@
       div.id = 'welcome';
       div.innerHTML = `
         <div class="welcome-icon">🧠</div>
-        <h2>Olá! Sou o NexusAI</h2>
+        <h2>Olá! Sou o VSAI - IA</h2>
         <p>Posso ajudar com perguntas, gerar código, traduzir textos, criar conteúdo, analisar dados e muito mais.</p>
         <div class="suggestions">
           <div class="suggestion" onclick="useSuggestion('Gere um código HTML de uma landing page moderna')">💻 Gerar código</div>
@@ -411,7 +411,7 @@
       const div = document.createElement('div');
       div.className = `msg msg-${role}`;
       const time = new Date().toLocaleTimeString('pt-BR');
-      const label = role === 'user' ? '👤 Você' : role === 'ai' ? '🧠 NexusAI' : '⚠️ Sistema';
+      const label = role === 'user' ? '👤 Você' : role === 'ai' ? '🧠 VSAI - IA' : '⚠️ Sistema';
       div.innerHTML = `
         <div class="msg-bubble">${role === 'user' ? content : parseMarkdown(content)}</div>
         <div class="msg-meta"><span>${label}</span><span>•</span><span>${time}</span></div>

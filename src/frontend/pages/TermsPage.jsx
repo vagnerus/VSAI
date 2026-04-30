@@ -19,13 +19,13 @@ export default function TermsPage({ onNavigate }) {
 
         <div className="legal-content" style={{ lineHeight: 1.8, color: 'var(--text-secondary)' }}>
           <h2 style={{ color: 'var(--text-primary)', marginTop: 32, marginBottom: 16 }}>1. Aceitação dos Termos</h2>
-          <p>Ao acessar e usar a plataforma NexusAI ("Serviço"), você concorda em cumprir e ser regido pelos presentes Termos de Uso. Se você não concorda com qualquer parte destes termos, você está proibido de usar nosso Serviço.</p>
+          <p>Ao acessar e usar a plataforma VSAI - IA ("Serviço"), você concorda em cumprir e ser regido pelos presentes Termos de Uso. Se você não concorda com qualquer parte destes termos, você está proibido de usar nosso Serviço.</p>
 
           <h2 style={{ color: 'var(--text-primary)', marginTop: 32, marginBottom: 16 }}>2. Descrição do Serviço</h2>
-          <p>O NexusAI é uma plataforma de Inteligência Artificial que facilita a criação, análise de código e automação de fluxos de trabalho utilizando APIs de IA de terceiros (como OpenAI, Anthropic e Google).</p>
+          <p>O VSAI - IA é uma plataforma de Inteligência Artificial que facilita a criação, análise de código e automação de fluxos de trabalho utilizando APIs de IA de terceiros (como OpenAI, Anthropic e Google).</p>
 
           <h2 style={{ color: 'var(--text-primary)', marginTop: 32, marginBottom: 16 }}>3. Processamento via IAs de Terceiros</h2>
-          <p>Você entende e concorda que os dados e prompts enviados através do NexusAI podem ser processados pelas APIs de IA conectadas (ex: Google Gemini, Anthropic Claude). O NexusAI não usa seus dados para treinar modelos base próprios, mas os termos de terceiros se aplicam ao tráfego gerado em suas respectivas APIs.</p>
+          <p>Você entende e concorda que os dados e prompts enviados através do VSAI - IA podem ser processados pelas APIs de IA conectadas (ex: Google Gemini, Anthropic Claude). O VSAI - IA não usa seus dados para treinar modelos base próprios, mas os termos de terceiros se aplicam ao tráfego gerado em suas respectivas APIs.</p>
 
           <h2 style={{ color: 'var(--text-primary)', marginTop: 32, marginBottom: 16 }}>4. Planos e Assinaturas</h2>
           <p>Os pagamentos são processados com segurança por gateways terceirizados. Assinaturas renovam-se automaticamente a menos que sejam canceladas antes do fim do ciclo de faturamento. Não há reembolso proporcional em caso de cancelamento no meio do ciclo.</p>

@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- NexusAI SaaS — PostgreSQL Schema (Supabase)
+-- VSAI - IA SaaS — PostgreSQL Schema (Supabase)
 -- Execute este SQL no SQL Editor do Supabase Dashboard
 -- ═══════════════════════════════════════════════════════════════
 

@@ -1,5 +1,5 @@
 /**
- * NexusAI — SQLite Database Layer
+ * VSAI - IA — SQLite Database Layer
  * Usa better-sqlite3 para persistência síncrona e confiável.
  * 
  * Tabelas:

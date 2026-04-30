@@ -495,7 +495,7 @@ function Sidebar({ currentPage, onNavigate, stats, agents = [], selectedAgent, s
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">🧠</div>
         <div className="sidebar-brand-text">
-          <div className="sidebar-brand-name">NexusAI</div>
+          <div className="sidebar-brand-name">VSAI - IA</div>
           <div className="sidebar-brand-version">Platform v1.0</div>
         </div>
       </div>
@@ -800,9 +800,9 @@ function ChatPage({ projectId }) {
 
   const exportChat = () => {
     if (messages.length === 0) return alert('O chat está vazio.');
-    let content = "# Histórico de Conversa - NexusAI\n\n";
+    let content = "# Histórico de Conversa - VSAI - IA\n\n";
     messages.forEach(m => {
-      content += `### ${m.role === 'user' ? '👤 Você' : '🧠 NexusAI'}\n`;
+      content += `### ${m.role === 'user' ? '👤 Você' : '🧠 VSAI - IA'}\n`;
       content += `${m.content}\n\n---\n\n`;
     });
     const blob = new Blob([content], { type: 'text/markdown' });
@@ -1108,7 +1108,7 @@ function ChatPage({ projectId }) {
             <span style={{ fontSize: 20 }}>💬</span>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14 }}>
-                Chat NexusAI {projectId && <span className="badge badge-purple" style={{ marginLeft: 6 }}>Projeto: {projectId}</span>}
+                Chat VSAI - IA {projectId && <span className="badge badge-purple" style={{ marginLeft: 6 }}>Projeto: {projectId}</span>}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
                 {sessionId ? `Sessão: ${(sessionId || '').substring(0, 8)}...` : 'Nova conversa'}
@@ -1384,7 +1384,7 @@ function ToolsPage() {
     <div className="animate-in">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <div>
-          <h2 style={{ fontSize: 22, fontWeight: 800 }}>🛠️ Ferramentas</h2>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>VSAI - IA Alpha-1000</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 4 }}>
             {tools.length} ferramentas disponíveis no sistema
           </p>
@@ -1850,7 +1850,7 @@ function ProjectsPage({ onStartChat }) {
             <textarea
               value={systemPrompt}
               onChange={e => setSystemPrompt(e.target.value)}
-              placeholder="Ex: Atue como um engenheiro de software sênior... Só responda com código documentado em Markdown."
+              placeholder="Ex: Você é o Engenheiro de Software Autônomo Antigravity do VSAI - IA. Só responda com código documentado em Markdown."
               style={{ width: '100%', height: 200, background: 'var(--glass-bg)', color: 'white', padding: 12, border: '1px solid var(--glass-border)', borderRadius: 4, fontFamily: 'monospace' }}
             />
             <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={saveProjectConfig}>Salvar Instruções</button>
@@ -1958,7 +1958,7 @@ function ProjectsPage({ onStartChat }) {
 // Profile Page
 // ═══════════════════════════════════════════════════════════════
 
-function ProfilePage() {
+function ProfilePage({ stats }) {
   const [profile, setProfile] = useState({ custom_instructions: '', plan: 'free', tokens_used_month: 0, tokens_limit: 50000 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1981,7 +1981,7 @@ function ProfilePage() {
     setSaving(false);
   };
 
-  if (loading) return <div style={{ padding: 24 }}>Carregando perfil...</div>;
+  if (loading && !stats) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando VSAI - IA...</div>;
 
   return (
     <div className="animate-in" style={{ padding: 24, maxWidth: 800 }}>

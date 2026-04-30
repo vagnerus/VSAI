@@ -11,7 +11,7 @@ export class AnthropicClient {
     this.maxRetries = config.maxRetries || 3;
 
     if (!this.apiKey || this.apiKey === 'sk-ant-xxxxx') {
-      console.warn('[NexusAI] No valid Anthropic API key configured. Set ANTHROPIC_API_KEY in .env');
+      console.warn('[VSAI - IA] No valid Anthropic API key configured. Set ANTHROPIC_API_KEY in .env');
       this.client = null;
     } else {
       this.client = new Anthropic({ apiKey: this.apiKey });
@@ -57,7 +57,7 @@ export class AnthropicClient {
         if (!isRetryable) throw error;
 
         const delay = Math.min(1000 * Math.pow(2, retries), 30000);
-        console.log(`[NexusAI] API error ${error.status}, retrying in ${delay}ms...`);
+        console.log(`[VSAI - IA] API error ${error.status}, retrying in ${delay}ms...`);
         await new Promise(r => setTimeout(r, delay));
       }
     }
@@ -102,9 +102,9 @@ export class AnthropicClient {
     const lower = input.toLowerCase();
 
     if (lower.includes('hello') || lower.includes('hi') || lower.includes('olá') || lower.includes('oi')) {
-      return `# 👋 Olá! Bem-vindo ao NexusAI!
+      return `# 👋 Olá! Bem-vindo ao VSAI - IA!
 
-Eu sou o **NexusAI**, sua plataforma de IA completa. Aqui está o que posso fazer:
+Eu sou o **VSAI - IA**, sua plataforma de IA completa. Aqui está o que posso fazer:
 
 ## 🛠️ Capacidades Principais
 - **Geração de Código** — Python, JavaScript, TypeScript, C++, e mais
@@ -154,7 +154,7 @@ class TaskManager:
 
 # Uso
 manager = TaskManager()
-manager.add_task("Implementar NexusAI", "high")
+manager.add_task("Implementar VSAI - IA", "high")
 manager.add_task("Testar ferramentas", "medium")
 print(f"Total de tarefas: {len(manager.tasks)}")
 \`\`\`
@@ -162,7 +162,7 @@ print(f"Total de tarefas: {len(manager.tasks)}")
 Quer que eu gere código para algo específico? Posso trabalhar com Python, JavaScript, TypeScript, C++, Java, Go, Rust, e mais!`;
     }
 
-    return `## 🧠 NexusAI — Modo Demo
+    return `## 🧠 VSAI - IA — Modo Demo
 
 Recebi sua mensagem: *"${input.substring(0, 100)}${input.length > 100 ? '...' : ''}"*
 

@@ -256,7 +256,7 @@ export default function AdminLayout() {
   const renderSettings = () => <div className="admin-panel-section animate-in"><h3>⚙️ Settings</h3><p>Versão Alpha-1000.</p></div>;
 
   const renderPage = () => {
-    if (loading && !stats) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando NexusAI...</div>;
+    if (loading && !stats) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando VSAI - IA...</div>;
     switch (activeTab) {
       case 'dashboard': return renderDashboard();
       case 'bi': return renderBI();
@@ -276,7 +276,7 @@ export default function AdminLayout() {
       <header className="admin-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ fontSize: 24 }}>🏛️</div>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>NexusAI Alpha-1000</h2>
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>VSAI - IA Alpha-1000</h2>
         </div>
         <nav className="admin-tabs">
           {['dashboard', 'bi', 'users', 'agents', 'infrastructure', 'compliance', 'omega', 'settings'].map(tab => (

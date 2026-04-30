@@ -1,5 +1,5 @@
 -- ==============================================================================
---  NexusAI: Database Schema for PostgreSQL (P4Admin)
+--  VSAI - IA: Database Schema for PostgreSQL (P4Admin)
 -- ==============================================================================
 -- Execute this script in your PostgreSQL database to create the required tables.
 

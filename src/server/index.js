@@ -113,7 +113,7 @@ server.listen(PORT, () => {
 ║     ██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║         ║
 ║     ██║ ╚████║███████╗██╔╝ ╚██╗╚██████╔╝███████║         ║
 ║     ╚═╝  ╚═══╝╚══════╝╚═╝   ╚═╝ ╚═════╝╚══════╝         ║
-║            NexusAI Enterprise API Simulator              ║
+║            VSAI - IA Enterprise API Simulator              ║
 ║                                                          ║
 ║     🌐  Frontend: http://localhost:5173                  ║
 ║     ⚡  API:      http://localhost:${PORT}/api                  ║

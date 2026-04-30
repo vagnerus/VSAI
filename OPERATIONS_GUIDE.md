@@ -1,4 +1,4 @@
-# NexusAI — Guia de Operação
+# VSAI - IA — Guia de Operação
 
 ## 📋 Visão Geral da Arquitetura
 

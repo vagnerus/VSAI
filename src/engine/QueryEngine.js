@@ -220,7 +220,7 @@ export class QueryEngine {
   }
 
   async assembleSystemPrompt(options) {
-    let parts = [`Você é o Engenheiro de Software Autônomo Antigravity do NexusAI.`];
+    let parts = [`Você é o Engenheiro de Software Autônomo Antigravity do VSAI - IA.`];
     
     // Core logic from architecture docs
     parts.push(`## Operação Autônoma

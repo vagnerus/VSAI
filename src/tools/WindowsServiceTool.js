@@ -65,7 +65,7 @@ export const WindowsServiceTool = buildTool({
       };
     } catch (e) {
       if (e.message.includes('Access is denied') || e.message.includes('5')) {
-        return { error: 'Acesso negado. Certifique-se de que o NexusAI está rodando como Administrador.' };
+        return { error: 'Acesso negado. Certifique-se de que o VSAI - IA está rodando como Administrador.' };
       }
       return { error: e.message };
     }

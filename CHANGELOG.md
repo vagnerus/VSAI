@@ -1,4 +1,4 @@
-# Changelog — NexusAI v2.0.0
+# Changelog — VSAI - IA v2.0.0
 
 ## [2.0.0] - 2026-04-30
 

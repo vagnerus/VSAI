@@ -1,5 +1,5 @@
 /**
- * Tool System — Ferramentas de IA do NexusAI.
+ * Tool System — Ferramentas de IA do VSAI - IA.
  *
  * Todas funcionam em serverless (Vercel).
  * Ferramentas que precisam de ambiente local (bash, filesystem) retornam
@@ -78,7 +78,7 @@ export const WebFetchTool = buildTool({
   },
   async call(input) {
     try {
-      const res = await fetch(input.url, { headers: { 'User-Agent': 'NexusAI/1.0' } });
+      const res = await fetch(input.url, { headers: { 'User-Agent': 'VSAI-IA/1.0' } });
       const text = await res.text();
       return { status: res.status, content: text.substring(0, 10000), truncated: text.length > 10000 };
     } catch (err) {
@@ -210,7 +210,7 @@ export const SEOAnalyzeTool = buildTool({
     let content = input.text || '';
     if (!content && input.url) {
       try {
-        const res = await fetch(input.url, { headers: { 'User-Agent': 'NexusAI-SEO/1.0' } });
+        const res = await fetch(input.url, { headers: { 'User-Agent': 'VSAI-IA-SEO/1.0' } });
         content = await res.text();
       } catch (e) {
         return { error: `Failed to fetch URL: ${e.message}` };
