@@ -7,6 +7,10 @@
  */
 
 import { buildTool } from './factory.js';
+import { AgentTool } from './AgentTool.js';
+import { SendMessageTool } from './SendMessageTool.js';
+import { TaskStopTool } from './TaskStopTool.js';
+import { WindowsServiceTool } from './WindowsServiceTool.js';
 
 // ─── Detectar ambiente ───────────────────────────────────────
 const isVercel = !!process.env.VERCEL;
@@ -274,6 +278,59 @@ export const FormatDataTool = buildTool({
   },
 });
 
+/**
+ * Safe math evaluator — recursive descent parser.
+ * B11 Fix: Replaces Function() which was an RCE vulnerability.
+ */
+function safeMathEval(expr) {
+  const tokens = expr.match(/(\d+\.?\d*|[+\-*/%()^])/g);
+  if (!tokens) throw new Error('No valid tokens found');
+  let pos = 0;
+  const peek = () => tokens[pos];
+  const consume = () => tokens[pos++];
+
+  function parseExpr() {
+    let left = parseTerm();
+    while (peek() === '+' || peek() === '-') {
+      const op = consume();
+      const right = parseTerm();
+      left = op === '+' ? left + right : left - right;
+    }
+    return left;
+  }
+  function parseTerm() {
+    let left = parsePower();
+    while (peek() === '*' || peek() === '/' || peek() === '%') {
+      const op = consume();
+      const right = parsePower();
+      if (op === '*') left *= right;
+      else if (op === '/') { if (right === 0) throw new Error('Division by zero'); left /= right; }
+      else left %= right;
+    }
+    return left;
+  }
+  function parsePower() {
+    let base = parseUnary();
+    while (peek() === '^') { consume(); base = Math.pow(base, parseUnary()); }
+    return base;
+  }
+  function parseUnary() {
+    if (peek() === '-') { consume(); return -parseAtom(); }
+    if (peek() === '+') { consume(); return parseAtom(); }
+    return parseAtom();
+  }
+  function parseAtom() {
+    if (peek() === '(') { consume(); const val = parseExpr(); if (peek() === ')') consume(); return val; }
+    const token = consume();
+    const num = parseFloat(token);
+    if (isNaN(num)) throw new Error(`Unexpected token: ${token}`);
+    return num;
+  }
+  const result = parseExpr();
+  if (pos < tokens.length) throw new Error(`Unexpected token: ${tokens[pos]}`);
+  return result;
+}
+
 export const CalculateTool = buildTool({
   name: 'calculate',
   description: 'Evaluate mathematical expressions and perform calculations.',
@@ -288,9 +345,7 @@ export const CalculateTool = buildTool({
   },
   async call(input) {
     try {
-      // Safe math evaluation (no eval)
-      const expr = input.expression.replace(/[^0-9+\-*/().%\s]/g, '');
-      const result = Function(`"use strict"; return (${expr})`)();
+      const result = safeMathEval(input.expression);
       return { expression: input.expression, result, type: typeof result };
     } catch (e) {
       return { error: `Cannot evaluate: ${e.message}`, expression: input.expression };
@@ -472,11 +527,16 @@ export function getAllTools() {
     FormatDataTool,
     CalculateTool,
     RegexTool,
+    // Agent tools (multi-agent orchestration)
+    AgentTool,
+    SendMessageTool,
+    TaskStopTool,
     // Apenas em ambiente local (VPS/Docker)
     BashTool,
     FileReadTool,
     FileWriteTool,
     FilePatchTool,
+    WindowsServiceTool,
   ];
 
   // No Vercel, incluir apenas as ferramentas habilitadas

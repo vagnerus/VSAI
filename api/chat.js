@@ -8,6 +8,7 @@ import { query } from './_lib/db.js';
 import { checkRateLimit } from './_lib/rateLimiter.js';
 import { getAllTools } from '../src/tools/registry.js';
 import { semanticCache } from './_lib/cache.js';
+import { aiManager } from '../src/engine/AIManager.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const config = {
@@ -58,7 +59,7 @@ export default async function handler(req, res) {
       } catch (e) { /* Fallback */ }
     }
 
-    const activeProvider = useEdge ? 'local' : (selectedProvider || 'google');
+    const activeProvider = useEdge ? 'local' : (selectedProvider || 'gemini');
     let activeModel = useEdge ? 'llama3:8b' : (selectedModel || 'gemini-1.5-flash');
     let activeSystemPrompt = '';
 
@@ -118,6 +119,16 @@ export default async function handler(req, res) {
       console.error('[DB_FETCH_ERROR]', e);
     }
 
+    // B4 Fix: Validate API BEFORE setting SSE headers
+    const apiClient = await getApiClient(activeProvider, userId === 'anonymous' ? null : userId);
+    
+    if (!apiClient.isConfigured()) {
+      return res.status(400).json({ 
+        error: `O provedor '${activeProvider}' não está configurado corretamente. Verifique se a API Key está definida nas variáveis de ambiente.`,
+        code: 'API_NOT_CONFIGURED'
+      });
+    }
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -127,16 +138,6 @@ export default async function handler(req, res) {
       if (!res.writable) return;
       res.write(`data: ${JSON.stringify(obj)}\n\n`);
     };
-
-    const apiClient = getApiClient(activeProvider);
-    
-    // Validação de configuração da API
-    if (!apiClient.isConfigured()) {
-      return res.status(400).json({ 
-        error: `O provedor '${activeProvider}' não está configurado corretamente. Verifique se a GEMINI_API_KEY está definida nas variáveis de ambiente da Vercel.`,
-        code: 'API_NOT_CONFIGURED'
-      });
-    }
 
     const tools = getAllTools();
     const sessionId = clientSessionId || uuidv4();
@@ -167,7 +168,7 @@ export default async function handler(req, res) {
     
     activeSystemPrompt = baseSystemPrompt;
 
-    const cachedResponse = semanticCache.get(historyMessages, activeSystemPrompt);
+    const cachedResponse = await semanticCache.get(historyMessages, activeSystemPrompt);
     if (cachedResponse && !sanitizedContent.includes('pesquise')) {
       send({ type: 'session', sessionId });
       send({ type: 'status', message: '💡 Resposta recuperada do Cache Semântico' });
@@ -227,33 +228,54 @@ export default async function handler(req, res) {
       let toolCalls = [];
       let stopReason = 'end_turn';
 
-      for await (const event of stream) {
-        if (!res.writable) break;
-        if (event.type === 'content_block_delta') {
-          if (event.delta?.type === 'text_delta') {
-            assistantContent += event.delta.text;
-            send({ type: 'stream', text: event.delta.text });
-          } else if (event.delta?.type === 'input_json_delta') {
-            const last = toolCalls[toolCalls.length - 1];
-            if (last) last.input += event.delta.partial_json;
-          }
-        } else if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
-          toolCalls.push({ id: event.content_block.id, name: event.content_block.name, input: '' });
-        } else if (event.type === 'message_delta') {
-          stopReason = event.delta?.stop_reason || stopReason;
-          if (event.usage) {
-            totalInputTokens += event.usage.input_tokens || 0;
-            totalOutputTokens += event.usage.output_tokens || 0;
-            send({ type: 'usage', usage: { inputTokens: event.usage.input_tokens, outputTokens: event.usage.output_tokens } });
+      const debugStart = `\n[DEBUG] Iniciando provedor: ${activeModel}\n`;
+      assistantContent += debugStart;
+      send({ type: 'stream', text: debugStart });
+
+      try {
+        for await (const event of stream) {
+          if (!res.writable) break;
+          if (event.type === 'content_block_delta') {
+            if (event.delta?.type === 'text_delta') {
+              assistantContent += event.delta.text;
+              send({ type: 'stream', text: event.delta.text });
+            } else if (event.delta?.type === 'input_json_delta') {
+              const last = toolCalls[toolCalls.length - 1];
+              if (last) last.input += event.delta.partial_json;
+            }
+          } else if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
+            toolCalls.push({ id: event.content_block.id, name: event.content_block.name, input: '' });
+          } else if (event.type === 'message_delta') {
+            stopReason = event.delta?.stop_reason || stopReason;
+            if (event.usage) {
+              totalInputTokens += event.usage.input_tokens || 0;
+              totalOutputTokens += event.usage.output_tokens || 0;
+              send({ type: 'usage', usage: { inputTokens: event.usage.input_tokens, outputTokens: event.usage.output_tokens } });
+            }
           }
         }
+      } catch (streamError) {
+        const debugErr = `\n\n[DEBUG ERROR] Falha no stream: ${streamError.message}\n`;
+        assistantContent += debugErr;
+        send({ type: 'stream', text: debugErr });
+        throw streamError;
       }
+
+      const debugEnd = `\n[DEBUG] Stream concluído. Bytes recebidos: ${assistantContent.length}\n`;
+      assistantContent += debugEnd;
+      send({ type: 'stream', text: debugEnd });
 
       const parsedCalls = toolCalls.map(tc => {
         try { return { ...tc, input: JSON.parse(tc.input) }; } catch { return { ...tc, input: {} }; }
       });
 
       finalAssistantContent += assistantContent;
+
+      // Hallucination check
+      const hallucinationCheck = aiManager.checkHallucinations(assistantContent);
+      if (!hallucinationCheck.isClean) {
+        send({ type: 'guardrail', warnings: hallucinationCheck.warnings });
+      }
 
       const assistantMsg = {
         uuid: uuidv4(),
@@ -266,6 +288,10 @@ export default async function handler(req, res) {
 
       mutableMessages.push(assistantMsg);
       send({ type: 'assistant', content: assistantContent, toolCalls: parsedCalls, uuid: assistantMsg.uuid });
+
+      // Record success with AIManager
+      aiManager.recordSuccess(activeProvider);
+      aiManager.recordTokenUsage(activeProvider, totalInputTokens, totalOutputTokens);
 
       if (userId !== 'anonymous') {
         await query(
@@ -298,7 +324,7 @@ export default async function handler(req, res) {
     }
     
     if (finalAssistantContent && turnCount < MAX_TURNS) {
-      semanticCache.set(historyMessages, activeSystemPrompt, finalAssistantContent);
+      await semanticCache.set(historyMessages, activeSystemPrompt, finalAssistantContent);
     }
 
     if (userId !== 'anonymous' && (totalInputTokens + totalOutputTokens) > 0) {
@@ -320,6 +346,7 @@ export default async function handler(req, res) {
     if (!res.writableEnded) {
       if (res.headersSent) {
         send({ type: 'error', message: err.message || 'Erro interno' });
+        res.end(); // IMPORTANT: Close the stream after an error!
       } else {
         console.error('[CHAT_500]', err);
         res.status(500).json({ 

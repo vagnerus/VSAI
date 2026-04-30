@@ -25,7 +25,7 @@ export async function verifyAuth(req) {
   try {
     const { payload } = await jwtVerify(token, SECRET);
 
-    const userRole = payload.email === 'vagneroliveira.us@gmail.com' ? 'admin' : (payload.role || 'user');
+    const userRole = payload.role || 'user';
 
     return {
       user: {

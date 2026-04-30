@@ -1,86 +1,89 @@
-import fs from 'fs';
-import path from 'path';
+/**
+ * SemanticCache — Caches AI responses based on conversation context hash.
+ * Migrated to PostgreSQL to support distributed Vercel environments.
+ */
+
 import crypto from 'crypto';
-import { fileURLToPath } from 'url';
-
-import os from 'os';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// No Vercel, usamos /tmp para cache ou desativamos se falhar
-let CACHE_DIR = path.join(__dirname, '../../data/cache');
-let cacheEnabled = true;
-
-try {
-  if (!fs.existsSync(CACHE_DIR)) {
-    fs.mkdirSync(CACHE_DIR, { recursive: true });
-  }
-} catch (e) {
-  console.warn('[SemanticCache] Falha ao criar diretório local, tentando /tmp:', e.message);
-  CACHE_DIR = path.join(os.tmpdir(), 'nexus-cache');
-  try {
-    if (!fs.existsSync(CACHE_DIR)) {
-      fs.mkdirSync(CACHE_DIR, { recursive: true });
-    }
-  } catch (e2) {
-    console.error('[SemanticCache] Falha crítica ao criar diretório de cache:', e2.message);
-    cacheEnabled = false;
-  }
-}
+import { query } from './db.js';
 
 class SemanticCache {
-  constructor(ttl = 3600 * 24) { // Padrão: 24 horas
-    this.ttl = ttl;
+  constructor(ttlSeconds = 3600 * 24) { // Padrão: 24 horas
+    this.ttlSeconds = ttlSeconds;
+    this.initialized = false;
+  }
+
+  async _init() {
+    if (this.initialized) return;
+    try {
+      await query(`
+        CREATE TABLE IF NOT EXISTS query_cache (
+          hash VARCHAR(64) PRIMARY KEY,
+          prompt JSONB NOT NULL,
+          response TEXT NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        )
+      `);
+      
+      // Cleanup de caches antigos em background
+      query(`DELETE FROM query_cache WHERE created_at < NOW() - INTERVAL '${this.ttlSeconds} seconds'`).catch(() => {});
+      
+      this.initialized = true;
+    } catch (e) {
+      console.warn('[SemanticCache] Falha ao inicializar tabela:', e.message);
+    }
   }
 
   _generateKey(messages, systemPrompt) {
-    // Cria um hash baseado no prompt do sistema e nas últimas mensagens
     const content = JSON.stringify({
       system: systemPrompt,
-      messages: messages.slice(-3).map(m => ({ role: m.role, content: m.content }))
+      messages: (messages || []).slice(-3).map(m => ({ role: m.role, content: m.content }))
     });
     return crypto.createHash('sha256').update(content).digest('hex');
   }
 
-  get(messages, systemPrompt) {
-    if (!cacheEnabled) return null;
-    const key = this._generateKey(messages, systemPrompt);
-    const cachePath = path.join(CACHE_DIR, `${key}.json`);
-
-    if (fs.existsSync(cachePath)) {
-      try {
-        const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-        const now = Math.floor(Date.now() / 1000);
-        
-        if (now - data.timestamp < this.ttl) {
-          console.log(`[SemanticCache] Hit for key: ${key.substring(0, 8)}`);
-          return data.response;
-        } else {
-          // Expired
-          try { fs.unlinkSync(cachePath); } catch {}
-        }
-      } catch (e) {
-        return null;
+  /**
+   * Get a cached response asynchronously.
+   */
+  async get(messages, systemPrompt) {
+    await this._init();
+    try {
+      const hash = this._generateKey(messages, systemPrompt);
+      const res = await query('SELECT response FROM query_cache WHERE hash = $1 AND created_at >= NOW() - INTERVAL \'$2 seconds\'', [hash, this.ttlSeconds]);
+      
+      if (res.rows.length > 0) {
+        console.log('[SemanticCache] 🟢 Cache Hit (PostgreSQL):', hash);
+        return res.rows[0].response;
       }
+      return null;
+    } catch (e) {
+      console.error('[SemanticCache] Erro de leitura DB:', e.message);
+      return null;
     }
-    return null;
   }
 
-  set(messages, systemPrompt, response) {
-    if (!cacheEnabled) return;
-    const key = this._generateKey(messages, systemPrompt);
-    const cachePath = path.join(CACHE_DIR, `${key}.json`);
+  /**
+   * Set a cached response asynchronously.
+   */
+  async set(messages, systemPrompt, responseText) {
+    await this._init();
+    if (!responseText || responseText.length < 10) return; // Não faz cache de respostas vazias ou minúsculas
 
     try {
-      const data = {
-        timestamp: Math.floor(Date.now() / 1000),
-        response
-      };
-      fs.writeFileSync(cachePath, JSON.stringify(data), 'utf8');
-      console.log(`[SemanticCache] Saved key: ${key.substring(0, 8)}`);
+      const hash = this._generateKey(messages, systemPrompt);
+      const promptData = JSON.stringify({
+        system: systemPrompt,
+        messages: (messages || []).slice(-3).map(m => ({ role: m.role, content: m.content }))
+      });
+      
+      await query(`
+        INSERT INTO query_cache (hash, prompt, response, created_at) 
+        VALUES ($1, $2, $3, NOW()) 
+        ON CONFLICT (hash) DO UPDATE SET response = $3, created_at = NOW()
+      `, [hash, promptData, responseText]);
+      
+      console.log('[SemanticCache] 💾 Cache Saved (PostgreSQL):', hash);
     } catch (e) {
-      // Ignora erro de gravação silenciosamente
+      console.error('[SemanticCache] Erro ao salvar no DB:', e.message);
     }
   }
 }

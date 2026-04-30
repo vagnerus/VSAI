@@ -1,4 +1,4 @@
--- ═══════════════════════════════════════════════════════════════
+211-- ═══════════════════════════════════════════════════════════════
 -- NexusAI SaaS — PostgreSQL Schema (Supabase)
 -- Execute este SQL no SQL Editor do Supabase Dashboard
 -- ═══════════════════════════════════════════════════════════════
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 -- ───  ────────────────────────────────────────────────
-CREATE TABLE IF NOT EXISTS public. (
+CREATE TABLE IF NOT EXISTS public.projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   name TEXT NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS public. (
 CREATE TABLE IF NOT EXISTS public.sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
-  project_id UUID REFERENCES public.(id) ON DELETE SET NULL,
+  project_id UUID REFERENCES public.projects(id) ON DELETE SET NULL,
   title TEXT DEFAULT 'Nova Conversa',
   message_count INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS public.messages (
 -- ─── Knowledge Files ────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.knowledge_files (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID REFERENCES public.(id) ON DELETE CASCADE NOT NULL,
+  project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE NOT NULL,
   user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
   file_name TEXT NOT NULL,
   file_path TEXT NOT NULL,
@@ -87,7 +87,7 @@ CREATE TABLE IF NOT EXISTS public.usage_logs (
 -- ═══════════════════════════════════════════════════════════════
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public. ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.knowledge_files ENABLE ROW LEVEL SECURITY;
@@ -101,8 +101,8 @@ CREATE POLICY "Users can update own profile" ON public.profiles
 CREATE POLICY "Service role can manage all profiles" ON public.profiles
   FOR ALL USING (auth.role() = 'service_role');
 
---  policies
-CREATE POLICY "Users can manage own " ON public.
+-- Projects policies
+CREATE POLICY "Users can manage own projects" ON public.projects
   FOR ALL USING (auth.uid() = user_id);
 
 -- Sessions policies
@@ -127,7 +127,7 @@ CREATE POLICY "Service role can manage all usage" ON public.usage_logs
 -- Indexes
 -- ═══════════════════════════════════════════════════════════════
 
-CREATE INDEX IF NOT EXISTS idx__user ON public.(user_id);
+CREATE INDEX IF NOT EXISTS idx_projects_user ON public.projects(user_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON public.sessions(user_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_project ON public.sessions(project_id);
 CREATE INDEX IF NOT EXISTS idx_messages_session ON public.messages(session_id, created_at);
@@ -171,7 +171,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
-CREATE TRIGGER update__updated_at BEFORE UPDATE ON public.
+CREATE TRIGGER update_projects_updated_at BEFORE UPDATE ON public.projects
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();
 CREATE TRIGGER update_sessions_updated_at BEFORE UPDATE ON public.sessions
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at();

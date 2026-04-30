@@ -103,8 +103,24 @@ Never stop until you explicitly notify the team-lead.`
 
   async startAgentLoop(teamName, agentId, engine) {
     console.log(`[Swarm] Agent ${agentId} loop started...`);
+    const MAX_ITERATIONS = 500;
+    const TOTAL_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+    const startTime = Date.now();
+    let iterations = 0;
     
     while(this.activeAgents.has(`${teamName}_${agentId}`)) {
+      iterations++;
+      
+      // B8 Fix: Prevent infinite loops
+      if (iterations > MAX_ITERATIONS) {
+        console.warn(`[Swarm] Agent ${agentId} hit max iterations (${MAX_ITERATIONS}). Shutting down.`);
+        break;
+      }
+      if (Date.now() - startTime > TOTAL_TIMEOUT_MS) {
+        console.warn(`[Swarm] Agent ${agentId} exceeded timeout (30min). Shutting down.`);
+        break;
+      }
+
       try {
         // Poll Inbox
         const messages = await readAndClearMailbox(teamName, agentId);
@@ -138,6 +154,10 @@ Never stop until you explicitly notify the team-lead.`
       // Wait before polling again
       await new Promise(r => setTimeout(r, 2000));
     }
+
+    // Cleanup on exit
+    this.activeAgents.delete(`${teamName}_${agentId}`);
+    console.log(`[Swarm] Agent ${agentId} loop ended. (${iterations} iterations)`);
   }
 }
 

@@ -1,14 +1,18 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { buildTool } from './factory.js';
 
 const execAsync = promisify(exec);
 
 /**
  * WindowsServiceTool — Manage Windows Services (Start, Stop, Restart).
+ * B14 Fix: Now uses buildTool() for proper defaults and is registered in registry.
  */
-export const WindowsServiceTool = {
+export const WindowsServiceTool = buildTool({
   name: 'windows_service_manager',
   description: 'Lista, inicia, para ou reinicia serviços do Windows (ex: spooler). Requer privilégios administrativos.',
+  isReadOnly: (input) => input?.action === 'list' || input?.action === 'status',
+  isEnabled: () => process.platform === 'win32' && !process.env.VERCEL,
   inputSchema: {
     type: 'object',
     properties: {
@@ -28,7 +32,7 @@ export const WindowsServiceTool = {
   async call({ action, serviceName }) {
     try {
       if (action === 'list') {
-        const { stdout } = await execAsync('net start');
+        const { stdout } = await execAsync('net start', { timeout: 15000 });
         return { status: 'success', services: stdout.split('\n').map(s => s.trim()).filter(s => s) };
       }
 
@@ -36,15 +40,18 @@ export const WindowsServiceTool = {
         return { error: 'O nome do serviço é obrigatório para esta ação.' };
       }
 
+      // Sanitize service name to prevent injection
+      const safeName = serviceName.replace(/[^a-zA-Z0-9_\-. ]/g, '');
+
       let command = '';
       switch (action) {
-        case 'start': command = `net start "${serviceName}"`; break;
-        case 'stop': command = `net stop "${serviceName}"`; break;
-        case 'restart': command = `powershell "Restart-Service -Name '${serviceName}' -Force"`; break;
-        case 'status': command = `sc query "${serviceName}"`; break;
+        case 'start': command = `net start "${safeName}"`; break;
+        case 'stop': command = `net stop "${safeName}"`; break;
+        case 'restart': command = `powershell "Restart-Service -Name '${safeName}' -Force"`; break;
+        case 'status': command = `sc query "${safeName}"`; break;
       }
 
-      const { stdout, stderr } = await execAsync(command);
+      const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
       
       if (stderr && !stdout) {
         return { error: stderr };
@@ -53,8 +60,8 @@ export const WindowsServiceTool = {
       return {
         status: 'success',
         action,
-        serviceName,
-        message: stdout || `Ação ${action} executada no serviço ${serviceName}.`
+        serviceName: safeName,
+        message: stdout || `Ação ${action} executada no serviço ${safeName}.`
       };
     } catch (e) {
       if (e.message.includes('Access is denied') || e.message.includes('5')) {
@@ -63,4 +70,4 @@ export const WindowsServiceTool = {
       return { error: e.message };
     }
   }
-};
+});

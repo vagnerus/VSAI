@@ -699,7 +699,7 @@ function DashboardPage({ stats, recentSessions }) {
               <tbody>
                 {recentSessions.map(s => (
                   <tr key={s.sessionId}>
-                    <td><code style={{ fontSize: 11 }}>{s.sessionId.substring(0, 8)}...</code></td>
+                    <td><code style={{ fontSize: 11 }}>{(s.sessionId || '').substring(0, 8)}...</code></td>
                     <td>{(s.firstPrompt || '').substring(0, 60)}{(s.firstPrompt || '').length > 60 ? '...' : ''}</td>
                     <td>{s.messageCount || 0}</td>
                     <td>{s.lastModified ? new Date(s.lastModified).toLocaleString('pt-BR') : '-'}</td>
@@ -805,7 +805,7 @@ function ChatPage({ projectId }) {
   };
 
   const AI_CONFIG = {
-    google: {
+    gemini: {
       name: 'Google Gemini',
       icon: '🔹',
       models: [
@@ -831,7 +831,7 @@ function ChatPage({ projectId }) {
     }
   };
 
-  const [selectedProvider, setSelectedProvider] = useState('google');
+  const [selectedProvider, setSelectedProvider] = useState('gemini');
   const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096, edgePriority: 'auto' });
   const [showSettings, setShowSettings] = useState(false);
 
@@ -1003,6 +1003,13 @@ function ChatPage({ projectId }) {
                 break;
               case 'error':
                 setIsStreaming(false);
+                // INSTEAD of deleting streamText, we push whatever we have to messages so the user can see it!
+                setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  content: streamText + `\n\n> ❌ **Erro na Conexão:** ${msg.message}`,
+                  isError: true,
+                  timestamp: Date.now(),
+                }]);
                 setStreamText('');
                 setErrorState({ message: msg.message, errorId: msg.errorId });
                 break;
@@ -1014,10 +1021,11 @@ function ChatPage({ projectId }) {
       if (err.name !== 'AbortError') {
         setMessages(prev => [...prev, { role: 'system', content: `Erro de conexão: ${err.message}`, timestamp: Date.now() }]);
       }
+    } finally {
       setIsStreaming(false);
       setStreamText('');
     }
-  }, [input, isStreaming, messages, sessionId, projectId, selectedModel]);
+  }, [input, isStreaming, messages, sessionId, projectId, selectedModel, selectedProvider, selectedAgent, chatSettings]);
 
   const handleAbort = () => {
     abortControllerRef.current?.abort();
@@ -1063,7 +1071,7 @@ function ChatPage({ projectId }) {
                 Chat NexusAI {projectId && <span className="badge badge-purple" style={{ marginLeft: 6 }}>Projeto: {projectId}</span>}
               </div>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-                {sessionId ? `Sessão: ${sessionId.substring(0, 8)}...` : 'Nova conversa'}
+                {sessionId ? `Sessão: ${(sessionId || '').substring(0, 8)}...` : 'Nova conversa'}
               </div>
             </div>
           </div>
@@ -1127,10 +1135,10 @@ function ChatPage({ projectId }) {
                 🔧 Usando ferramenta: {tool.name}
               </div>
               <div className="tool-use-body">
-                {JSON.stringify(tool.input, null, 2).substring(0, 300)}
+                {(JSON.stringify(tool.input, null, 2) || '').substring(0, 300)}
                 {tool.result && (
                   <div style={{ marginTop: 8, color: tool.isError ? 'var(--accent-danger)' : 'var(--accent-success)' }}>
-                    → {typeof tool.result === 'string' ? tool.result.substring(0, 200) : JSON.stringify(tool.result).substring(0, 200)}
+                    → {typeof tool.result === 'string' ? (tool.result || '').substring(0, 200) : (JSON.stringify(tool.result) || '').substring(0, 200)}
                   </div>
                 )}
               </div>
@@ -1479,7 +1487,7 @@ function HooksPage() {
               <tbody>
                 {hooks.map(h => (
                   <tr key={h.id}>
-                    <td><code style={{ fontSize: 11 }}>{h.id.substring(0, 16)}</code></td>
+                    <td><code style={{ fontSize: 11 }}>{(h.id || '').substring(0, 16)}</code></td>
                     <td>{h.event}</td>
                     <td>{h.matcher}</td>
                     <td>{h.type}</td>
@@ -1743,9 +1751,10 @@ function ProjectsPage({ onStartChat }) {
 
   const load = () => {
     api('/projects').then(data => {
-      setProjects(data.projects || []);
+      const projectData = data || [];
+      setProjects(projectData);
       if (selectedProject) {
-        const updated = (data.projects || []).find(p => p.id === selectedProject.id);
+        const updated = projectData.find(p => p.id === selectedProject.id);
         if (updated) setSelectedProject(updated);
       }
     });
@@ -1754,10 +1763,14 @@ function ProjectsPage({ onStartChat }) {
   const createProject = async (e) => {
     e?.preventDefault();
     if (!name.trim()) return;
-    await api('/projects', { method: 'POST', body: { name, description: desc } });
-    setName('');
-    setDesc('');
-    load();
+    const result = await api('/projects', { method: 'POST', body: { name, description: desc } });
+    if (result.error) {
+      alert(`Falha ao criar o projeto: ${result.error}`);
+    } else {
+      setName('');
+      setDesc('');
+      load();
+    }
   };
 
   const selectProject = (p) => {
@@ -2043,7 +2056,7 @@ function TeamsPage() {
                 <h4 style={{ fontSize: 16, fontWeight: 700 }}>{team.name}</h4>
                 <span className="badge badge-purple" style={{ textTransform: 'uppercase' }}>{team.my_role}</span>
               </div>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>ID: {team.id.substring(0,8)}...</p>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>ID: {(team.id || '').substring(0,8)}...</p>
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--glass-border)' }}>
                 <button className="btn btn-secondary btn-sm" style={{ width: '100%' }}>Gerenciar Membros</button>
               </div>
@@ -2137,9 +2150,10 @@ function SettingsPage() {
                 value={config.googleModel}
                 onChange={e => setConfig({ ...config, googleModel: e.target.value })}
               >
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Mais Rápido)</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Novo Padrão)</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Rápido)</option>
                 <option value="gemini-1.5-pro">Gemini 1.5 Pro (Mais Inteligente)</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Padrão Grátis)</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legado)</option>
               </select>
             </div>
           </div>
