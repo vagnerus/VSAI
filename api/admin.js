@@ -83,6 +83,11 @@ export default async function handler(req, res) {
       return res.status(200).json({ data });
     }
 
+    if (action === 'memory') {
+      const { rows: data } = await query('SELECT id, full_name, email, long_term_memory, user_personality FROM profiles WHERE long_term_memory IS NOT NULL OR user_personality IS NOT NULL');
+      return res.status(200).json({ memories: data });
+    }
+
     return res.status(404).json({ error: 'Action not found' });
   } catch (error) {
     console.error('[ADMIN_DB_ERROR]', error);

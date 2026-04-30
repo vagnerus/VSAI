@@ -14,6 +14,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     tokens_used_month BIGINT DEFAULT 0,
     tokens_limit BIGINT DEFAULT 50000,
     custom_instructions TEXT,
+    long_term_memory TEXT,
+    user_personality TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

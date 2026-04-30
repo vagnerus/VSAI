@@ -7,7 +7,9 @@ export default {
   theme: {
     extend: {
       colors: {
-        platinum: "#E5E4E2",
+        platinum: "var(--platinum-light)",
+        primary: "var(--text-primary)",
+        secondary: "var(--text-secondary)",
         silver: {
           base: "#C0C0C0",
           dark: "#848482",

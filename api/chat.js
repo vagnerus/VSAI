@@ -9,6 +9,7 @@ import { checkRateLimit } from './_lib/rateLimiter.js';
 import { getAllTools } from '../src/tools/registry.js';
 import { semanticCache } from './_lib/cache.js';
 import { aiManager } from '../src/engine/AIManager.js';
+import { MemoryManager } from '../src/engine/MemoryManager.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const config = {
@@ -102,7 +103,7 @@ export default async function handler(req, res) {
       }
 
       if (userId !== 'anonymous') {
-        promises.push(query('SELECT custom_instructions FROM profiles WHERE id = $1', [userId]));
+        promises.push(query('SELECT custom_instructions, long_term_memory, user_personality FROM profiles WHERE id = $1', [userId]));
       } else {
         promises.push(Promise.resolve({ rows: [] }));
       }
@@ -112,8 +113,17 @@ export default async function handler(req, res) {
       if (knowledgeRes.rows.length > 0) {
         extraContext = '\n\n=== PROJECT KNOWLEDGE ===\n' + knowledgeRes.rows.map(k => `[${k.file_name}]\n${k.content}`).join('\n\n') + '\n';
       }
-      if (profileRes.rows.length > 0 && profileRes.rows[0].custom_instructions) {
-        profileInstructions = `\n\n=== USER PREFERENCES ===\n${profileRes.rows[0].custom_instructions}\n`;
+      if (profileRes.rows.length > 0) {
+        const p = profileRes.rows[0];
+        if (p.custom_instructions) {
+          profileInstructions += `\n\n=== USER PREFERENCES ===\n${p.custom_instructions}\n`;
+        }
+        if (p.long_term_memory) {
+          profileInstructions += `\n\n=== INSTITUTIONAL MEMORY ===\n${p.long_term_memory}\n`;
+        }
+        if (p.user_personality) {
+          profileInstructions += `\n\n=== USER PERSONALITY ANALYSIS ===\n${p.user_personality}\n`;
+        }
       }
     } catch (e) {
       console.error('[DB_FETCH_ERROR]', e);
@@ -300,6 +310,14 @@ export default async function handler(req, res) {
                   [userId, sessionId, activeModel, totalInputTokens, totalOutputTokens, usageCost]
                 );
                 await query('UPDATE profiles SET tokens_used_month = tokens_used_month + $1 WHERE id = $2', [totalInputTokens + totalOutputTokens, userId]);
+            }
+            
+            // --- Memory Learning Step ---
+            if (userId !== 'anonymous' && mutableMessages.length >= 2) {
+              // Trigger background memory extraction
+              MemoryManager.updateUserMemory(userId, mutableMessages).catch(memErr => {
+                console.error('[MemoryManager_ASYNC_ERROR]', memErr);
+              });
             }
           } catch(e) {
             console.error('[CHAT_DB_ASYNC_ERROR] Falha na escrita assíncrona no DB:', e);
