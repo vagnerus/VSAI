@@ -760,6 +760,8 @@ function ChatPage({ projectId }) {
   const [toolUses, setToolUses] = useState([]);
   const [usage, setUsage] = useState(null);
   const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
+  const [selectedProvider, setSelectedProvider] = useState('gemini');
+  const [chatSettings, setChatSettings] = useState({});
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentLogs, setAgentLogs] = useState([]);

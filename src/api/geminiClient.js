@@ -11,7 +11,7 @@ export class GeminiClient {
   constructor(config = {}) {
     this.apiKey = config.apiKey || '';
     this.defaultModel = config.model || 'gemini-1.5-flash';
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1/models';
+    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
     this.maxRetries = config.maxRetries || 3;
 
     if (!this.apiKey) {
@@ -25,6 +25,7 @@ export class GeminiClient {
 
   getAvailableModels() {
     return [
+      { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Latest and most capable flash model' },
       { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Fast and versatile' },
       { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Most capable model' },
       { id: 'gemini-1.5-flash-8b', name: 'Gemini 1.5 Flash 8B', description: 'Lightweight and fast' }
@@ -112,10 +113,7 @@ export class GeminiClient {
   async *stream({ model, max_tokens, system, messages, tools, temperature, top_p }) {
     let targetModel = model || this.defaultModel;
     
-    // Antigravity Fix: Map the user's '2.5-flash' brand to a stable flash model
-    if (targetModel === 'gemini-2.5-flash') {
-      targetModel = 'gemini-1.5-flash-latest';
-    }
+    // gemini-2.5-flash is now GA — no mapping needed
 
     const url = `${this.baseUrl}/${targetModel}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
     

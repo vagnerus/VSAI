@@ -23,6 +23,7 @@ const FLAGS = {
  * Model context window sizes (in tokens) and cost rates.
  */
 const MODEL_CONFIGS = {
+  'gemini-2.5-flash': { contextWindow: 1000000, inputRate: 0.15 / 1e6, outputRate: 0.60 / 1e6 },
   'gemini-1.5-flash': { contextWindow: 1000000, inputRate: 0.075 / 1e6, outputRate: 0.30 / 1e6 },
   'gemini-1.5-pro': { contextWindow: 2000000, inputRate: 1.25 / 1e6, outputRate: 5.0 / 1e6 },
   'gemini-1.5-flash-8b': { contextWindow: 1000000, inputRate: 0.0375 / 1e6, outputRate: 0.15 / 1e6 },
