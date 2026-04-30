@@ -340,6 +340,7 @@ export default async function handler(req, res) {
     if (!res.writableEnded) {
       if (res.headersSent) {
         send({ type: 'error', message: err.message || 'Erro interno' });
+        res.end(); // IMPORTANT: Close the stream after an error!
       } else {
         console.error('[CHAT_500]', err);
         res.status(500).json({ 

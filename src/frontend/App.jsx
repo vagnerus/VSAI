@@ -1003,6 +1003,13 @@ function ChatPage({ projectId }) {
                 break;
               case 'error':
                 setIsStreaming(false);
+                // INSTEAD of deleting streamText, we push whatever we have to messages so the user can see it!
+                setMessages(prev => [...prev, {
+                  role: 'assistant',
+                  content: streamText + `\n\n> ❌ **Erro na Conexão:** ${msg.message}`,
+                  isError: true,
+                  timestamp: Date.now(),
+                }]);
                 setStreamText('');
                 setErrorState({ message: msg.message, errorId: msg.errorId });
                 break;
