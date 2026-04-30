@@ -9,6 +9,24 @@ import PrivacyPage from './pages/PrivacyPage.jsx';
 import ArtifactsPanel, { extractArtifacts } from './components/ArtifactsPanel.jsx';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { SpeedInsights } from "@vercel/speed-insights/react"
+import { 
+  LayoutDashboard, 
+  User, 
+  Users, 
+  FolderRoot, 
+  MessageSquare, 
+  Wrench, 
+  Bot, 
+  Settings, 
+  LogOut, 
+  Plus, 
+  RefreshCw,
+  Cpu,
+  ShieldCheck,
+  Zap,
+  Globe,
+  Bell
+} from 'lucide-react';
 
 
 // ═══════════════════════════════════════════════════════════════
@@ -454,20 +472,18 @@ function Sidebar({ currentPage, onNavigate, stats, agents = [], selectedAgent, s
   const { isAdmin } = useAuth();
 
   const navItems = [
-    { id: 'dashboard', icon: '📊', label: 'Dashboard' },
-    { id: 'profile', icon: '👤', label: 'Meu Perfil' },
-    { id: 'teams', icon: '🏢', label: 'Equipes (B2B)' },
-    { id: 'projects', icon: '📁', label: 'Projetos' },
-    { id: 'chat', icon: '💬', label: 'Chat AI', badge: null },
-    { id: 'tools', icon: '🛠️', label: 'Ferramentas', badge: stats?.totalTools },
-    { id: 'agents', icon: '🤖', label: 'Agentes' },
-    { id: 'sessions', icon: '📝', label: 'Sessões', badge: stats?.totalSessions },
-    { id: 'pricing', icon: '💎', label: 'Planos' },
-    { id: 'hooks', icon: '🪝', label: 'Hooks', badge: stats?.totalHooks },
-    { id: 'permissions', icon: '🔐', label: 'Permissões' },
-    { id: 'analytics', icon: '📈', label: 'Analytics' },
-    { id: 'plugins', icon: '🧩', label: 'Plugins' },
-    { id: 'settings', icon: '⚙️', label: 'Configurações' },
+    { id: 'dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
+    { id: 'profile', icon: <User size={18} />, label: 'Meu Perfil' },
+    { id: 'teams', icon: <Users size={18} />, label: 'Equipes (B2B)' },
+    { id: 'projects', icon: <FolderRoot size={18} />, label: 'Projetos' },
+    { id: 'chat', icon: <MessageSquare size={18} />, label: 'Chat AI', badge: null },
+    { id: 'tools', icon: <Wrench size={18} />, label: 'Ferramentas', badge: stats?.totalTools },
+    { id: 'agents', icon: <Bot size={18} />, label: 'Agentes' },
+    { id: 'sessions', icon: <RefreshCw size={18} />, label: 'Sessões', badge: stats?.totalSessions },
+    { id: 'pricing', icon: <Zap size={18} />, label: 'Planos' },
+    { id: 'settings', icon: <Settings size={18} />, label: 'Configurações' },
+    { id: 'analytics', icon: <Cpu size={18} />, label: 'Analytics' },
+    { id: 'settings', icon: <Settings size={18} />, label: 'Configurações' },
   ];
 
   if (isAdmin) {
@@ -578,78 +594,86 @@ function DashboardPage({ stats, recentSessions }) {
 
   return (
     <div className="animate-in">
-      <div className="welcome-banner">
-        <h1>👋 Bem-vindo ao NexusAI</h1>
-        <p>Sua plataforma de IA completa com 20+ ferramentas, multi-agentes, hooks e muito mais. Baseada na arquitetura do Claude Code.</p>
-        <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <div className="glass-panel p-8 mb-8 border border-platinum/30 shadow-soft">
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-12 h-12 rounded-2xl bg-silver-gradient flex items-center justify-center shadow-metallic">
+            <Zap className="text-primary" size={24} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tighter text-metallic">PROTOCOLO PLATINUM ATIVADO</h1>
+            <p className="text-secondary font-medium">NexusAI • Sistema de Inteligência de Elite</p>
+          </div>
+        </div>
+        <p className="text-secondary max-w-2xl mb-8 leading-relaxed">
+          Bem-vindo à nova fronteira da produtividade. Sua plataforma foi atualizada para a arquitetura <strong>Platinum 2.5</strong>, 
+          oferecendo processamento cromo-acelerado e design de precisão.
+        </p>
+        <div className="flex gap-4 flex-wrap">
           <a
             href="/painel"
             target="_blank"
-            rel="noopener noreferrer"
-            className="btn-liquid"
-            style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, padding: '16px 32px' }}
+            className="btn-liquid px-8 py-4"
           >
-            🚀 Abrir Painel do Usuário
+            <LayoutDashboard size={20} /> Abrir Painel de Controle
           </a>
           <button
-            className="btn-ghost"
+            className="px-8 py-4 rounded-xl border border-platinum-light bg-white/50 backdrop-blur-md font-bold text-sm hover:bg-white transition-all"
             onClick={() => { navigator.clipboard.writeText(window.location.origin + '/painel'); alert('Link copiado!'); }}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '16px 32px', fontSize: 15, borderRadius: 12, border: '1px solid var(--platinum-light)', background: 'none', cursor: 'pointer', fontWeight: 600 }}
           >
-            📋 Copiar Link do Painel
+            <RefreshCw size={20} className="inline mr-2" /> Sincronizar Acesso
           </button>
         </div>
       </div>
 
       <div style={{ height: 24 }} />
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card-icon">💬</div>
-          <div className="stat-card-value">{stats?.totalSessions || 0}</div>
-          <div className="stat-card-label">Sessões Totais</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+        <div className="stat-card p-6">
+          <div className="stat-card-icon mb-2 text-platinum"><MessageSquare size={24} /></div>
+          <div className="stat-card-value text-2xl font-bold">{stats?.totalSessions || 0}</div>
+          <div className="stat-card-label text-xs uppercase tracking-wider text-secondary">Sessões Totais</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">🔄</div>
-          <div className="stat-card-value">{stats?.activeSessions || 0}</div>
-          <div className="stat-card-label">Sessões Ativas</div>
+        <div className="stat-card p-6">
+          <div className="stat-card-icon mb-2 text-platinum"><RefreshCw size={24} /></div>
+          <div className="stat-card-value text-2xl font-bold">{stats?.activeSessions || 0}</div>
+          <div className="stat-card-label text-xs uppercase tracking-wider text-secondary">Ativas</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">🛠️</div>
-          <div className="stat-card-value">{stats?.totalTools || 0}</div>
-          <div className="stat-card-label">Ferramentas</div>
+        <div className="stat-card p-6">
+          <div className="stat-card-icon mb-2 text-platinum"><Wrench size={24} /></div>
+          <div className="stat-card-value text-2xl font-bold">{stats?.totalTools || 0}</div>
+          <div className="stat-card-label text-xs uppercase tracking-wider text-secondary">Ferramentas</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">📨</div>
-          <div className="stat-card-value">{stats?.totalMessages || 0}</div>
-          <div className="stat-card-label">Mensagens</div>
+        <div className="stat-card p-6">
+          <div className="stat-card-icon mb-2 text-platinum"><Globe size={24} /></div>
+          <div className="stat-card-value text-2xl font-bold">{stats?.totalMessages || 0}</div>
+          <div className="stat-card-label text-xs uppercase tracking-wider text-secondary">Mensagens</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">🪝</div>
-          <div className="stat-card-value">{stats?.totalHooks || 0}</div>
-          <div className="stat-card-label">Hooks Ativos</div>
+        <div className="stat-card p-6">
+          <div className="stat-card-icon mb-2 text-platinum"><Zap size={24} /></div>
+          <div className="stat-card-value text-2xl font-bold">{stats?.totalHooks || 0}</div>
+          <div className="stat-card-label text-xs uppercase tracking-wider text-secondary">Hooks Ativos</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">⏱️</div>
-          <div className="stat-card-value">{Math.floor((stats?.uptime || 0) / 60)}m</div>
-          <div className="stat-card-label">Uptime</div>
+        <div className="stat-card p-6">
+          <div className="stat-card-icon mb-2 text-platinum"><RefreshCw size={24} /></div>
+          <div className="stat-card-value text-2xl font-bold">{Math.floor((stats?.uptime || 0) / 60)}m</div>
+          <div className="stat-card-label text-xs uppercase tracking-wider text-secondary">Uptime</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">🤖</div>
-          <div className="stat-card-value">{(stats?.model || '').split('-').pop()?.substring(0, 8) || 'Sonnet'}</div>
-          <div className="stat-card-label">Modelo Ativo</div>
+        <div className="stat-card p-6">
+          <div className="stat-card-icon mb-2 text-platinum"><Bot size={24} /></div>
+          <div className="stat-card-value text-2xl font-bold">{(stats?.model || '').split('-').pop()?.substring(0, 8) || 'Sonnet'}</div>
+          <div className="stat-card-label text-xs uppercase tracking-wider text-secondary">Modelo Ativo</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">🔑</div>
-          <div className="stat-card-value">{stats?.apiConfigured ? '✅' : '⚠️'}</div>
-          <div className="stat-card-label">API Status</div>
+        <div className="stat-card p-6">
+          <div className="stat-card-icon mb-2 text-platinum"><ShieldCheck size={24} /></div>
+          <div className="stat-card-value text-2xl font-bold">{stats?.apiConfigured ? 'Ativo' : 'Pendente'}</div>
+          <div className="stat-card-label text-xs uppercase tracking-wider text-secondary">Status do Núcleo</div>
         </div>
-        <div className="stat-card" style={{ background: 'var(--accent-primary-glow)', borderColor: 'var(--accent-primary)' }}>
-          <div className="stat-card-icon">💸</div>
-          <div className="stat-card-value" style={{ color: 'var(--accent-primary)' }}>
+        <div className="stat-card p-6 bg-platinum/10 border-platinum/40">
+          <div className="stat-card-icon mb-2 text-platinum"><Zap size={24} /></div>
+          <div className="stat-card-value text-2xl font-bold">
             R$ {((stats?.tokensUsed || 0) * 0.000003 * 5.25).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </div>
-          <div className="stat-card-label">Custo Estimado (BRL)</div>
+          <div className="stat-card-label text-xs uppercase tracking-wider text-secondary">Recursos Consumidos</div>
         </div>
       </div>
 

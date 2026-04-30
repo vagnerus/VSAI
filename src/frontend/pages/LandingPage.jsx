@@ -1,4 +1,13 @@
 import React from 'react';
+import { 
+  Zap, 
+  ShieldCheck, 
+  Cpu, 
+  ArrowRight, 
+  LayoutDashboard, 
+  Globe, 
+  Layers 
+} from 'lucide-react';
 
 export default function LandingPage({ onNavigate }) {
   return (
@@ -7,7 +16,7 @@ export default function LandingPage({ onNavigate }) {
       <nav className="navbar-fixed" style={{ position: 'fixed', top: 0, left: 0, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 40px', height: 'var(--topbar-height)', background: 'var(--bg-secondary)', backdropFilter: 'var(--glass-blur)', borderBottom: '1px solid var(--platinum-light)', zIndex: 1000 }}>
         <div className="flex items-center gap-2">
           <div className="logo-icon-shell">
-            <span style={{ fontSize: 20 }}>🧠</span>
+            <Cpu size={20} className="text-primary" />
           </div>
           <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: -1, color: 'var(--text-primary)', textTransform: 'uppercase' }}>
             Nexus<span style={{ color: 'var(--text-platinum)' }}>AI</span>
@@ -60,7 +69,7 @@ export default function LandingPage({ onNavigate }) {
               onClick={() => onNavigate('register')}
               style={{ padding: '20px 48px', fontSize: 18 }}
             >
-              🚀 Ativar Protocolo Platinum
+              <Zap size={24} className="inline mr-2" /> Ativar Protocolo Platinum
             </button>
           </div>
 
@@ -90,12 +99,12 @@ export default function LandingPage({ onNavigate }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32 }}>
             {[
-              { icon: '⚡', title: 'Velocidade Cromo', desc: 'Processamento em milissegundos com a nova arquitetura Gemini 2.5 Platinum.' },
-              { icon: '🛡️', title: 'Segurança Platinum', desc: 'Criptografia de ponta a ponta e isolamento total de seus projetos estratégicos.' },
-              { icon: '💠', title: 'Multi-Agentes', desc: 'Coordene múltiplos modelos simultaneamente para fluxos de trabalho avançados.' }
+              { icon: <Zap size={32} className="text-primary" />, title: 'Velocidade Cromo', desc: 'Processamento em milissegundos com a nova arquitetura Gemini 2.5 Platinum.' },
+              { icon: <ShieldCheck size={32} className="text-primary" />, title: 'Segurança Platinum', desc: 'Criptografia de ponta a ponta e isolamento total de seus projetos estratégicos.' },
+              { icon: <Layers size={32} className="text-primary" />, title: 'Multi-Agentes', desc: 'Coordene múltiplos modelos simultaneamente para fluxos de trabalho avançados.' }
             ].map((f, i) => (
               <div key={i} className="card-metallic">
-                <div className="feature-icon-metallic" style={{ fontSize: 32, marginBottom: 20 }}>{f.icon}</div>
+                <div className="feature-icon-metallic" style={{ marginBottom: 20 }}>{f.icon}</div>
                 <h4 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 16 }}>{f.title}</h4>
                 <p style={{ fontSize: 16, color: 'var(--text-secondary)', lineHeight: 1.6 }}>{f.desc}</p>
               </div>
