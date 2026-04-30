@@ -7,7 +7,7 @@ export default function TermsPage({ onNavigate }) {
         <div className="landing-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="landing-logo" onClick={() => onNavigate('landing')} style={{ cursor: 'pointer' }}>
             <div className="landing-logo-icon">🧠</div>
-            <div className="landing-logo-text">NexusAI</div>
+            <div className="landing-logo-text">VSAI - IA</div>
           </div>
           <button className="btn btn-secondary" onClick={() => onNavigate('landing')}>Voltar</button>
         </div>

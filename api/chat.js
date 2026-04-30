@@ -153,7 +153,7 @@ export default async function handler(req, res) {
       return;
     }
 
-    let baseSystemPrompt = `Você é o NexusAI, uma inteligência artificial de elite (Technical Elite).\n` + profileInstructions + customInstructions;
+    let baseSystemPrompt = `Você é o VSAI - IA, uma inteligência artificial de elite (Technical Elite).\n` + profileInstructions + customInstructions;
 
     if (agentId && userId !== 'anonymous') {
       try {

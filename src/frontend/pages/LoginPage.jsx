@@ -125,7 +125,7 @@ export default function LoginPage({ mode: initialMode = 'login', onNavigate }) {
           {/* Logo */}
           <div className="auth-logo" onClick={() => onNavigate('landing')}>
             <div className="landing-logo-icon">🧠</div>
-            <span className="landing-logo-text">NexusAI</span>
+            <span className="landing-logo-text">VSAI - IA</span>
           </div>
 
           {/* Title */}

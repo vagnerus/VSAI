@@ -7,7 +7,7 @@ export default function PrivacyPage({ onNavigate }) {
         <div className="landing-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div className="landing-logo" onClick={() => onNavigate('landing')} style={{ cursor: 'pointer' }}>
             <div className="landing-logo-icon">🧠</div>
-            <div className="landing-logo-text">NexusAI</div>
+            <div className="landing-logo-text">VSAI - IA</div>
           </div>
           <button className="btn btn-secondary" onClick={() => onNavigate('landing')}>Voltar</button>
         </div>
@@ -19,7 +19,7 @@ export default function PrivacyPage({ onNavigate }) {
 
         <div className="legal-content" style={{ lineHeight: 1.8, color: 'var(--text-secondary)' }}>
           <h2 style={{ color: 'var(--text-primary)', marginTop: 32, marginBottom: 16 }}>1. Coleta de Dados</h2>
-          <p>O NexusAI coleta os seguintes tipos de informações para prover e melhorar seus serviços: Informações de conta (nome, e-mail), logs de comunicação (prompts enviados para a IA) e metadados de uso (tokens consumidos).</p>
+          <p>O VSAI - IA coleta os seguintes tipos de informações para prover e melhorar seus serviços: Informações de conta (nome, e-mail), logs de comunicação (prompts enviados para a IA) e metadados de uso (tokens consumidos).</p>
 
           <h2 style={{ color: 'var(--text-primary)', marginTop: 32, marginBottom: 16 }}>2. Uso das Informações</h2>
           <p>As informações coletadas são estritamente usadas para: prover o serviço contratado, faturamento e cumprimento de obrigações legais. Não vendemos ou comercializamos seus dados com terceiros para fins de marketing sob nenhuma hipótese.</p>

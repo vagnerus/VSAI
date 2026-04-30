@@ -19,7 +19,7 @@ export default function LandingPage({ onNavigate }) {
             <Cpu size={20} className="text-primary" />
           </div>
           <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: -1, color: 'var(--text-primary)', textTransform: 'uppercase' }}>
-            Nexus<span style={{ color: 'var(--text-platinum)' }}>AI</span>
+            VSAI<span style={{ color: 'var(--text-platinum)' }}> - IA</span>
           </span>
         </div>
 
@@ -82,7 +82,7 @@ export default function LandingPage({ onNavigate }) {
               borderRadius: 32
             }}>
               <div style={{ background: 'white', borderRadius: 24, overflow: 'hidden' }}>
-                <img src="/landing_metallic_mockup.png" alt="NexusAI Mockup" style={{ width: '100%', display: 'block' }} />
+                <img src="/landing_metallic_mockup.png" alt="VSAI - IA Mockup" style={{ width: '100%', display: 'block' }} />
               </div>
             </div>
           </div>
@@ -118,13 +118,13 @@ export default function LandingPage({ onNavigate }) {
         <div style={{ maxWidth: 1000, margin: '0 auto', textAlign: 'center' }}>
           <div style={{ fontSize: 80, color: 'var(--platinum-light)', opacity: 0.5, lineHeight: 1, marginBottom: -20, fontFamily: 'serif' }}>“</div>
           <p style={{ fontSize: 28, fontWeight: 600, color: 'var(--text-primary)', fontStyle: 'italic', marginBottom: 32, lineHeight: 1.5 }}>
-            "A transição para o NexusAI foi como sair de uma ferramenta rudimentar para um assistente de luxo. O design Platinum não é apenas estética, é funcionalidade pura."
+            "A transição para o VSAI - IA foi como sair de uma ferramenta rudimentar para um assistente de luxo. O design Platinum não é apenas estética, é funcionalidade pura."
           </p>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
             <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'var(--silver-brushed)', border: '2px solid white' }}></div>
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Vagner Santos</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-platinum)', textTransform: 'uppercase' }}>CEO @ NexusAI</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-platinum)', textTransform: 'uppercase' }}>CEO @ VSAI - IA</div>
             </div>
           </div>
         </div>
@@ -138,13 +138,13 @@ export default function LandingPage({ onNavigate }) {
                 <div className="logo-icon-shell" style={{ width: 32, height: 32, fontSize: 14 }}>
                   <span>🧠</span>
                 </div>
-                <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)' }}>NEXUS<span style={{ color: 'var(--text-platinum)' }}>AI</span></span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: 'var(--text-primary)' }}>VSAI<span style={{ color: 'var(--text-platinum)' }}> - IA</span></span>
             </div>
             <p style={{ fontSize: 14, color: 'var(--text-secondary)', lineHeight: 1.6 }}>Elevando a produtividade humana através da inteligência artificial de elite.</p>
           </div>
         </div>
         <div style={{ maxWidth: 1200, margin: '48px auto 0', paddingTop: 24, borderTop: '1px solid var(--border-platinum)', textAlign: 'center' }}>
-          <p style={{ fontSize: 12, color: 'var(--text-platinum)', fontWeight: 600 }}>© {new Date().getFullYear()} NexusAI Platinum Edition. Todos os direitos reservados.</p>
+          <p style={{ fontSize: 12, color: 'var(--text-platinum)', fontWeight: 600 }}>© {new Date().getFullYear()} VSAI - IA Platinum Edition. Todos os direitos reservados.</p>
         </div>
       </footer>
     </div>

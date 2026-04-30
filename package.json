@@ -1,7 +1,7 @@
 {
   "name": "nexus-ai",
   "version": "1.0.0",
-  "description": "NexusAI — Plataforma de IA Completa com Painel Web",
+  "description": "VSAI - IA — Plataforma de IA Completa com Painel Web",
   "type": "module",
   "main": "src/main/main.js",
   "scripts": {
@@ -51,8 +51,8 @@
     "wait-on": "^8.0.1"
   },
   "build": {
-    "appId": "com.nexus.ai",
-    "productName": "NexusAI",
+    "appId": "com.vsai.ia",
+    "productName": "VSAI - IA",
     "directories": {
       "output": "dist_electron"
     },

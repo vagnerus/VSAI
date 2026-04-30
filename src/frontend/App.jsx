@@ -30,7 +30,7 @@ import {
 
 
 // ═══════════════════════════════════════════════════════════════
-// NexusAI — Main Application
+// VSAI - IA — Main Application
 // ═══════════════════════════════════════════════════════════════
 
 const API_BASE = '/api';
@@ -76,7 +76,7 @@ const MessageBubble = React.memo(({ message, onCopy }) => {
       <div className="chat-message-avatar">{isAssistant ? '🧠' : '👤'}</div>
       <div className="chat-message-content">
         <div className="chat-message-meta">
-          <span className="chat-message-author">{isAssistant ? 'NexusAI' : 'Você'}</span>
+          <span className="chat-message-author">{isAssistant ? 'VSAI - IA' : 'Você'}</span>
           <span className="chat-message-time">{new Date(message.timestamp).toLocaleTimeString()}</span>
         </div>
         <div className="chat-message-bubble">
@@ -601,7 +601,7 @@ function DashboardPage({ stats, recentSessions }) {
           </div>
           <div>
             <h1 className="text-3xl font-black tracking-tighter text-metallic">PROTOCOLO PLATINUM ATIVADO</h1>
-            <p className="text-secondary font-medium">NexusAI • Sistema de Inteligência de Elite</p>
+            <p className="text-secondary font-medium">VSAI - IA • Sistema de Inteligência de Elite</p>
           </div>
         </div>
         <p className="text-secondary max-w-2xl mb-8 leading-relaxed">
@@ -1145,7 +1145,7 @@ function ChatPage({ projectId }) {
           {messages.length === 0 && !isStreaming && (
             <div className="empty-state" style={{ flex: 1 }}>
               <div className="empty-state-icon">🧠</div>
-              <div className="empty-state-title">NexusAI</div>
+              <div className="empty-state-title">VSAI - IA</div>
               <div className="empty-state-desc">
                 Envie uma mensagem para começar. Posso ajudar com código, análise de texto, pesquisa, tradução, e muito mais.
               </div>
@@ -1211,7 +1211,7 @@ function ChatPage({ projectId }) {
               <div className="chat-streaming-dots">
                 <span></span><span></span><span></span>
               </div>
-              {statusText || 'NexusAI está pensando...'}
+              {statusText || 'VSAI - IA está pensando...'}
             </div>
           )}
 
@@ -2361,7 +2361,7 @@ function DashboardShell({ onSignOut, userProfile }) {
           <button className="sidebar-toggle-btn" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
             {sidebarCollapsed ? '📂' : '⬅️'}
           </button>
-          <div className="topbar-title">NexusAI • {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}</div>
+          <div className="topbar-title">VSAI - IA • {currentPage.charAt(0).toUpperCase() + currentPage.slice(1)}</div>
           <div className="topbar-actions">
             <div className="status-indicator">
               <span className="status-dot"></span>
@@ -2458,7 +2458,7 @@ function MainApp() {
       <div className="app-loading">
         <div className="app-loading-inner">
           <div className="landing-logo-icon" style={{ width: 56, height: 56, fontSize: 28 }}>🧠</div>
-          <div className="app-loading-text">Carregando NexusAI...</div>
+          <div className="app-loading-text">Carregando VSAI - IA...</div>
           <div className="app-loading-bar"><div className="app-loading-bar-fill"></div></div>
         </div>
       </div>
