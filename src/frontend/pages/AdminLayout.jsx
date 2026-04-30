@@ -226,31 +226,41 @@ export default function AdminLayout() {
       <h3>🌳 Árvore de Memória (VSAI Knowledge)</h3>
       <p style={{ fontSize: 13, opacity: 0.7, marginBottom: 20 }}>Visualização dos dados cognitivos extraídos dos usuários pelo MemoryManager.</p>
       
-      <div className="memory-tree-container">
-        {memories.map(m => (
+    <div className="memory-tree-container">
+      {memories.map(m => {
+        const memoryLength = (m.long_term_memory || '').length;
+        const cognitiveLevel = memoryLength > 1000 ? 'Deep' : memoryLength > 300 ? 'Standard' : 'Initial';
+        
+        return (
           <div key={m.id} className="memory-node-card">
             <div className="memory-node-header">
-              <span className="memory-node-icon">👤</span>
+              <div className="memory-avatar">{(m.full_name || 'U').substring(0,1)}</div>
               <div className="memory-node-info">
                 <div className="memory-node-name">{m.full_name || 'Usuário'}</div>
-                <div className="memory-node-email">{m.email}</div>
+                <div className={`cognitive-badge ${cognitiveLevel.toLowerCase()}`}>{cognitiveLevel} Level</div>
               </div>
             </div>
             
             <div className="memory-content-grid">
               <div className="memory-leaf">
-                <div className="leaf-title">🧠 Long-Term Memory</div>
-                <div className="leaf-body">{m.long_term_memory || 'Vazio'}</div>
+                <div className="leaf-header">
+                  <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🧠 Long-Term Memory</span>
+                  <span className="leaf-meta">{memoryLength} chars</span>
+                </div>
+                <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.long_term_memory || 'Vazio'}</div>
               </div>
               <div className="memory-leaf">
-                <div className="leaf-title">🎭 Personality Traits</div>
-                <div className="leaf-body">{m.user_personality || 'Vazio'}</div>
+                <div className="leaf-header">
+                  <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🎭 Personality Traits</span>
+                </div>
+                <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.user_personality || 'Vazio'}</div>
               </div>
             </div>
           </div>
-        ))}
-        {memories.length === 0 && <div className="empty-state">Nenhuma memória processada pelo VSAI ainda.</div>}
-      </div>
+        );
+      })}
+      {memories.length === 0 && <div className="empty-state">Nenhuma memória processada pelo VSAI ainda.</div>}
+    </div>
     </div>
   );
 
@@ -383,14 +393,13 @@ export default function AdminLayout() {
         .memory-node-card { background: var(--bg-elevated); border: 1px solid var(--border-platinum); border-radius: 16px; padding: 20px; box-shadow: var(--shadow-soft); transition: all 0.3s ease; }
         .memory-node-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.08); border-color: var(--platinum-light); }
         .memory-node-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; border-bottom: 1px solid #f1f5f9; padding-bottom: 12px; }
-        .memory-node-icon { font-size: 24px; }
-        .memory-node-name { font-weight: 800; font-size: 15px; color: var(--text-primary); }
-        .memory-node-email { font-size: 11px; color: var(--text-tertiary); }
-        .memory-content-grid { display: grid; gap: 12px; }
-        .memory-leaf { background: #f8fafc; padding: 12px; border-radius: 8px; border-left: 3px solid var(--accent-primary); }
-        .leaf-title { font-size: 10px; font-weight: 800; text-transform: uppercase; color: var(--text-tertiary); margin-bottom: 4px; }
-        .leaf-body { font-size: 12px; line-height: 1.5; color: var(--text-secondary); }
-        .empty-state { grid-column: 1/-1; text-align: center; padding: 60px; color: var(--text-tertiary); font-style: italic; }
+        .memory-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+        .cognitive-badge { font-size: 9px; font-weight: 800; text-transform: uppercase; padding: 2px 6px; border-radius: 100px; display: inline-block; margin-top: 2px; }
+        .cognitive-badge.deep { background: #ede9fe; color: #7c3aed; border: 1px solid #ddd6fe; }
+        .cognitive-badge.standard { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+        .cognitive-badge.initial { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
+        .leaf-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .leaf-meta { font-size: 9px; opacity: 0.5; font-weight: 600; }
       `}</style>
     </div>
   );

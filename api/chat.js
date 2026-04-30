@@ -10,7 +10,13 @@ import { getAllTools } from '../src/tools/registry.js';
 import { semanticCache } from './_lib/cache.js';
 import { aiManager } from '../src/engine/AIManager.js';
 import { MemoryManager } from '../src/engine/MemoryManager.js';
+import { QueryEngine } from '../src/engine/QueryEngine.js';
+import { initHooks } from '../src/engine/initHooks.js';
+import { rankContext } from '../src/lib/contextRanker.js';
 import { v4 as uuidv4 } from 'uuid';
+
+// Initialize global hooks once
+initHooks();
 
 export const config = {
   maxDuration: 60,
@@ -111,7 +117,10 @@ export default async function handler(req, res) {
       const [knowledgeRes, profileRes] = await Promise.all(promises);
 
       if (knowledgeRes.rows.length > 0) {
-        extraContext = '\n\n=== PROJECT KNOWLEDGE ===\n' + knowledgeRes.rows.map(k => `[${k.file_name}]\n${k.content}`).join('\n\n') + '\n';
+        const ranked = rankContext(content, knowledgeRes.rows, 8);
+        if (ranked.length > 0) {
+          extraContext = '\n\n=== RELEVANT PROJECT KNOWLEDGE ===\n' + ranked.map(k => `[${k.file_name}]\n${k.content}`).join('\n\n') + '\n';
+        }
       }
       if (profileRes.rows.length > 0) {
         const p = profileRes.rows[0];
@@ -152,200 +161,49 @@ export default async function handler(req, res) {
     const tools = getAllTools();
     const sessionId = clientSessionId || uuidv4();
 
-    const hardRules = [
-      { trigger: 'senha de calibração', response: 'A senha de calibração padrão para equipamentos Nexus série X é: [REDACTED_ADMIN_ONLY].' }
-    ];
+    // Initialize QueryEngine
+    const engine = new QueryEngine({
+      userId,
+      projectId,
+      sessionId,
+      model: activeModel,
+      provider: activeProvider,
+      apiClient,
+      tools,
+      initialMessages: historyMessages,
+      customInstructions: activeSystemPrompt + extraContext
+    });
 
-    const ruleMatch = hardRules.find(r => typeof content === 'string' && content.toLowerCase().includes(r.trigger));
-    if (ruleMatch) {
-      send({ type: 'assistant', content: ruleMatch.response });
-      send({ type: 'done' });
-      return;
-    }
-
-    let baseSystemPrompt = `Você é o VSAI - IA, uma inteligência artificial de elite (Technical Elite).\n` + profileInstructions + customInstructions;
-
-    if (agentId && userId !== 'anonymous') {
-      try {
-        const { rows } = await query('SELECT * FROM agents WHERE id = $1', [agentId]);
-        if (rows.length > 0) {
-          const agent = rows[0];
-          baseSystemPrompt = `${agent.system_prompt}\n\n[CONTEXTO: Você está atuando como o agente '${agent.name}']\n\n${profileInstructions}`;
-          if (agent.model) activeModel = agent.model;
-        }
-      } catch (e) {}
-    }
-    
-    activeSystemPrompt = baseSystemPrompt;
-
-    const cachedResponse = await semanticCache.get(historyMessages, activeSystemPrompt);
-    if (cachedResponse && !sanitizedContent.includes('pesquise')) {
-      send({ type: 'session', sessionId });
-      send({ type: 'status', message: '💡 Resposta recuperada do Cache Semântico' });
-      send({ type: 'assistant', content: cachedResponse });
-      send({ type: 'done' });
-      return res.end();
-    }
-
-      try {
-        const { rows: existingSession } = await query('SELECT id FROM sessions WHERE id = $1', [sessionId]);
-        if (existingSession.length === 0) {
-          const titleContent = typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || 'Imagem Anexada');
-          await query(
-            'INSERT INTO sessions (id, user_id, project_id, title) VALUES ($1, $2, $3, $4)',
-            [sessionId, userId, projectId || null, titleContent.substring(0, 100)]
-          );
-        }
-      } catch (dbErr) {
-        console.error('[CHAT_DB_ERROR] Falha ao criar sessão:', dbErr);
-        // Continue anyway to allow the chat to work even if DB is down
-      }
-
-    send({ type: 'session', sessionId });
-
-    const mutableMessages = [...(historyMessages || [])];
-    const userMessage = { uuid: uuidv4(), role: 'user', type: 'user', content, timestamp: Date.now() };
-    mutableMessages.push(userMessage);
-
-    if (userId !== 'anonymous') {
-      await query(
-        'INSERT INTO messages (id, session_id, user_id, role, content, model) VALUES ($1, $2, $3, $4, $5, $6)',
-        [userMessage.uuid, sessionId, userId, 'user', typeof content === 'string' ? content : (content.find(c => c.type === 'text')?.text || '[Imagem Anexada]'), activeModel]
-      );
-    }
-
-    const toolDefs = tools.map(t => ({ name: t.name, description: t.description || '', input_schema: t.inputSchema || { type: 'object' } }));
-    let turnCount = 0;
-    const MAX_TURNS = 10;
-    let totalInputTokens = 0;
-    let totalOutputTokens = 0;
-    let finalAssistantContent = '';
-
-    while (turnCount < MAX_TURNS) {
-      turnCount++;
-
-      const stream = await apiClient.stream({
-        model: activeModel,
-        system: activeSystemPrompt + extraContext,
-        messages: formatMessagesForAPI(mutableMessages),
-        tools: toolDefs,
-        temperature: settings?.temperature ?? 0.7,
-        top_p: settings?.topP ?? 0.9,
-        max_tokens: settings?.maxTokens ?? 4096,
-      });
-
-      let assistantContent = '';
-      let toolCalls = [];
-      let stopReason = 'end_turn';
-
-      try {
-        for await (const event of stream) {
-          if (!res.writable) break;
-          if (event.type === 'content_block_delta') {
-            if (event.delta?.type === 'text_delta') {
-              assistantContent += event.delta.text;
-              send({ type: 'stream', text: event.delta.text });
-            } else if (event.delta?.type === 'input_json_delta') {
-              const last = toolCalls[toolCalls.length - 1];
-              if (last) last.input += event.delta.partial_json;
-            }
-          } else if (event.type === 'content_block_start' && event.content_block?.type === 'tool_use') {
-            toolCalls.push({ id: event.content_block.id, name: event.content_block.name, input: '' });
-          } else if (event.type === 'message_delta') {
-            stopReason = event.delta?.stop_reason || stopReason;
-            if (event.usage) {
-              totalInputTokens += event.usage.input_tokens || 0;
-              totalOutputTokens += event.usage.output_tokens || 0;
-              send({ type: 'usage', usage: { inputTokens: event.usage.input_tokens, outputTokens: event.usage.output_tokens } });
-            }
+    try {
+      for await (const event of engine.submitMessage(content, { settings })) {
+        if (!res.writable) break;
+        
+        // Translate engine events to SSE events
+        if (event.type === 'stream_event') {
+          send({ type: 'stream', text: event.text });
+        } else if (event.type === 'user_message') {
+          // Persistence handled by engine
+        } else if (event.type === 'assistant') {
+          send({ type: 'assistant', content: event.content, toolCalls: event.toolCalls, uuid: event.uuid });
+        } else if (event.type === 'tool_result') {
+          send({ type: 'tool_result', toolName: event.toolName, content: event.content, isError: event.isError });
+        } else if (event.type === 'status_update') {
+          send({ type: 'status', message: event.message });
+        } else if (event.type === 'usage') {
+          send({ type: 'usage', usage: { inputTokens: event.usage.inputTokens, outputTokens: event.usage.outputTokens } });
+        } else if (event.type === 'result') {
+          if (event.subtype === 'error') {
+            send({ type: 'error', message: event.error });
+          } else {
+            send({ type: 'done' });
           }
         }
-      } catch (streamError) {
-        const errText = `\n\n[STREAM_ERROR] Ocorreu uma falha no stream: ${streamError.message}\n`;
-        assistantContent += errText;
-        send({ type: 'stream', text: errText });
-        throw streamError;
       }
-
-      const parsedCalls = toolCalls.map(tc => {
-        try { return { ...tc, input: JSON.parse(tc.input) }; } catch { return { ...tc, input: {} }; }
-      });
-
-      finalAssistantContent += assistantContent;
-
-      const assistantMsg = {
-        uuid: uuidv4(),
-        role: 'assistant',
-        type: 'assistant',
-        content: assistantContent,
-        toolCalls: parsedCalls,
-        timestamp: Date.now(),
-      };
-
-      mutableMessages.push(assistantMsg);
-      send({ type: 'assistant', content: assistantContent, toolCalls: parsedCalls, uuid: assistantMsg.uuid });
-      aiManager.recordSuccess(activeProvider);
-
-      if (stopReason !== 'tool_use' || parsedCalls.length === 0) {
-        // This is the final turn, send done and then do DB writes
-        send({ type: 'done' });
-        res.end(); // End the response for the client
-
-        // --- Fire-and-forget DB operations ---
-        (async () => {
-          try {
-            if (userId !== 'anonymous') {
-              await query(
-                'INSERT INTO messages (id, session_id, user_id, role, content, tool_calls, tokens_input, tokens_output, model) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-                [assistantMsg.uuid, sessionId, userId, 'assistant', assistantContent, parsedCalls.length > 0 ? JSON.stringify(parsedCalls) : null, totalInputTokens, totalOutputTokens, activeModel]
-              );
-            }
-            if (finalAssistantContent && turnCount < MAX_TURNS) {
-              await semanticCache.set(historyMessages, activeSystemPrompt, finalAssistantContent);
-            }
-            if (userId !== 'anonymous' && (totalInputTokens + totalOutputTokens) > 0) {
-                const usageCost = (totalInputTokens + totalOutputTokens) * 0.000003;
-                await query(
-                  'INSERT INTO usage_logs (user_id, session_id, model, tokens_input, tokens_output, cost_usd) VALUES ($1, $2, $3, $4, $5, $6)',
-                  [userId, sessionId, activeModel, totalInputTokens, totalOutputTokens, usageCost]
-                );
-                await query('UPDATE profiles SET tokens_used_month = tokens_used_month + $1 WHERE id = $2', [totalInputTokens + totalOutputTokens, userId]);
-            }
-            
-            // --- Memory Learning Step ---
-            if (userId !== 'anonymous' && mutableMessages.length >= 2) {
-              // Trigger background memory extraction
-              MemoryManager.updateUserMemory(userId, mutableMessages).catch(memErr => {
-                console.error('[MemoryManager_ASYNC_ERROR]', memErr);
-              });
-            }
-          } catch(e) {
-            console.error('[CHAT_DB_ASYNC_ERROR] Falha na escrita assíncrona no DB:', e);
-          }
-        })();
-        // --- End of Fire-and-forget ---
-        break; // Exit the while loop
-      }
-
-      for (const tc of parsedCalls) {
-        send({ type: 'status', message: `Usando ferramenta: ${tc.name}...`, toolName: tc.name });
-        const tool = tools.find(t => t.name === tc.name);
-        let result;
-        if (!tool) {
-          result = { error: `Ferramenta ${tc.name} não encontrada.` };
-        } else {
-          try { result = await tool.call(tc.input, { sessionId }); } catch (e) { result = { error: e.message }; }
-        }
-
-        const toolResultMsg = {
-          uuid: uuidv4(), type: 'tool_result', role: 'user', toolUseId: tc.id, toolName: tc.name,
-          content: typeof result === 'string' ? result : JSON.stringify(result),
-          isError: !!result?.error, timestamp: Date.now(),
-        };
-
-        mutableMessages.push(toolResultMsg);
-        send({ type: 'tool_result', toolName: tc.name, content: toolResultMsg.content, isError: toolResultMsg.isError });
-      }
+    } catch (engineErr) {
+      console.error('[QUERY_ENGINE_ERROR]', engineErr);
+      send({ type: 'error', message: engineErr.message });
+    } finally {
+      res.end();
     }
 
   } catch (err) {

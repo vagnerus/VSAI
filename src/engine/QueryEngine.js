@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Coordinator } from './Coordinator.js';
+import { globalHooks } from './HookSystem.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -118,12 +119,20 @@ export class QueryEngine {
           this.updateUsage(message);
           yield { type: 'usage', usage: this.totalUsage, cost: this.costTracker };
         } else {
-          yield message;
+        yield message;
         }
       }
 
-      // 7. Final Result Extraction
+      // 7. Final Result Extraction & Hook Execution
       const finalResult = this.mutableMessages.filter(m => m.role === 'assistant').pop();
+      
+      await globalHooks.execute('onSessionEnd', {
+        engine: this,
+        userId: this.config.userId,
+        messages: this.mutableMessages,
+        result: finalResult?.content
+      });
+
       yield {
         type: 'result',
         subtype: 'success',
