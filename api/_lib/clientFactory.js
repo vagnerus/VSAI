@@ -59,7 +59,7 @@ class GatewayClient {
           console.error(`[Gateway] Fallback API also failed: ${fallbackError.message}`);
           yield { 
             type: 'content_block_delta', 
-            delta: { type: 'text_delta', text: `\n\n> ❌ **Erro Crítico:** O provedor reserva também falhou ao tentar responder. Detalhes: ${fallbackError.message}\n\n` } 
+            delta: { type: 'text_delta', text: `\n\n> ❌ **Erro Crítico:** Ambos os provedores falharam.\n> 1. Primário: ${primaryError.message}\n> 2. Reserva: ${fallbackError.message}\n\n` } 
           };
           throw fallbackError;
         }

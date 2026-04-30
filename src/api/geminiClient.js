@@ -112,9 +112,9 @@ export class GeminiClient {
   async *stream({ model, max_tokens, system, messages, tools, temperature, top_p }) {
     let targetModel = model || this.defaultModel;
     
-    // Antigravity Fix: Map the user's '2.5-flash' brand to the actual latest experimental model
+    // Antigravity Fix: Map the user's '2.5-flash' brand to a stable flash model
     if (targetModel === 'gemini-2.5-flash') {
-      targetModel = 'gemini-2.0-flash-exp';
+      targetModel = 'gemini-1.5-flash';
     }
 
     const url = `${this.baseUrl}/${targetModel}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
