@@ -800,9 +800,13 @@ function ChatPage({ projectId }) {
   const textareaRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [isCallMode, setIsCallMode] = useState(false);
+  const [isCameraActive, setIsCameraActive] = useState(false);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // 🎙️ Speech Recognition Logic
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback((autoSubmit = false) => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return alert('Seu navegador não suporta reconhecimento de voz.');
 
@@ -814,22 +818,72 @@ function ChatPage({ projectId }) {
     recognition.onstart = () => setIsRecording(true);
     recognition.onresult = (event) => {
       const transcript = event.results[0][0].transcript;
-      setInput(prev => prev + ' ' + transcript);
+      if (autoSubmit) {
+        // Direct state update is safer than functional update here for immediate submission
+        const finalInput = transcript.trim();
+        if (finalInput) {
+          sendMessage(finalInput);
+        }
+      } else {
+        setInput(prev => prev + ' ' + transcript);
+      }
     };
     recognition.onerror = () => setIsRecording(false);
     recognition.onend = () => setIsRecording(false);
 
     recognition.start();
-  }, []);
+  }, [messages, selectedModel, selectedProvider, chatSettings, projectId, selectedAgent]); // Dependencies for sendMessage inside
 
   // 🔊 Speech Synthesis Logic
   const speak = useCallback((text) => {
-    if (!voiceEnabled || !window.speechSynthesis) return;
-    const utterance = new SpeechSynthesisUtterance(text.replace(/```[\s\S]*?```/g, '').replace(/[*#]/g, ''));
+    if ((!voiceEnabled && !isCallMode) || !window.speechSynthesis) return;
+    
+    // Clean text for speech
+    const cleanText = text.replace(/```[\s\S]*?```/g, '').replace(/[*#_~]/g, '').substring(0, 1000);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
     utterance.lang = 'pt-BR';
     utterance.rate = 1.0;
+    
+    utterance.onend = () => {
+      if (isCallMode) {
+        // Automatic restart of the loop
+        setTimeout(() => startRecording(true), 500);
+      }
+    };
+    
+    window.speechSynthesis.cancel(); // Stop current speech
     window.speechSynthesis.speak(utterance);
-  }, [voiceEnabled]);
+  }, [voiceEnabled, isCallMode, startRecording]);
+
+  // 📷 Camera Logic
+  const toggleCamera = async () => {
+    if (isCameraActive) {
+      if (videoRef.current?.srcObject) {
+        videoRef.current.srcObject.getTracks().forEach(track => track.stop());
+      }
+      setIsCameraActive(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+        if (videoRef.current) videoRef.current.srcObject = stream;
+        setIsCameraActive(true);
+      } catch (err) {
+        alert('Erro ao acessar câmera: ' + err.message);
+      }
+    }
+  };
+
+  const captureFrame = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    setImageAttachment(dataUrl);
+  };
 
   useEffect(() => {
     fetchAgents();
@@ -974,8 +1028,9 @@ function ChatPage({ projectId }) {
   }, [messages, streamText, scrollToBottom]);
 
   // ─── SSE-based sendMessage (substitui WebSocket) ─────────────────
-  const sendMessage = useCallback(async () => {
-    if ((!input.trim() && !imageAttachment) || isStreaming) return;
+  const sendMessage = useCallback(async (overrideInput) => {
+    const finalInput = (typeof overrideInput === 'string' ? overrideInput : input).trim();
+    if ((!finalInput && !imageAttachment) || isStreaming) return;
 
     if (isOffline) {
       const offlineMsg = {
@@ -990,7 +1045,7 @@ function ChatPage({ projectId }) {
       return;
     }
 
-    const userContent = input.trim();
+    const userContent = finalInput;
     const payloadContent = imageAttachment 
       ? [
           { type: 'image_url', image_url: { url: imageAttachment } },
@@ -1176,6 +1231,16 @@ function ChatPage({ projectId }) {
                 🔤 {(usage.inputTokens + usage.outputTokens).toLocaleString()} tokens
               </span>
             )}
+            <button 
+              className={`btn ${isCallMode ? 'btn-primary' : 'btn-secondary'} btn-sm`} 
+              onClick={() => {
+                setIsCallMode(!isCallMode);
+                if (!isCallMode) setVoiceEnabled(true); // Auto-enable voice if starting call
+              }} 
+              style={{ marginRight: 8, gap: 4, display: 'flex', alignItems: 'center' }}
+            >
+              📞 {isCallMode ? 'Finalizar Chamada' : 'Modo Chamada'}
+            </button>
             <button className="btn btn-secondary btn-sm" onClick={() => setVoiceEnabled(!voiceEnabled)} style={{ marginRight: 8 }}>
               {voiceEnabled ? '🔊 Voz Ativa' : '🔇 Voz Muda'}
             </button>
@@ -1273,6 +1338,16 @@ function ChatPage({ projectId }) {
             </div>
           )}
 
+          {isCameraActive && (
+            <div className="camera-preview-container animate-in">
+              <video ref={videoRef} autoPlay playsInline muted className="camera-preview-video" />
+              <canvas ref={canvasRef} style={{ display: 'none' }} />
+              <div className="camera-controls">
+                <button className="btn btn-primary btn-sm" onClick={captureFrame}>📸 Capturar Foto</button>
+                <button className="btn btn-danger btn-sm" onClick={toggleCamera}>✕ Fechar</button>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -1362,6 +1437,14 @@ function ChatPage({ projectId }) {
                 <button onClick={() => setImageAttachment(null)} style={{ position: 'absolute', top: -8, right: -8, background: 'var(--accent-danger)', color: 'white', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
               </div>
             )}
+            <button 
+              onClick={toggleCamera}
+              className={`camera-btn ${isCameraActive ? 'active' : ''}`}
+              title="Abrir Câmera"
+              style={{ background: 'transparent', border: 'none', padding: '0 12px', cursor: 'pointer', fontSize: 18, color: isCameraActive ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+            >
+              📷
+            </button>
             <label style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 12px', color: 'var(--text-secondary)' }} title="Anexar Imagem">
               <span style={{ fontSize: 18 }}>📎</span>
               <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />

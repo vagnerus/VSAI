@@ -266,6 +266,55 @@
       text-align: center;
     }
 
+    /* Camera & Call Mode Styles */
+    .camera-preview {
+      position: relative;
+      margin: 10px auto;
+      max-width: 320px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      display: none;
+    }
+    .camera-preview video { width: 100%; display: block; transform: scaleX(-1); }
+    .camera-controls {
+      position: absolute;
+      bottom: 10px; left: 0; right: 0;
+      display: flex; justify-content: center; gap: 8px;
+    }
+    .btn-icon {
+      background: transparent; border: none;
+      font-size: 20px; cursor: pointer; padding: 4px 8px;
+      transition: transform 0.2s;
+    }
+    .btn-icon:hover { transform: scale(1.2); }
+    .btn-icon.active { color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
+    .btn-icon.recording { color: #ef4444; animation: blink 1s infinite; }
+    @keyframes blink { 50% { opacity: 0.5; } }
+    
+    .call-btn {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      padding: 6px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .call-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+    
+    .image-preview {
+      display: none;
+      position: relative;
+      width: 60px; height: 60px;
+      margin-bottom: 8px;
+    }
+    .image-preview img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+    .image-preview .remove {
+      position: absolute; top: -5px; right: -5px;
+      background: #ef4444; color: white; border: none;
+      border-radius: 50%; width: 18px; height: 18px;
+      font-size: 12px; cursor: pointer;
+    }
+
     /* ── Animations ────────────────────────────────────────── */
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -296,6 +345,7 @@
       </div>
     </div>
     <div class="header-actions">
+      <button class="call-btn" id="callBtn" onclick="toggleCallMode()">📞 Modo Chamada</button>
       <span class="model-badge" id="modelBadge">⚡ Gemini 2.5 Flash</span>
       <button class="btn-new" onclick="newChat()">+ Nova</button>
     </div>
@@ -318,9 +368,25 @@
 
   <!-- Input -->
   <div class="input-area">
-    <div class="input-wrapper">
-      <textarea id="input" rows="1" placeholder="Digite sua mensagem..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
-      <button class="send-btn" id="sendBtn" onclick="send()" disabled>➤</button>
+    <div class="camera-preview" id="cameraPreview">
+      <video id="video" autoPlay playsInline muted></video>
+      <div class="camera-controls">
+        <button class="btn-new" onclick="captureFrame()">📸 Foto</button>
+        <button class="btn-new" style="background:#ef4444" onclick="toggleCamera()">✕</button>
+      </div>
+    </div>
+    
+    <div class="input-wrapper" style="flex-direction: column; align-items: flex-start;">
+      <div class="image-preview" id="imagePreview">
+        <img id="previewImg" src="">
+        <button class="remove" onclick="removeImage()">×</button>
+      </div>
+      <div style="display: flex; width: 100%; align-items: flex-end; gap: 8px;">
+        <button class="btn-icon" onclick="toggleCamera()" title="Câmera">📷</button>
+        <button class="btn-icon" id="micBtn" onclick="toggleMic()" title="Voz">🎤</button>
+        <textarea id="input" rows="1" placeholder="Digite sua mensagem..." onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="send()" disabled>➤</button>
+      </div>
     </div>
     <div class="input-footer">VSAI - IA pode cometer erros. Verifique informações importantes.</div>
   </div>
@@ -330,6 +396,28 @@
     let messages = [];
     let isStreaming = false;
     let abortController = null;
+    let isCallMode = false;
+    let isCameraActive = false;
+    let imageAttachment = null;
+    let isRecording = false;
+    let voiceEnabled = false;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+    if (recognition) {
+      recognition.lang = 'pt-BR';
+      recognition.onstart = () => { isRecording = true; document.getElementById('micBtn').classList.add('recording'); };
+      recognition.onend = () => { isRecording = false; document.getElementById('micBtn').classList.remove('recording'); };
+      recognition.onresult = (e) => {
+        const text = e.results[0][0].transcript;
+        if (isCallMode) {
+          send(text);
+        } else {
+          $input.value += ' ' + text;
+          $sendBtn.disabled = false;
+        }
+      };
+    }
 
     const $messages = document.getElementById('messages');
     const $input = document.getElementById('input');
@@ -442,11 +530,75 @@
       const el = document.getElementById('streamingMsg');
       if (el) el.remove();
       addMessage('ai', content);
+      if (isCallMode || voiceEnabled) speak(content);
     }
 
-    async function send() {
-      const content = $input.value.trim();
-      if (!content || isStreaming) return;
+    function speak(text) {
+      if (!window.speechSynthesis) return;
+      const clean = text.replace(/```[\s\S]*?```/g, '').replace(/[*#_~]/g, '');
+      const utterance = new SpeechSynthesisUtterance(clean);
+      utterance.lang = 'pt-BR';
+      utterance.onend = () => {
+        if (isCallMode) setTimeout(() => recognition?.start(), 500);
+      };
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function toggleCallMode() {
+      isCallMode = !isCallMode;
+      const btn = document.getElementById('callBtn');
+      btn.classList.toggle('active', isCallMode);
+      if (isCallMode) {
+        voiceEnabled = true;
+        recognition?.start();
+      } else {
+        window.speechSynthesis.cancel();
+      }
+    }
+
+    function toggleMic() {
+      if (isRecording) recognition?.stop();
+      else recognition?.start();
+    }
+
+    async function toggleCamera() {
+      const preview = document.getElementById('cameraPreview');
+      const video = document.getElementById('video');
+      if (isCameraActive) {
+        video.srcObject.getTracks().forEach(t => t.stop());
+        preview.style.display = 'none';
+        isCameraActive = false;
+      } else {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          video.srcObject = stream;
+          preview.style.display = 'block';
+          isCameraActive = true;
+        } catch (e) { alert('Erro ao abrir câmera'); }
+      }
+    }
+
+    function captureFrame() {
+      const video = document.getElementById('video');
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      imageAttachment = canvas.toDataURL('image/jpeg', 0.8);
+      document.getElementById('imagePreview').style.display = 'block';
+      document.getElementById('previewImg').src = imageAttachment;
+    }
+
+    function removeImage() {
+      imageAttachment = null;
+      document.getElementById('imagePreview').style.display = 'none';
+    }
+
+    async function send(overrideInput) {
+      const content = overrideInput || $input.value.trim();
+      if (!content && !imageAttachment) return;
+      if (isStreaming) return;
 
       $input.value = '';
       $input.style.height = 'auto';
@@ -457,8 +609,13 @@
       $sendBtn.disabled = false;
       $sendBtn.onclick = abort;
 
-      addMessage('user', content);
-      messages.push({ role: 'user', content });
+      const userPayload = imageAttachment 
+        ? [{ type: 'image_url', image_url: { url: imageAttachment } }, { type: 'text', text: content || 'O que você vê?' }]
+        : content;
+
+      addMessage('user', content || '📷 Imagem enviada');
+      messages.push({ role: 'user', content: userPayload });
+      removeImage();
 
       showStreaming();
 
@@ -471,7 +628,7 @@
           headers: { 'Content-Type': 'application/json' },
           signal: abortController.signal,
           body: JSON.stringify({
-            content,
+            content: typeof userPayload === 'string' ? userPayload : content,
             messages: messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content })),
             model: 'gemini-2.5-flash',
           }),
