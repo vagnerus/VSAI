@@ -11,7 +11,7 @@ export class GeminiClient {
   constructor(config = {}) {
     this.apiKey = config.apiKey || '';
     this.defaultModel = config.model || 'gemini-1.5-flash';
-    this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
+    this.baseUrl = 'https://generativelanguage.googleapis.com/v1/models';
     this.maxRetries = config.maxRetries || 3;
 
     if (!this.apiKey) {
@@ -114,7 +114,7 @@ export class GeminiClient {
     
     // Antigravity Fix: Map the user's '2.5-flash' brand to a stable flash model
     if (targetModel === 'gemini-2.5-flash') {
-      targetModel = 'gemini-1.5-flash';
+      targetModel = 'gemini-1.5-flash-latest';
     }
 
     const url = `${this.baseUrl}/${targetModel}:streamGenerateContent?alt=sse&key=${this.apiKey}`;

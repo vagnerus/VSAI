@@ -65,6 +65,94 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// ─── Markdown Parser (enhanced Claude-like) ─────────────────
+function parseMarkdown(text) {
+  if (!text) return '';
+  let html = text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    // Mermaid Diagrams support
+    .replace(/```mermaid\n([\s\S]*?)```/g, (_, code) => {
+      return `<div class="mermaid-block"><pre class="mermaid">${code}</pre><div class="mermaid-hint">✨ Digrama Interativo (Mermaid)</div></div>`;
+    })
+    // Code blocks with copy button and language badge
+    .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+      const langLabel = lang || 'code';
+      return `<div class="code-block-wrapper"><div class="code-block-header"><span class="code-block-lang">${langLabel}</span><button class="code-block-copy" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('code').textContent);this.textContent='✓ Copiado';setTimeout(()=>this.textContent='📋 Copiar',1500)">📋 Copiar</button></div><pre><code class="lang-${lang}">${code}</code></pre></div>`;
+    })
+    // Inline code
+    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
+    // Tables (GFM)
+    .replace(/^\|(.+)\|$/gm, (match) => {
+      const cells = match.split('|').filter(c => c.trim());
+      if (cells.every(c => c.trim().match(/^[-:]+$/))) return '<!--table-sep-->';
+      const tag = 'td';
+      return `<tr>${cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('')}</tr>`;
+    })
+    // Headers
+    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+    // Bold & Italic
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/~~([^~]+)~~/g, '<del>$1</del>')
+    // Lists
+    .replace(/^\* (.+)$/gm, '<li>$1</li>')
+    .replace(/^- (.+)$/gm, '<li>$1</li>')
+    .replace(/^([0-9]+)\. (.+)$/gm, '<li>$2</li>')
+    // Wrap lists
+    .replace(/(<li>.*<\/li>)/gs, (match) => {
+      if (match.includes('<li>')) return `<ul>${match}</ul>`;
+      return match;
+    })
+    // Blockquotes
+    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    // Line breaks
+    .replace(/\n/g, '<br/>');
+
+  return html;
+}
+
+/**
+ * DynamicChart Component (Pillar 3: Performance & Pillar 4: Clean Code)
+ */
+const DynamicChart = React.memo(({ json }) => {
+  try {
+    const config = JSON.parse(json);
+    const { type, title, data } = config;
+    const maxVal = Math.max(...data.map(d => d.value), 1);
+    
+    return (
+      <div className="card" style={{ padding: 16, marginTop: 12, border: '1px solid var(--glass-border)', background: 'var(--bg-secondary)', borderRadius: 12 }}>
+        <h4 style={{ fontSize: 14, marginBottom: 16, textAlign: 'center', color: 'var(--text-primary)' }}>📊 {title || 'Análise de Dados'}</h4>
+        <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 8, padding: '0 10px' }}>
+          {data.map((item, i) => (
+            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+              <div 
+                style={{ 
+                  width: '100%', 
+                  height: `${(item.value / maxVal) * 100}%`, 
+                  background: 'var(--gradient-primary)',
+                  borderRadius: '4px 4px 0 0',
+                  minHeight: 4,
+                  boxShadow: '0 4px 12px rgba(0, 102, 255, 0.1)'
+                }} 
+                title={`${item.name}: ${item.value}`}
+              />
+              <span style={{ fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', opacity: 0.6 }}>
+                {item.name}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  } catch (e) {
+    return <div style={{ fontSize: 11, color: 'var(--accent-danger)' }}>Erro ao renderizar gráfico.</div>;
+  }
+});
+
 /**
  * Memoized Message Bubble (Pillar 3: Performance)
  * Prevents re-rendering historical messages during chat streaming.
@@ -148,41 +236,6 @@ async function api(path, options = {}) {
  * DynamicChart Component (Pillar 3: Performance & Pillar 4: Clean Code)
  * Memoized to prevent re-renders on every chat stream update.
  */
-const DynamicChart = React.memo(({ json }) => {
-  try {
-    const config = JSON.parse(json);
-    const { type, title, data } = config;
-    const maxVal = Math.max(...data.map(d => d.value), 1);
-    
-    return (
-      <div className="card" style={{ padding: 16, marginTop: 12, border: '1px solid var(--glass-border)', background: 'var(--bg-secondary)', borderRadius: 12 }}>
-        <h4 style={{ fontSize: 14, marginBottom: 16, textAlign: 'center', color: 'var(--text-primary)' }}>📊 {title || 'Análise de Dados'}</h4>
-        <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 8, padding: '0 10px' }}>
-          {data.map((item, i) => (
-            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-              <div 
-                style={{ 
-                  width: '100%', 
-                  height: `${(item.value / maxVal) * 100}%`, 
-                  background: 'var(--gradient-primary)',
-                  borderRadius: '4px 4px 0 0',
-                  minHeight: 4,
-                  boxShadow: '0 4px 12px rgba(0, 102, 255, 0.1)'
-                }} 
-                title={`${item.name}: ${item.value}`}
-              />
-              <span style={{ fontSize: 9, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', width: '100%', textAlign: 'center', opacity: 0.6 }}>
-                {item.name}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  } catch (e) {
-    return <div style={{ fontSize: 11, color: 'var(--accent-danger)' }}>Erro ao renderizar gráfico.</div>;
-  }
-});
 
 function PromptLibrary({ onSelect }) {
   const categories = [
@@ -220,34 +273,6 @@ function PromptLibrary({ onSelect }) {
   );
 }
 
-function parseMarkdown(text) {
-  if (!text) return '';
-  let html = text
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    // Mermaid Diagrams support
-    .replace(/```mermaid\n([\s\S]*?)```/g, (_, code) => {
-      return `<div class="mermaid-block"><pre class="mermaid">${code}</pre><div class="mermaid-hint">✨ Digrama Interativo (Mermaid)</div></div>`;
-    })
-    // Code blocks with copy button and language badge
-    .replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-      const langLabel = lang || 'code';
-      return `<div class="code-block-wrapper"><div class="code-block-header"><span class="code-block-lang">${langLabel}</span><button class="code-block-copy" onclick="navigator.clipboard.writeText(this.closest('.code-block-wrapper').querySelector('code').textContent);this.textContent='✓ Copiado';setTimeout(()=>this.textContent='📋 Copiar',1500)">📋 Copiar</button></div><pre><code class="lang-${lang}">${code}</code></pre></div>`;
-    })
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-    // Tables (GFM)
-    .replace(/^\|(.+)\|$/gm, (match) => {
-      const cells = match.split('|').filter(c => c.trim());
-      if (cells.every(c => c.trim().match(/^[-:]+$/))) return '<!--table-sep-->';
-      const tag = 'td';
-      return `<tr>${cells.map(c => `<${tag}>${c.trim()}</${tag}>`).join('')}</tr>`;
-    })
-    // Headers
-    .replace(/^#### (.+)$/gm, '<h4>$1</h4>')
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Bold & Italic
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // Links
