@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VSAI — Premium Intelligence Shell</title>
+    <!-- Configuração de Estilo Global -->
+    <link rel="stylesheet" href="../src/frontend/index.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* Estilos específicos para o Shell do Layout */
+        .master-layout {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .navbar-fixed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: var(--topbar-height);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 1000;
+            background: var(--bg-secondary);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-bottom: 1px solid var(--platinum-light);
+        }
+
+        .logo-metallic {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: -1.5px;
+            color: var(--text-primary);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon-shell {
+            width: 32px;
+            height: 32px;
+            background: var(--silver-brushed);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--shadow-metallic);
+        }
+
+        .main-shell {
+            margin-top: var(--topbar-height);
+            padding: 40px;
+            flex: 1;
+        }
+
+        .nav-links-shell {
+            display: flex;
+            gap: 32px;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .nav-links-shell a {
+            text-decoration: none;
+            color: inherit;
+            transition: color 0.3s;
+        }
+
+        .nav-links-shell a:hover {
+            color: var(--accent-primary);
+        }
+    </style>
+</head>
+<body class="master-layout">
+
+    <!-- Fixed Navbar -->
+    <header class="navbar-fixed">
+        <div class="logo-metallic">
+            <div class="logo-icon-shell">
+                <i data-lucide="cpu" class="lucide-icon" style="stroke: #333"></i>
+            </div>
+            VSAI <span style="color: var(--text-platinum)">Intelligence</span>
+        </div>
+
+        <nav class="nav-links-shell">
+            <a href="#">Dashboard</a>
+            <a href="#">Projetos</a>
+            <a href="#">Agentes</a>
+            <a href="#">Configurações</a>
+        </nav>
+
+        <div class="auth-actions">
+            <button class="btn-liquid">
+                <i data-lucide="user" class="lucide-icon" style="stroke: #333; width: 16px; height: 16px;"></i>
+                Minha Conta
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-shell">
+        <!-- O conteúdo das páginas será injetado aqui -->
+        <div class="glass-panel" style="padding: 60px; text-align: center;">
+            <h1 class="text-metallic" style="font-size: 48px; margin-bottom: 16px;">Fundação Platinum Ativada</h1>
+            <p style="color: var(--text-secondary); font-size: 18px; max-width: 600px; margin: 0 auto;">
+                Este é o Shell mestre do VSAI. Todos os componentes utilizam a arquitetura de design baseada em metal líquido e vidro jateado.
+            </p>
+            
+            <div style="margin-top: 40px; display: flex; justify-center: center; gap: 20px; justify-content: center;">
+                <button class="btn-liquid">Iniciar Protocolo</button>
+                <div class="card-metallic" style="text-align: left; max-width: 300px;">
+                    <i data-lucide="shield-check" class="lucide-icon" style="stroke: #888; margin-bottom: 12px;"></i>
+                    <h4 style="margin-bottom: 8px;">Segurança Platinum</h4>
+                    <p style="font-size: 13px; color: var(--text-secondary);">Proteção de dados com criptografia de nível militar e isolamento total.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

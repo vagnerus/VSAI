@@ -3,73 +3,116 @@
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  /* ─── Base Colors (Metallic Porcelain) ─────────────────── */
-  --bg-primary: #f8fafc; 
-  --bg-secondary: #ffffff; 
-  --bg-elevated: #ffffff; 
-  --bg-hover: #f1f5f9; 
-  --bg-active: #e2e8f0; 
-
-  /* ─── Accent Colors (Vibrant Purple & Silver) ─────────── */
-  --accent-primary: #8b5cf6; 
-  --accent-primary-hover: #7c3aed;
-  --accent-primary-glow: rgba(139, 92, 246, 0.1);
-  --accent-secondary: #6366f1;
-  --accent-secondary-glow: rgba(99, 102, 241, 0.05);
-  --accent-success: #10b981;
-  --accent-warning: #f59e0b;
-  --accent-danger: #ef4444;
-  --accent-info: #0ea5e9;
-
-  /* ─── Gradients (Metallic Shine) ──────────────────────── */
-  --gradient-primary: linear-gradient(135deg, #8b5cf6, #6366f1);
-  --gradient-secondary: linear-gradient(135deg, #6366f1, #3b82f6);
-  --gradient-warm: linear-gradient(135deg, #f43f5e, #fb923c);
-  --gradient-surface: linear-gradient(145deg, #ffffff, #f8fafc);
-  --gradient-hero: radial-gradient(circle at top center, rgba(139, 92, 246, 0.05), transparent 70%);
-  --gradient-metallic: linear-gradient(135deg, #ffffff 0%, #f1f5f9 50%, #ffffff 100%);
-
-  /* ─── Glass / Surface ────────────────────────────────── */
-  --glass-bg: rgba(255, 255, 255, 0.7);
-  --glass-bg-hover: rgba(255, 255, 255, 0.9);
-  --glass-border: rgba(0, 0, 0, 0.06);
-  --glass-border-hover: rgba(0, 0, 0, 0.12);
-
-  /* ─── Text (Deep Slate Contrast) ──────────────────────── */
-  --text-primary: #0f172a; 
-  --text-secondary: #475569; 
-  --text-tertiary: #94a3b8; 
-  --text-accent: var(--accent-primary);
-  --text-code: #6366f1;
-
-  /* ─── Shadows (Soft & Elegant) ───────────────────────── */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 35px 60px -15px rgba(0, 0, 0, 0.1);
-  --shadow-glow: 0 0 20px rgba(139, 92, 246, 0.15);
-
-  /* ─── Radius ─────────────────────────────────────────── */
-  --radius-sm: 8px;
-  --radius-md: 12px;
+  /* ─── Architecture: Platinum & Silver Palette ─────────── */
+  --silver-brushed: linear-gradient(145deg, #f0f0f0, #bebebe);
+  --silver-liquid: linear-gradient(90deg, #e0e0e0, #ffffff, #e0e0e0);
+  --platinum-dark: #333333;
+  --platinum-light: #E5E4E2;
+  --platinum-glow: 0 0 15px rgba(229, 228, 226, 0.8);
+  
+  --bg-primary: #f5f5f7; /* Soft Apple-style Grey */
+  --bg-secondary: rgba(255, 255, 255, 0.95); /* Snow White Glass */
+  --bg-elevated: #ffffff;
+  --bg-hover: #f1f5f9;
+  
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-platinum: #86868b;
+  
+  --accent-primary: #000000; /* Deep Obsidian for contrast */
+  --accent-secondary: #8e8e93;
+  
+  --border-platinum: rgba(0, 0, 0, 0.1);
+  --glass-blur: blur(12px);
+  
+  /* ─── Radius & Shadows ─── */
   --radius-lg: 20px;
-  --radius-xl: 32px;
-  --radius-full: 9999px;
+  --radius-md: 12px;
+  --radius-sm: 8px;
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.05);
+  --shadow-metallic: 4px 4px 10px rgba(0, 0, 0, 0.05), -4px -4px 10px rgba(255, 255, 255, 0.8);
 
-  /* ─── Spacing ────────────────────────────────────────── */
-  --sidebar-width: 280px;
-  --sidebar-collapsed: 72px;
+  --font-sans: 'Outfit', 'Inter', -apple-system, sans-serif;
   --topbar-height: 72px;
+}
 
-  /* ─── Typography ─────────────────────────────────────── */
-  --font-sans: 'Outfit', 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+/* ─── Global Reset & Body ─── */
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
 
-  /* ─── Transitions ────────────────────────────────────── */
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
-  --transition-slow: 400ms ease;
-  --transition-bounce: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+/* ─── Global Components Framework ───────────────────────── */
+
+/* .liquid-metal-btn */
+.btn-liquid {
+  background: var(--silver-liquid);
+  background-size: 200% 200%;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  color: var(--platinum-dark);
+  padding: 12px 28px;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-metallic);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.btn-liquid:hover {
+  transform: scale(1.02) translateY(-2px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+  background-position: right center;
+}
+
+/* .glass-panel */
+.glass-panel {
+  background: var(--bg-secondary);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--border-platinum);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+}
+
+/* .metallic-card */
+.card-metallic {
+  background: var(--gradient-surface);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s ease;
+}
+
+.card-metallic:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+  border-color: var(--platinum-light);
+}
+
+/* .metallic-text */
+.text-metallic {
+  background: var(--silver-brushed);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 900;
+}
+
+/* ─── Lucide Icons Integration ─── */
+.lucide-icon {
+  width: 20px;
+  height: 20px;
+  stroke: #E5E4E2;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,0.1));
 }
    Reset & Global Styles
    ═══════════════════════════════════════════════════════════════ */
