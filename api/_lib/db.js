@@ -47,22 +47,23 @@ export const query = async (text, params) => {
  */
 export const getClient = async () => {
   const client = await pool.connect();
-  const query = client.query;
-  const release = client.release;
-  // Patch client.query to catch errors
+  const originalQuery = client.query.bind(client);
+  const originalRelease = client.release.bind(client);
+
+  // B10 Fix: Increased timeout from 5s to 30s for long-running chat operations
   const timeout = setTimeout(() => {
-    console.error('Um client foi mantido por muito tempo (vazamento de conexão).');
-  }, 5000);
+    console.error('[DB] Client held for >30s (possible connection leak). Last query:', client.lastQuery);
+  }, 30000);
   
   client.query = (...args) => {
     client.lastQuery = args;
-    return query.apply(client, args);
+    return originalQuery(...args);
   };
   client.release = () => {
     clearTimeout(timeout);
-    client.query = query;
-    client.release = release;
-    return release.apply(client);
+    client.query = originalQuery;
+    client.release = originalRelease;
+    return originalRelease();
   };
   return client;
 };

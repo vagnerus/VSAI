@@ -8,6 +8,7 @@ import { query } from './_lib/db.js';
 import { checkRateLimit } from './_lib/rateLimiter.js';
 import { getAllTools } from '../src/tools/registry.js';
 import { semanticCache } from './_lib/cache.js';
+import { aiManager } from '../src/engine/AIManager.js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const config = {
@@ -58,7 +59,7 @@ export default async function handler(req, res) {
       } catch (e) { /* Fallback */ }
     }
 
-    const activeProvider = useEdge ? 'local' : (selectedProvider || 'google');
+    const activeProvider = useEdge ? 'local' : (selectedProvider || 'gemini');
     let activeModel = useEdge ? 'llama3:8b' : (selectedModel || 'gemini-1.5-flash');
     let activeSystemPrompt = '';
 
@@ -118,6 +119,16 @@ export default async function handler(req, res) {
       console.error('[DB_FETCH_ERROR]', e);
     }
 
+    // B4 Fix: Validate API BEFORE setting SSE headers
+    const apiClient = getApiClient(activeProvider);
+    
+    if (!apiClient.isConfigured()) {
+      return res.status(400).json({ 
+        error: `O provedor '${activeProvider}' não está configurado corretamente. Verifique se a API Key está definida nas variáveis de ambiente.`,
+        code: 'API_NOT_CONFIGURED'
+      });
+    }
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
@@ -127,16 +138,6 @@ export default async function handler(req, res) {
       if (!res.writable) return;
       res.write(`data: ${JSON.stringify(obj)}\n\n`);
     };
-
-    const apiClient = getApiClient(activeProvider);
-    
-    // Validação de configuração da API
-    if (!apiClient.isConfigured()) {
-      return res.status(400).json({ 
-        error: `O provedor '${activeProvider}' não está configurado corretamente. Verifique se a GEMINI_API_KEY está definida nas variáveis de ambiente da Vercel.`,
-        code: 'API_NOT_CONFIGURED'
-      });
-    }
 
     const tools = getAllTools();
     const sessionId = clientSessionId || uuidv4();
@@ -255,6 +256,12 @@ export default async function handler(req, res) {
 
       finalAssistantContent += assistantContent;
 
+      // Hallucination check
+      const hallucinationCheck = aiManager.checkHallucinations(assistantContent);
+      if (!hallucinationCheck.isClean) {
+        send({ type: 'guardrail', warnings: hallucinationCheck.warnings });
+      }
+
       const assistantMsg = {
         uuid: uuidv4(),
         role: 'assistant',
@@ -266,6 +273,10 @@ export default async function handler(req, res) {
 
       mutableMessages.push(assistantMsg);
       send({ type: 'assistant', content: assistantContent, toolCalls: parsedCalls, uuid: assistantMsg.uuid });
+
+      // Record success with AIManager
+      aiManager.recordSuccess(activeProvider);
+      aiManager.recordTokenUsage(activeProvider, totalInputTokens, totalOutputTokens);
 
       if (userId !== 'anonymous') {
         await query(

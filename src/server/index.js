@@ -23,6 +23,28 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// ─── Static Files (Production) ───────────────────────────────
+const distPath = path.join(__dirname, '../../dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  console.log('[Server] Serving static files from dist/');
+}
+
+// ─── Health Check (Direct) ───────────────────────────────────
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString(), uptime: Math.floor(process.uptime()) });
+});
+
+// ─── AI Manager Health ───────────────────────────────────────
+app.get('/api/ai-health', async (req, res) => {
+  try {
+    const { aiManager } = await import('../engine/AIManager.js');
+    res.status(200).json(aiManager.getHealthReport());
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ─── Vercel Serverless Simulator (for local dev) ────────────
 // This ensures local development perfectly matches Vercel production by routing ALL /api/* requests to the /api directory.
 app.all('/api/*', async (req, res, next) => {
@@ -55,6 +77,30 @@ app.all('/api/*', async (req, res, next) => {
   }
 });
 
+// ─── SPA Fallback (Production) ───────────────────────────────
+if (fs.existsSync(distPath)) {
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
+// ─── Graceful Shutdown ───────────────────────────────────────
+function gracefulShutdown(signal) {
+  console.log(`\n[Server] ${signal} received. Shutting down gracefully...`);
+  server.close(() => {
+    console.log('[Server] HTTP server closed.');
+    process.exit(0);
+  });
+  // Force exit after 10 seconds
+  setTimeout(() => {
+    console.error('[Server] Forced shutdown after 10s timeout.');
+    process.exit(1);
+  }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // ─── Start Server ────────────────────────────────────────────
 const PORT = process.env.PORT || 3777;
 server.listen(PORT, () => {
@@ -71,6 +117,8 @@ server.listen(PORT, () => {
 ║                                                          ║
 ║     🌐  Frontend: http://localhost:5173                  ║
 ║     ⚡  API:      http://localhost:${PORT}/api                  ║
+║     🏥  Health:   http://localhost:${PORT}/health               ║
+║     🧠  AI:       http://localhost:${PORT}/api/ai-health        ║
 ║     🗄️  Database: PostgreSQL (P4Admin)                    ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝

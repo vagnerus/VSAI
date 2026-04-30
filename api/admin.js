@@ -76,7 +76,10 @@ export default async function handler(req, res) {
     if (action === 'db') {
       const { table } = req.query;
       if (!table || !ALLOWED_TABLES.includes(table)) return res.status(403).json({ error: 'Acesso à tabela negado' });
-      const { rows: data } = await query(`SELECT * FROM ${table} LIMIT 100`);
+      // B12 Fix: Use identifier quoting to prevent SQL injection even with allowlist
+      const safeTable = table.replace(/[^a-z_]/g, '');
+      if (!ALLOWED_TABLES.includes(safeTable)) return res.status(403).json({ error: 'Acesso à tabela negado' });
+      const { rows: data } = await query(`SELECT * FROM "${safeTable}" LIMIT 100`);
       return res.status(200).json({ data });
     }
 

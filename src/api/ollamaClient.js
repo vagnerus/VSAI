@@ -144,7 +144,7 @@ export class OllamaClient {
               if (tc.function?.name) {
                 yield { 
                   type: 'content_block_start', 
-                  content_block: { type: 'tool_use', id: tc.id, name: tc.function.name } 
+                  content_block: { type: 'tool_use', id: tc.id || `call_${Math.random().toString(36).substring(2, 11)}`, name: tc.function.name } 
                 };
               }
               if (tc.function?.arguments) {
@@ -154,6 +154,17 @@ export class OllamaClient {
                 };
               }
             }
+          }
+
+          // B3 Fix: Emit stop_reason so QueryEngine can detect tool calls
+          if (choice?.finish_reason) {
+            const stopReason = (choice.finish_reason === 'tool_calls' || choice.finish_reason === 'function_call')
+              ? 'tool_use'
+              : 'end_turn';
+            yield {
+              type: 'message_delta',
+              delta: { stop_reason: stopReason }
+            };
           }
 
           if (data.usage) {

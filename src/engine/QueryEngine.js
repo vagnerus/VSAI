@@ -19,6 +19,23 @@ const FLAGS = {
 };
 
 /**
+ * Model context window sizes (in tokens) and cost rates.
+ */
+const MODEL_CONFIGS = {
+  'gemini-1.5-flash': { contextWindow: 1000000, inputRate: 0.075 / 1e6, outputRate: 0.30 / 1e6 },
+  'gemini-1.5-pro': { contextWindow: 2000000, inputRate: 1.25 / 1e6, outputRate: 5.0 / 1e6 },
+  'gemini-1.5-flash-8b': { contextWindow: 1000000, inputRate: 0.0375 / 1e6, outputRate: 0.15 / 1e6 },
+  'claude-sonnet-4-20250514': { contextWindow: 200000, inputRate: 3.0 / 1e6, outputRate: 15.0 / 1e6 },
+  'claude-3-opus-20240229': { contextWindow: 200000, inputRate: 15.0 / 1e6, outputRate: 75.0 / 1e6 },
+  'claude-3-5-haiku-20241022': { contextWindow: 200000, inputRate: 0.25 / 1e6, outputRate: 1.25 / 1e6 },
+  'gpt-4o': { contextWindow: 128000, inputRate: 5.0 / 1e6, outputRate: 15.0 / 1e6 },
+  'gpt-4-turbo': { contextWindow: 128000, inputRate: 10.0 / 1e6, outputRate: 30.0 / 1e6 },
+  'gpt-3.5-turbo': { contextWindow: 16385, inputRate: 0.5 / 1e6, outputRate: 1.5 / 1e6 },
+  'llama3:8b': { contextWindow: 8192, inputRate: 0, outputRate: 0 },
+  'default': { contextWindow: 32000, inputRate: 3.0 / 1e6, outputRate: 15.0 / 1e6 },
+};
+
+/**
  * QueryEngine — Per-Conversation Session Manager
  */
 export class QueryEngine {
@@ -54,8 +71,13 @@ export class QueryEngine {
         return;
       }
 
-      // 3. Auto-Snip (Context Management)
-      if (this.mutableMessages.length > 50) this.snipHistory();
+      // 3. Auto-Snip (Context Management) — model-aware
+      const modelConfig = MODEL_CONFIGS[this.config.model] || MODEL_CONFIGS['default'];
+      const estimatedTokens = this.estimateTokenCount(this.mutableMessages);
+      const contextLimit = Math.floor(modelConfig.contextWindow * 0.75); // Keep 25% headroom
+      if (estimatedTokens > contextLimit || this.mutableMessages.length > 50) {
+        this.smartSnipHistory(contextLimit);
+      }
 
       // 4. Message Normalization & Persistence
       const userMessage = {
@@ -147,10 +169,53 @@ export class QueryEngine {
     return { shouldQuery: true, content: prompt };
   }
 
+  /**
+   * Simple token estimation (approx 4 chars per token).
+   */
+  estimateTokenCount(messages) {
+    let total = 0;
+    for (const msg of messages) {
+      const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || '');
+      total += Math.ceil(content.length / 4);
+      if (msg.toolCalls) total += Math.ceil(JSON.stringify(msg.toolCalls).length / 4);
+    }
+    return total;
+  }
+
+  /**
+   * Smart history snip — preserves first user message + last N messages.
+   * More intelligent than simple slice: keeps context summary.
+   */
+  smartSnipHistory(contextLimit) {
+    if (this.mutableMessages.length <= 6) return;
+
+    // Always keep the first user message for context
+    const firstUserMsg = this.mutableMessages.find(m => m.role === 'user');
+    const keepCount = Math.min(10, this.mutableMessages.length - 1);
+    const recentMessages = this.mutableMessages.slice(-keepCount);
+
+    // Create a summary marker
+    const droppedCount = this.mutableMessages.length - keepCount - (firstUserMsg ? 1 : 0);
+    const summaryMsg = {
+      uuid: 'context-summary',
+      role: 'user',
+      type: 'user',
+      content: `[Sistema: ${droppedCount} mensagens anteriores foram resumidas para otimização de contexto. A conversa continua abaixo.]`,
+      timestamp: Date.now(),
+    };
+
+    this.mutableMessages = [
+      ...(firstUserMsg ? [firstUserMsg] : []),
+      summaryMsg,
+      ...recentMessages,
+    ];
+
+    console.log(`[QueryEngine] Smart snip: kept ${this.mutableMessages.length} messages, dropped ${droppedCount}`);
+  }
+
   snipHistory() {
     if (this.mutableMessages.length > 10) {
-      // Keep last 10 turns as a simple snip strategy
-      this.mutableMessages = this.mutableMessages.slice(-10);
+      this.smartSnipHistory(32000);
     }
   }
 
@@ -186,9 +251,11 @@ export class QueryEngine {
   updateUsage(usageEvent) {
     this.totalUsage.inputTokens += usageEvent.input_tokens || 0;
     this.totalUsage.outputTokens += usageEvent.output_tokens || 0;
-    // Simple cost calculation
-    const rate = 3 / 1000000; // $3 per 1M tokens approx
-    this.costTracker.totalCostUsd += (usageEvent.input_tokens + usageEvent.output_tokens) * rate;
+    // Model-specific cost calculation
+    const modelConfig = MODEL_CONFIGS[this.config.model] || MODEL_CONFIGS['default'];
+    const inputCost = (usageEvent.input_tokens || 0) * modelConfig.inputRate;
+    const outputCost = (usageEvent.output_tokens || 0) * modelConfig.outputRate;
+    this.costTracker.totalCostUsd += inputCost + outputCost;
   }
 
   abort() {

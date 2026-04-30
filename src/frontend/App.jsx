@@ -23,9 +23,9 @@ const API_BASE = '/api';
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
-  static getDerivedStateFromError(error) { return { hasError: true }; }
+  static getDerivedStateFromError(error) { return { hasError: true, error }; }
   componentDidCatch(error, errorInfo) { console.error('[UI_CRITICAL_ERROR]', error, errorInfo); }
   render() {
     if (this.state.hasError) {
@@ -34,6 +34,11 @@ class ErrorBoundary extends React.Component {
           <h1 style={{ fontSize: 48 }}>⚠️</h1>
           <h2>Ops! Algo deu errado na interface.</h2>
           <p style={{ color: '#64748b', maxWidth: 400 }}>Ocorreu um erro inesperado. Não se preocupe, seus dados estão seguros.</p>
+          {this.state.error && (
+            <div style={{ marginTop: 20, padding: 12, background: '#fee2e2', color: '#b91c1c', borderRadius: 8, fontSize: 12, fontFamily: 'monospace', textAlign: 'left', maxWidth: '90%' }}>
+              <strong>Erro:</strong> {this.state.error.message}
+            </div>
+          )}
           <button className="btn btn-primary" onClick={() => window.location.reload()} style={{ marginTop: 20 }}>Recarregar Aplicativo</button>
         </div>
       );

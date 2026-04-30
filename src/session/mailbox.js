@@ -6,21 +6,41 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const TEAMS_DIR = path.join(__dirname, '../../data/teams');
 
-// Memory locks for safe cross-async intra-process file writes
-const locks = new Map();
+/**
+ * AsyncMutex — Promise-based lock to replace busy-wait spin-lock (B9 Fix).
+ */
+class AsyncMutex {
+  constructor() {
+    this._locks = new Map();
+  }
+
+  async acquire(key) {
+    while (this._locks.has(key)) {
+      await this._locks.get(key);
+    }
+    let release;
+    const promise = new Promise(resolve => { release = resolve; });
+    this._locks.set(key, promise);
+    return release;
+  }
+
+  release(key, releaseFn) {
+    this._locks.delete(key);
+    if (releaseFn) releaseFn();
+  }
+}
+
+const mutex = new AsyncMutex();
 
 /**
  * Write a message to an agent's inbox in a thread-safe manner.
+ * B9 Fix: Uses AsyncMutex instead of busy-wait spin-lock.
  */
 export async function writeMailbox(teamName, agentId, message) {
   const inboxDir = path.join(TEAMS_DIR, teamName, 'inboxes');
   const mailboxPath = path.join(inboxDir, `${agentId}.json`);
   
-  // Wait for lock
-  while (locks.get(mailboxPath)) {
-    await new Promise(r => setTimeout(r, 20));
-  }
-  locks.set(mailboxPath, true);
+  const release = await mutex.acquire(mailboxPath);
 
   try {
     if (!fs.existsSync(inboxDir)) {
@@ -28,12 +48,13 @@ export async function writeMailbox(teamName, agentId, message) {
     }
 
     let inbox = [];
-    if (fs.existsSync(mailboxPath)) {
-      try {
-        inbox = JSON.parse(fs.readFileSync(mailboxPath, 'utf8'));
-      } catch (err) {
-        console.warn(`[Mailbox] Corrupt inbox at ${mailboxPath}, resetting.`);
-      }
+    try {
+      const raw = fs.readFileSync(mailboxPath, 'utf8');
+      inbox = JSON.parse(raw);
+      if (!Array.isArray(inbox)) inbox = [];
+    } catch (err) {
+      // File doesn't exist or is corrupt — start fresh
+      inbox = [];
     }
     
     inbox.push({
@@ -44,27 +65,25 @@ export async function writeMailbox(teamName, agentId, message) {
     
     fs.writeFileSync(mailboxPath, JSON.stringify(inbox, null, 2));
   } finally {
-    locks.set(mailboxPath, false);
+    mutex.release(mailboxPath, release);
   }
 }
 
 /**
  * Reads all messages currently in the mailbox and empties it securely.
+ * B9 Fix: Uses AsyncMutex instead of busy-wait spin-lock.
  */
 export async function readAndClearMailbox(teamName, agentId) {
   const mailboxPath = path.join(TEAMS_DIR, teamName, 'inboxes', `${agentId}.json`);
   
-  while (locks.get(mailboxPath)) {
-    await new Promise(r => setTimeout(r, 20));
-  }
-  locks.set(mailboxPath, true);
+  const release = await mutex.acquire(mailboxPath);
 
   try {
-    if (!fs.existsSync(mailboxPath)) return [];
-    
     let inbox = [];
     try {
-      inbox = JSON.parse(fs.readFileSync(mailboxPath, 'utf8'));
+      const raw = fs.readFileSync(mailboxPath, 'utf8');
+      inbox = JSON.parse(raw);
+      if (!Array.isArray(inbox)) inbox = [];
     } catch (err) {
       return [];
     }
@@ -75,6 +94,6 @@ export async function readAndClearMailbox(teamName, agentId) {
   } catch (err) {
     return [];
   } finally {
-    locks.set(mailboxPath, false);
+    mutex.release(mailboxPath, release);
   }
 }

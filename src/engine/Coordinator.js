@@ -19,7 +19,7 @@ export class Coordinator {
     const jobId = `agent-${uuidv4().substring(0, 8)}`;
     
     // Workers start with ZERO context (Isolation by Design)
-    const workerEngine = new engine.constructor({
+    const workerEngine = new this.engine.constructor({
       ...this.engine.config,
       sessionId: `${this.engine.sessionId}-${jobId}`,
       initialMessages: [], // Isolated context

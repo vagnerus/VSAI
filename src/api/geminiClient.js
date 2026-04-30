@@ -1,6 +1,10 @@
 /**
  * GeminiClient — REST Wrapper for the Google Gemini API.
  * Emulates the Anthropic stream event format to maintain compatibility.
+ *
+ * B1 Fix: Iterates ALL parts for functionCall detection
+ * B2 Fix: Unified tool_result formatting (no duplicates)
+ * Added: Retry logic with exponential backoff
  */
 
 export class GeminiClient {
@@ -8,6 +12,7 @@ export class GeminiClient {
     this.apiKey = config.apiKey || '';
     this.defaultModel = config.model || 'gemini-1.5-flash';
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
+    this.maxRetries = config.maxRetries || 3;
 
     if (!this.apiKey) {
       console.warn('[GeminiClient] No API key configured. Set GEMINI_API_KEY in .env');
@@ -28,6 +33,7 @@ export class GeminiClient {
 
   /**
    * Translates messages from the internal format (Anthropic-like) to Gemini format.
+   * B2 Fix: Unified handling — tool_result messages are processed once, not duplicated.
    */
   _translateMessages(messages) {
     const contents = [];
@@ -36,7 +42,16 @@ export class GeminiClient {
       let role = msg.role === 'assistant' ? 'model' : 'user';
       let parts = [];
 
-      if (typeof msg.content === 'string') {
+      // Handle tool_result messages first (B2 Fix: single code path)
+      if (msg.type === 'tool_result') {
+        role = 'user';
+        parts.push({
+          functionResponse: {
+            name: msg.toolName || msg.name || 'unknown_tool',
+            response: { content: msg.content }
+          }
+        });
+      } else if (typeof msg.content === 'string') {
         parts.push({ text: msg.content });
       } else if (Array.isArray(msg.content)) {
         msg.content.forEach(c => {
@@ -62,20 +77,10 @@ export class GeminiClient {
           if (c.type === 'tool_result') {
             parts.push({
               functionResponse: {
-                name: c.name,
+                name: c.name || c.toolName || 'unknown_tool',
                 response: { content: c.content }
               }
             });
-          }
-        });
-      }
-
-      if (msg.type === 'tool_result') {
-        role = 'user';
-        parts.push({
-          functionResponse: {
-            name: msg.toolName,
-            response: { content: msg.content }
           }
         });
       }
@@ -126,17 +131,55 @@ export class GeminiClient {
       body.tools = geminiTools;
     }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+    // Retry logic with exponential backoff
+    let lastError = null;
+    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 30000);
+          console.log(`[GeminiClient] Retry attempt ${attempt}/${this.maxRetries} after ${Math.round(delay)}ms...`);
+          await new Promise(r => setTimeout(r, delay));
+        }
 
-    if (!response.ok) {
-      const errText = await response.text();
-      throw new Error(`Gemini Error ${response.status}: ${errText}`);
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          const error = new Error(`Gemini Error ${response.status}: ${errText}`);
+          error.status = response.status;
+          
+          // Only retry on retryable errors
+          const isRetryable = response.status === 429 || response.status === 503 || response.status === 500;
+          if (isRetryable && attempt < this.maxRetries) {
+            lastError = error;
+            continue;
+          }
+          throw error;
+        }
+
+        yield* this._consumeStream(response);
+        return; // Success — exit retry loop
+
+      } catch (error) {
+        lastError = error;
+        const isRetryable = error.status === 429 || error.status === 503 || error.status === 500;
+        if (!isRetryable || attempt >= this.maxRetries) {
+          throw error;
+        }
+      }
     }
 
+    if (lastError) throw lastError;
+  }
+
+  /**
+   * Consume the SSE stream from the Gemini API response.
+   */
+  async *_consumeStream(response) {
     const bodyReader = (response.body && response.body.getReader) ? response.body.getReader() : null;
     const nodeStream = !bodyReader ? (response.body || null) : null;
     const decoder = new TextDecoder('utf-8');
@@ -166,10 +209,16 @@ export class GeminiClient {
         }
       }
     }
+
+    // Process any remaining buffer
+    if (buffer.trim()) {
+      yield* this._processSSELine(buffer);
+    }
   }
 
   /**
    * Helper to process a single SSE line and yield events.
+   * B1 Fix: Iterates ALL parts of the candidate, not just the first.
    */
   *_processSSELine(line) {
     const cleanLine = line.replace(/^data: /, '').trim();
@@ -178,43 +227,54 @@ export class GeminiClient {
     try {
       const data = JSON.parse(cleanLine);
       const candidate = data.candidates?.[0];
-      const part = candidate?.content?.parts?.[0];
+      const parts = candidate?.content?.parts || [];
 
-      if (part?.text) {
-        yield { 
-          type: 'content_block_delta', 
-          delta: { type: 'text_delta', text: part.text } 
-        };
+      let hasText = false;
+      let hasFunctionCall = false;
+
+      // B1 Fix: Iterate ALL parts instead of just parts[0]
+      for (const part of parts) {
+        if (part?.text) {
+          hasText = true;
+          yield { 
+            type: 'content_block_delta', 
+            delta: { type: 'text_delta', text: part.text } 
+          };
+        }
+
+        if (part?.functionCall) {
+          hasFunctionCall = true;
+          yield { 
+            type: 'content_block_start', 
+            content_block: { 
+              type: 'tool_use', 
+              id: `call_${Math.random().toString(36).substring(2, 11)}`, 
+              name: part.functionCall.name 
+            } 
+          };
+          yield { 
+            type: 'content_block_delta', 
+            delta: { 
+              type: 'input_json_delta', 
+              partial_json: JSON.stringify(part.functionCall.args || {}) 
+            } 
+          };
+        }
       }
 
-      if (part?.functionCall) {
-        yield { 
-          type: 'content_block_start', 
-          content_block: { 
-            type: 'tool_use', 
-            id: `call_${Math.random().toString(36).substring(2, 11)}`, 
-            name: part.functionCall.name 
-          } 
-        };
-        yield { 
-          type: 'content_block_delta', 
-          delta: { 
-            type: 'input_json_delta', 
-            partial_json: JSON.stringify(part.functionCall.args) 
-          } 
-        };
-      }
-
-      if (candidate?.finishReason === 'STOP' || candidate?.finishReason === 'MAX_TOKENS') {
-        yield {
-          type: 'message_delta',
-          delta: { stop_reason: 'end_turn' }
-        };
-      } else if (candidate?.finishReason === 'FUNCTION_CALL') {
-        yield {
-          type: 'message_delta',
-          delta: { stop_reason: 'tool_use' }
-        };
+      // Determine stop_reason based on finishReason AND whether we saw function calls
+      if (candidate?.finishReason) {
+        if (candidate.finishReason === 'FUNCTION_CALL' || hasFunctionCall) {
+          yield {
+            type: 'message_delta',
+            delta: { stop_reason: 'tool_use' }
+          };
+        } else if (candidate.finishReason === 'STOP' || candidate.finishReason === 'MAX_TOKENS') {
+          yield {
+            type: 'message_delta',
+            delta: { stop_reason: 'end_turn' }
+          };
+        }
       }
 
       if (data.usageMetadata) {
@@ -227,7 +287,7 @@ export class GeminiClient {
         };
       }
     } catch (e) {
-      // Incomplete JSON or other parsing error
+      // Incomplete JSON or other parsing error — skip silently
     }
   }
 }

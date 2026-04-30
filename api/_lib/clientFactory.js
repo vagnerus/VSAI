@@ -89,7 +89,7 @@ export function getApiClient(requestedProvider) {
   if (process.env.OLLAMA_MODEL) cfg.ollamaModel = process.env.OLLAMA_MODEL;
 
   const clients = {
-    google: new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel }),
+    gemini: new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel }),
     anthropic: new AnthropicClient({ apiKey: cfg.anthropicApiKey, model: cfg.anthropicModel }),
     openai: new OpenAIClient({ apiKey: cfg.openaiApiKey, model: cfg.openaiModel }),
     local: new OllamaClient({ host: cfg.ollamaHost, model: cfg.ollamaModel })
@@ -97,7 +97,7 @@ export function getApiClient(requestedProvider) {
 
   // Roteamento Dinâmico: O provedor pedido é o Primário. O padrão vira Fallback.
   const primaryKey = requestedProvider || cfg.defaultProvider;
-  const primary = clients[primaryKey] || clients.google;
+  const primary = clients[primaryKey] || clients.gemini;
   
   // Escolhe um fallback diferente do primário que esteja configurado
   const fallbackKey = Object.keys(clients).find(k => k !== primaryKey && clients[k].isConfigured());
