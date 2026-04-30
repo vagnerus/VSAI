@@ -102,15 +102,8 @@ export default async function handler(req, res) {
         };
 
         try {
-          // Garante que a coluna config existe na tabela profiles
-          await query(`
-            DO $$ 
-            BEGIN 
-              IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='config') THEN 
-                ALTER TABLE profiles ADD COLUMN config JSONB DEFAULT '{}'::jsonb;
-              END IF; 
-            END $$;
-          `);
+          // Garante que a coluna config existe na tabela profiles (sintaxe PostgreSQL 11+ nativa e segura)
+          await query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}'::jsonb;`);
           
           await query(`
             UPDATE profiles SET config = $1 WHERE id = $2
@@ -132,14 +125,7 @@ export default async function handler(req, res) {
     try {
       let savedConfig = {};
       try {
-        await query(`
-          DO $$ 
-          BEGIN 
-            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='config') THEN 
-              ALTER TABLE profiles ADD COLUMN config JSONB DEFAULT '{}'::jsonb;
-            END IF; 
-          END $$;
-        `);
+        await query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}'::jsonb;`);
         
         const resDb = await query('SELECT config FROM profiles WHERE id = $1', [auth.user.id]);
         if (resDb.rows.length > 0 && resDb.rows[0].config) {
