@@ -1014,10 +1014,11 @@ function ChatPage({ projectId }) {
       if (err.name !== 'AbortError') {
         setMessages(prev => [...prev, { role: 'system', content: `Erro de conexão: ${err.message}`, timestamp: Date.now() }]);
       }
+    } finally {
       setIsStreaming(false);
       setStreamText('');
     }
-  }, [input, isStreaming, messages, sessionId, projectId, selectedModel]);
+  }, [input, isStreaming, messages, sessionId, projectId, selectedModel, selectedProvider, selectedAgent, chatSettings]);
 
   const handleAbort = () => {
     abortControllerRef.current?.abort();

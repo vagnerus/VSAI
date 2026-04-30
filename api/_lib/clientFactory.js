@@ -39,20 +39,35 @@ class GatewayClient {
   }
 
   async *stream(params) {
+    let primaryError = null;
     try {
       yield* this.primary.stream(params);
     } catch (error) {
-      console.warn(`[Gateway] Primary API (${this.primary.constructor.name}) failed: ${error.message}`);
+      primaryError = error;
+      console.warn(`[Gateway] Primary API (${this.constructorName}) failed: ${error.message}`);
       
       if (this.fallback && this.fallback.isConfigured()) {
         console.log(`[Gateway] Switching to fallback API (${this.fallback.constructor.name})...`);
-        // Adiciona um aviso sutil na resposta para o usuário saber do fallback
         yield { 
           type: 'content_block_delta', 
           delta: { type: 'text_delta', text: '\n\n> ⚠️ *Nota: O provedor primário falhou ou está indisponível. Alternando automaticamente para o provedor reserva...*\n\n' } 
         };
-        yield* this.fallback.stream(params);
+        
+        try {
+          yield* this.fallback.stream(params);
+        } catch (fallbackError) {
+          console.error(`[Gateway] Fallback API also failed: ${fallbackError.message}`);
+          yield { 
+            type: 'content_block_delta', 
+            delta: { type: 'text_delta', text: `\n\n> ❌ **Erro Crítico:** O provedor reserva também falhou ao tentar responder. Detalhes: ${fallbackError.message}\n\n` } 
+          };
+          throw fallbackError;
+        }
       } else {
+        yield { 
+          type: 'content_block_delta', 
+          delta: { type: 'text_delta', text: `\n\n> ❌ **Erro:** O provedor primário falhou (${error.message}) e não há provedor reserva configurado.\n\n` } 
+        };
         throw error;
       }
     }
@@ -85,12 +100,22 @@ export async function getApiClient(requestedProvider, userId = null) {
       cfg = { ...cfg, ...sysRes.rows[0].config };
     }
 
-    // 2. Personal Config (profiles)
+    // 2. ENV VARS (Vercel) - Aplicado ANTES do Personal Config para servir de fallback global real
+    if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+      cfg.geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    }
+    if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;
+    if (process.env.OLLAMA_HOST) cfg.ollamaHost = process.env.OLLAMA_HOST;
+    if (process.env.DEFAULT_PROVIDER) cfg.defaultProvider = process.env.DEFAULT_PROVIDER;
+    if (process.env.GEMINI_MODEL) cfg.googleModel = process.env.GEMINI_MODEL;
+    if (process.env.OLLAMA_MODEL) cfg.ollamaModel = process.env.OLLAMA_MODEL;
+
+    // 3. Personal Config (profiles) - Tem PRIORIDADE MAXIMA
     if (userId) {
       const userRes = await query('SELECT config FROM profiles WHERE id = $1', [userId]);
       if (userRes.rows.length > 0 && userRes.rows[0].config) {
         const userCfg = userRes.rows[0].config;
-        // Merge over global, but only if the user actually set a key (not empty string)
         if (userCfg.geminiApiKey) cfg.geminiApiKey = userCfg.geminiApiKey;
         if (userCfg.anthropicApiKey) cfg.anthropicApiKey = userCfg.anthropicApiKey;
         if (userCfg.openaiApiKey) cfg.openaiApiKey = userCfg.openaiApiKey;
@@ -100,17 +125,6 @@ export async function getApiClient(requestedProvider, userId = null) {
   } catch (err) {
     console.warn('[DB_CONFIG_WARN] Failed to load config from DB:', err.message);
   }
-
-  // ENV VARS sempre tem prioridade (Vercel)
-  if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
-    cfg.geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-  }
-  if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
-  if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;
-  if (process.env.OLLAMA_HOST) cfg.ollamaHost = process.env.OLLAMA_HOST;
-  if (process.env.DEFAULT_PROVIDER) cfg.defaultProvider = process.env.DEFAULT_PROVIDER;
-  if (process.env.GEMINI_MODEL) cfg.googleModel = process.env.GEMINI_MODEL;
-  if (process.env.OLLAMA_MODEL) cfg.ollamaModel = process.env.OLLAMA_MODEL;
 
   const clients = {
     gemini: new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel }),
