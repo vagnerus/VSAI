@@ -136,12 +136,13 @@ export default async function handler(req, res) {
       return res.json({
         ...savedConfig,
         models: [
-          { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google', speed: 'ultra' },
+          { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google', speed: 'ultra' },
+          { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', provider: 'Google', speed: 'high' },
           { id: 'claude-3-5-sonnet', name: 'Claude 3.5 Sonnet', provider: 'Anthropic', speed: 'high' },
           { id: 'gpt-4o', name: 'GPT-4o', provider: 'OpenAI', speed: 'high' }
         ],
         settings: {
-          defaultModel: savedConfig.googleModel || 'gemini-1.5-flash',
+          defaultModel: savedConfig.googleModel || 'gemini-2.5-flash',
           maxTokens: 4096,
           safetyMode: 'enterprise'
         }

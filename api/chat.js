@@ -228,7 +228,9 @@ export default async function handler(req, res) {
       let toolCalls = [];
       let stopReason = 'end_turn';
 
-      send({ type: 'stream', text: `\n[DEBUG] Iniciando provedor: ${activeModel}\n` });
+      const debugStart = `\n[DEBUG] Iniciando provedor: ${activeModel}\n`;
+      assistantContent += debugStart;
+      send({ type: 'stream', text: debugStart });
 
       try {
         for await (const event of stream) {
@@ -253,11 +255,15 @@ export default async function handler(req, res) {
           }
         }
       } catch (streamError) {
-        send({ type: 'stream', text: `\n\n[DEBUG ERROR] Falha no stream: ${streamError.message}\n` });
+        const debugErr = `\n\n[DEBUG ERROR] Falha no stream: ${streamError.message}\n`;
+        assistantContent += debugErr;
+        send({ type: 'stream', text: debugErr });
         throw streamError;
       }
 
-      send({ type: 'stream', text: `\n[DEBUG] Stream concluído. Bytes recebidos: ${assistantContent.length}\n` });
+      const debugEnd = `\n[DEBUG] Stream concluído. Bytes recebidos: ${assistantContent.length}\n`;
+      assistantContent += debugEnd;
+      send({ type: 'stream', text: debugEnd });
 
       const parsedCalls = toolCalls.map(tc => {
         try { return { ...tc, input: JSON.parse(tc.input) }; } catch { return { ...tc, input: {} }; }

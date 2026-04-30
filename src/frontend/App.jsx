@@ -1751,9 +1751,10 @@ function ProjectsPage({ onStartChat }) {
 
   const load = () => {
     api('/projects').then(data => {
-      setProjects(data.projects || []);
+      const projectData = data || [];
+      setProjects(projectData);
       if (selectedProject) {
-        const updated = (data.projects || []).find(p => p.id === selectedProject.id);
+        const updated = projectData.find(p => p.id === selectedProject.id);
         if (updated) setSelectedProject(updated);
       }
     });
@@ -1762,10 +1763,14 @@ function ProjectsPage({ onStartChat }) {
   const createProject = async (e) => {
     e?.preventDefault();
     if (!name.trim()) return;
-    await api('/projects', { method: 'POST', body: { name, description: desc } });
-    setName('');
-    setDesc('');
-    load();
+    const result = await api('/projects', { method: 'POST', body: { name, description: desc } });
+    if (result.error) {
+      alert(`Falha ao criar o projeto: ${result.error}`);
+    } else {
+      setName('');
+      setDesc('');
+      load();
+    }
   };
 
   const selectProject = (p) => {
@@ -2145,9 +2150,10 @@ function SettingsPage() {
                 value={config.googleModel}
                 onChange={e => setConfig({ ...config, googleModel: e.target.value })}
               >
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Mais Rápido)</option>
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash (Novo Padrão)</option>
+                <option value="gemini-2.0-flash">Gemini 2.0 Flash (Rápido)</option>
                 <option value="gemini-1.5-pro">Gemini 1.5 Pro (Mais Inteligente)</option>
-                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Padrão Grátis)</option>
+                <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legado)</option>
               </select>
             </div>
           </div>
