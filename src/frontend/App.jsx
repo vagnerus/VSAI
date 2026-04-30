@@ -65,6 +65,34 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// ─── API Helper (with auth token) ────────────────────────────
+async function api(path, options = {}) {
+  let token = null;
+  try {
+    token = localStorage.getItem('nexus_access_token');
+  } catch (e) { /* localStorage not available */ }
+
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      console.warn(`[API_ERROR] ${path}:`, errorData);
+      return { stats: { apiConfigured: false }, error: errorData.error };
+    }
+    return res.json();
+  } catch (err) {
+    console.error(`[API_FETCH_CRITICAL] ${path}:`, err);
+    return { stats: { apiConfigured: false }, error: err.message };
+  }
+}
+
 // ─── Markdown Parser (enhanced Claude-like) ─────────────────
 function parseMarkdown(text) {
   if (!text) return '';
@@ -108,6 +136,8 @@ function parseMarkdown(text) {
     })
     // Blockquotes
     .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+    // Links
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
     // Line breaks
     .replace(/\n/g, '<br/>');
 
@@ -155,7 +185,6 @@ const DynamicChart = React.memo(({ json }) => {
 
 /**
  * Memoized Message Bubble (Pillar 3: Performance)
- * Prevents re-rendering historical messages during chat streaming.
  */
 const MessageBubble = React.memo(({ message, onCopy }) => {
   const isAssistant = message.role === 'assistant';
@@ -184,58 +213,6 @@ const MessageBubble = React.memo(({ message, onCopy }) => {
     </div>
   );
 });
-
-// ─── API Helper (with auth token) ────────────────────────────
-async function api(path, options = {}) {
-  let token = null;
-  try {
-    token = localStorage.getItem('nexus_access_token');
-  } catch (e) { /* localStorage not available */ }
-
-  const headers = { 'Content-Type': 'application/json', ...options.headers };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-
-
-  try {
-    const res = await fetch(`${API_BASE}${path}`, {
-      ...options,
-      headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
-    });
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      console.warn(`[API_ERROR] ${path}:`, errorData);
-      return { stats: { apiConfigured: false }, error: errorData.error };
-    }
-    return res.json();
-  } catch (err) {
-    console.error(`[API_FETCH_CRITICAL] ${path}:`, err);
-    return { stats: { apiConfigured: false }, error: err.message };
-  }
-}
-
-// ─── Markdown Parser (enhanced Claude-like) ─────────────────
-// ═══════════════════════════════════════════════════════════════
-// Power Features: Dynamic Charts & Prompt Library
-// ═══════════════════════════════════════════════════════════════
-
-/**
- * @typedef {Object} ChartData
- * @property {string} name
- * @property {number} value
- */
-
-/**
- * @typedef {Object} ChartConfig
- * @property {string} type
- * @property {string} title
- * @property {ChartData[]} data
- */
-
-/**
- * DynamicChart Component (Pillar 3: Performance & Pillar 4: Clean Code)
- * Memoized to prevent re-renders on every chat stream update.
- */
 
 function PromptLibrary({ onSelect }) {
   const categories = [
@@ -272,36 +249,6 @@ function PromptLibrary({ onSelect }) {
     </div>
   );
 }
-
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    // Blockquotes
-    .replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>')
-    // Horizontal rules
-    .replace(/^---$/gm, '<hr/>')
-    // Numbered lists
-    .replace(/^\d+\. (.+)$/gm, '<li class="ol-item">$1</li>')
-    // Unordered lists
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    // Line breaks
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/\n/g, '<br/>');
-
-  // Wrap list items
-  html = html.replace(/(<li>.*?<\/li>(\s*<br\/>)?)+/g, (match) => `<ul>${match.replace(/<br\/>/g, '')}</ul>`);
-
-  return `<p>${html}</p>`;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Workspace Explorer Component
-// ═══════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════
-// Agent Activity Feed Component
-// ═══════════════════════════════════════════════════════════════
 
 function ActivityFeed({ logs }) {
   const scrollRef = useRef();
@@ -1171,8 +1118,6 @@ function ChatPage({ projectId }) {
     });
   }, []);
 
-  // ... rest of state ...
-  
   // UI do Seletor Compacto
   const renderAISelector = () => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: '#f8fafc', padding: '6px 12px', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.02)' }}>
