@@ -967,7 +967,7 @@ function ChatPage({ projectId }) {
           if (!line.startsWith('data: ')) continue;
           try {
             const msg = JSON.parse(line.slice(6));
-
+            console.log('SSE Message Type:', msg.type, msg); // Added for debugging
             switch (msg.type) {
               case 'session':
                 setSessionId(msg.sessionId);
