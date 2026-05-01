@@ -13,6 +13,7 @@ export default function AdminLayout() {
   const [memories, setMemories] = useState([]);
   const [alphaActive, setAlphaActive] = useState(false);
   const [agents, setAgents] = useState([]);
+  const [newAgent, setNewAgent] = useState({ name: '', description: '', model: 'gemini-1.5-flash', system_prompt: '', icon: '🤖' });
   const [systemConfig, setSystemConfig] = useState({ global_prompt: '', maintenance_mode: false });
   const [showAgentBuilder, setShowAgentBuilder] = useState(false);
   const [loading, setLoading] = useState(true);
