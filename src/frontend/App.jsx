@@ -2964,7 +2964,7 @@ function DashboardShell({ onSignOut, userProfile }) {
           {renderPage()}
         </section>
       </main>
-      <AvatarWidget profile={userProfile} onUpdateProfile={updateProfile} />
+      <AvatarWidget profile={userProfile} onUpdateProfile={updateProfile} currentPage={currentPage} />
     </div>
   );
 }
