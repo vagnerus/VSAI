@@ -104,8 +104,8 @@ export async function getApiClient(requestedProvider, userId = null) {
     if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
       cfg.geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
     } else {
-      // B12 Fix: Updated to the most recent working key found in .env
-      cfg.geminiApiKey = 'AIzaSyBEveF4TEVwId_qDiehsy9FBY34-K0Gw44'; 
+      // B12 Fix: Updated to the most recent working key
+      cfg.geminiApiKey = 'AIzaSyARXN7K4LXo0ij34VUGtrHN-_GILW-oDfM'; 
     }
     if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;

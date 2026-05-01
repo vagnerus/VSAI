@@ -10,7 +10,7 @@
 export class GeminiClient {
   constructor(config = {}) {
     this.apiKey = config.apiKey || '';
-    this.defaultModel = config.model || 'gemini-1.5-flash';
+    this.defaultModel = config.model || 'gemini-2.5-flash';
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
     this.maxRetries = config.maxRetries || 3;
 

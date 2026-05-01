@@ -761,7 +761,9 @@ function ChatPage({ projectId }) {
   const [usage, setUsage] = useState(null);
   const [selectedModel, setSelectedModel] = useState('gemini-2.5-flash');
   const [selectedProvider, setSelectedProvider] = useState('gemini');
-  const [chatSettings, setChatSettings] = useState({});
+  const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096, edgePriority: 'auto' });
+  const [showSettings, setShowSettings] = useState(false);
+  const [configuredProviders, setConfiguredProviders] = useState({ gemini: true, anthropic: false, openai: false });
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [agentLogs, setAgentLogs] = useState([]);
@@ -1103,10 +1105,7 @@ function ChatPage({ projectId }) {
     }
   };
 
-  const [selectedProvider, setSelectedProvider] = useState('gemini');
-  const [chatSettings, setChatSettings] = useState({ temperature: 0.7, topP: 0.9, maxTokens: 4096, edgePriority: 'auto' });
-  const [showSettings, setShowSettings] = useState(false);
-  const [configuredProviders, setConfiguredProviders] = useState({ gemini: true, anthropic: false, openai: false });
+  // selectedProvider, chatSettings, showSettings, configuredProviders — declared at top of ChatPage
 
   useEffect(() => {
     api('/config').then(data => {

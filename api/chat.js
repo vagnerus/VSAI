@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     }
 
     const activeProvider = useEdge ? 'local' : (selectedProvider || 'gemini');
-    let activeModel = useEdge ? 'llama3:8b' : (selectedModel || 'gemini-1.5-flash');
+    let activeModel = useEdge ? 'llama3:8b' : (selectedModel || 'gemini-2.5-flash');
     let activeSystemPrompt = '';
 
     if (!content) return res.status(400).json({ error: 'content is required' });
