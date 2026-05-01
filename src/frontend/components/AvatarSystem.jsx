@@ -2,6 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Motores Sensoriais ──────────────────────────────────────
+// ─── Lógica de Nível RPG ────────────────────────────────────
+const getAvatarRank = (xp) => {
+  const level = Math.floor((xp || 0) / 100) + 1;
+  if (level < 5) return { title: 'IA Aprendiz', level, color: '#6ee7b7' };
+  if (level < 10) return { title: 'IA Sábia', level, color: '#3b82f6' };
+  return { title: 'Entidade Oráculo', level, color: '#f59e0b' };
+};
+
 const AudioFX = {
   ctx: null, enabled: true,
   init() {
@@ -23,6 +31,7 @@ const AudioFX = {
   error() { this.init(); this.playTone(150, 'sawtooth', 0.2, 0.2); },
   levelUp() { this.init(); [523, 659, 783, 1046].forEach((f, i) => setTimeout(() => this.playTone(f, 'triangle', 0.2, 0.2), i * 100)); }
 };
+
 
 // ─── Sistema de Catálogo (150+ Itens) ────────────────────────
 const CATEGORIES = [
@@ -65,87 +74,63 @@ const getItemsForCategory = (catId) => {
   return items;
 };
 
-// ─── Motor de Renderização SVG (Character Creator) ──────────
+// ─── Motor de Renderização Realista (Holograma 3D) ──────────
 const AvatarCharacter = ({ config, lookRotation, isAsleep, emotion }) => {
   const outfit = config.outfit || { acessorio: 1, camisa: 1, calca: 1, tenis: 1, blusa: 1 };
   
-  const getStyle = (cat, id) => {
-    const items = getItemsForCategory(cat);
-    return items.find(it => it.id === id) || items[0];
-  };
-
-  const styles = {
-    head: getStyle('acessorio', outfit.acessorio),
-    body: getStyle('camisa', outfit.camisa),
-    legs: getStyle('calca', outfit.calca),
-    feet: getStyle('tenis', outfit.tenis),
-    outer: getStyle('blusa', outfit.blusa)
-  };
-
+  // Imagem Realista Gerada
+  const baseImg = "https://images.unsplash.com/photo-1675271591211-126ad94e495d?q=80&w=2000&auto=format&fit=crop"; // Fallback Realista
+  
   return (
-    <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%', filter: isAsleep ? 'grayscale(0.8) opacity(0.5)' : 'none' }}>
-      <defs>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
-          <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
-        </filter>
-        {Object.entries(styles).map(([key, item]) => (
-          item.pattern === 'gradient' && (
-            <linearGradient key={key} id={`grad-${key}`} x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor={item.color.match(/#[0-9a-f]{3,6}/gi)?.[0] || '#8b5cf6'} />
-              <stop offset="100%" stopColor={item.color.match(/#[0-9a-f]{3,6}/gi)?.[1] || '#ec4899'} />
-            </linearGradient>
-          )
-        ))}
-      </defs>
-
-      <g transform={`rotate(${lookRotation.y * 0.5}, 100, 100) translate(0, ${isAsleep ? 20 : 0})`} style={{ transition: 'transform 0.2s' }}>
-        {/* Pernas / Calça */}
-        <rect x="75" y="130" width="20" height="40" rx="5" fill={styles.legs.pattern === 'solid' ? styles.legs.color : `url(#grad-legs)`} />
-        <rect x="105" y="130" width="20" height="40" rx="5" fill={styles.legs.pattern === 'solid' ? styles.legs.color : `url(#grad-legs)`} />
+    <div style={{ position: 'relative', width: '100%', height: '100%', perspective: '1000px' }}>
+      <motion.div 
+        animate={{ 
+          rotateX: lookRotation.x, rotateY: lookRotation.y,
+          y: isAsleep ? 40 : 0,
+          scale: emotion === 'happy' ? 1.1 : 1
+        }}
+        style={{ 
+          width: '100%', height: '100%', position: 'relative', transformStyle: 'preserve-3d',
+          filter: isAsleep ? 'grayscale(1) brightness(0.5)' : 'none'
+        }}
+      >
+        {/* Camada de Fundo (Aura de Profundidade) */}
+        <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, ${config.bodyColor}33 0%, transparent 70%)`, zIndex: -1 }}></div>
         
-        {/* Pés / Tênis */}
-        <rect x="70" y="165" width="25" height="15" rx="4" fill={styles.feet.pattern === 'solid' ? styles.feet.color : `url(#grad-feet)`} />
-        <rect x="105" y="165" width="25" height="15" rx="4" fill={styles.feet.pattern === 'solid' ? styles.feet.color : `url(#grad-feet)`} />
+        {/* Imagem Principal (Realistic Render) */}
+        <img 
+          src={baseImg} 
+          style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${config.bodyColor}44`, boxShadow: `0 0 50px ${config.bodyColor}22` }} 
+          alt="Avatar" 
+        />
 
-        {/* Tronco / Camisa */}
-        <rect x="65" y="70" width="70" height="70" rx="10" fill={styles.body.pattern === 'solid' ? styles.body.color : `url(#grad-body)`} />
-        
-        {/* Blusa / Casaco (Sobreposição) */}
-        {outfit.blusa > 1 && (
-          <path d="M60,70 L140,70 L140,140 L120,140 L120,85 L80,85 L80,140 L60,140 Z" fill={styles.outer.pattern === 'solid' ? styles.outer.color : `url(#grad-outer)`} opacity="0.9" />
+        {/* Overlay de Customização (Simulação de Roupas/Cores) */}
+        <div style={{ 
+          position: 'absolute', inset: 0, borderRadius: '50%', 
+          background: `linear-gradient(135deg, ${config.bodyColor}22 0%, transparent 50%, rgba(255,255,255,0.1) 100%)`,
+          mixBlendMode: 'overlay', pointerEvents: 'none' 
+        }}></div>
+
+        {/* Efeito de Vidro/Reflexo Dinâmico */}
+        <div style={{ 
+          position: 'absolute', inset: 0, borderRadius: '50%', 
+          background: `radial-gradient(circle at ${50 + lookRotation.y}% ${50 - lookRotation.x}%, rgba(255,255,255,0.4) 0%, transparent 60%)`,
+          pointerEvents: 'none' 
+        }}></div>
+
+        {/* Scanner de Dados (Efeito Sci-Fi) */}
+        {!isAsleep && (
+          <motion.div 
+            animate={{ top: ['0%', '100%', '0%'] }} 
+            transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+            style={{ position: 'absolute', left: 0, right: 0, height: '2px', background: 'rgba(0,255,255,0.3)', boxShadow: '0 0 10px #0ff', zIndex: 5, pointerEvents: 'none' }} 
+          />
         )}
-
-        {/* Braços */}
-        <motion.rect animate={{ rotate: emotion === 'happy' ? -40 : 0 }} style={{ originX: '70px', originY: '80px' }} x="45" y="75" width="15" height="50" rx="7" fill="#ffdbac" />
-        <motion.rect animate={{ rotate: emotion === 'happy' ? 40 : 0 }} style={{ originX: '130px', originY: '80px' }} x="140" y="75" width="15" height="50" rx="7" fill="#ffdbac" />
-
-        {/* Cabeça */}
-        <circle cx="100" cy="45" r="30" fill="#ffdbac" />
-        
-        {/* Rosto / Emoções */}
-        <g transform={`translate(${lookRotation.y * 0.1}, ${lookRotation.x * 0.1})`}>
-          {isAsleep ? (
-             <g stroke="#000" strokeWidth="2" fill="none">
-               <path d="M85,45 Q90,50 95,45" /><path d="M105,45 Q110,50 115,45" />
-             </g>
-          ) : (
-             <>
-               <circle cx="90" cy="45" r="3" fill="#000" />
-               <circle cx="110" cy="45" r="3" fill="#000" />
-               <path d={emotion === 'happy' ? "M85,60 Q100,75 115,60" : "M90,65 Q100,65 110,65"} stroke="#000" strokeWidth="2" fill="none" />
-             </>
-          )}
-        </g>
-
-        {/* Acessório Cabeça */}
-        {outfit.acessorio > 1 && (
-          <path d="M70,30 Q100,10 130,30" stroke={styles.head.color} strokeWidth="8" fill="none" filter="url(#glow)" />
-        )}
-      </g>
-    </svg>
+      </motion.div>
+    </div>
   );
 };
+
 
 // ─── Estúdio de Personalização Massiva ──────────────────────
 function AvatarStudio({ config, onClose, onSave, avatarXP }) {
