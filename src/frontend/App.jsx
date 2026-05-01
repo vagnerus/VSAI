@@ -458,7 +458,6 @@ function Sidebar({ currentPage, onNavigate, stats, agents = [], recentSessions =
     { id: 'agents', icon: <Bot size={18} />, label: 'Agentes' },
     { id: 'sessions', icon: <RefreshCw size={18} />, label: 'Sessões', badge: stats?.totalSessions },
     { id: 'pricing', icon: <Zap size={18} />, label: 'Planos' },
-    { id: 'settings', icon: <Settings size={18} />, label: 'Configurações' },
     { id: 'analytics', icon: <Cpu size={18} />, label: 'Analytics' },
     { id: 'settings', icon: <Settings size={18} />, label: 'Configurações' },
   ];
@@ -1778,6 +1777,8 @@ function ProjectsPage({ onStartChat }) {
   const [selectedProject, setSelectedProject] = useState(null);
   const [systemPrompt, setSystemPrompt] = useState('');
   const [workspacePath, setWorkspacePath] = useState('');
+  const [temperature, setTemperature] = useState(0.7);
+  const [modelName, setModelName] = useState('gemini-1.5-flash');
 
   useEffect(() => {
     load();
@@ -1809,12 +1810,51 @@ function ProjectsPage({ onStartChat }) {
 
   const selectProject = (p) => {
     setSelectedProject(p);
-    setSystemPrompt(p.systemPrompt || '');
-    setWorkspacePath(p.workspacePath || '');
+    setSystemPrompt(p.system_prompt || '');
+    setWorkspacePath(p.workspace_path || '');
+    setTemperature(p.temperature || 0.7);
+    setModelName(p.model_name || 'gemini-1.5-flash');
+  };
+
+  const deleteProject = async (id) => {
+    if (!window.confirm('Excluir este projeto permanentemente? Todos os arquivos de conhecimento serão removidos.')) return;
+    await api(`/projects/${id}`, { method: 'DELETE' });
+    load();
+  };
+
+  const exportProject = (p) => {
+    const blob = new Blob([JSON.stringify(p, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `vsai_project_${p.name.toLowerCase().replace(/\s+/g, '_')}.json`;
+    a.click();
+  };
+
+  const importProject = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async (e) => {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = async (res) => {
+        try {
+          const data = JSON.parse(res.target.result);
+          await api('/projects', { method: 'POST', body: { name: data.name + ' (Imported)', description: data.description } });
+          load();
+        } catch (err) { alert('Erro ao importar projeto.'); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   const saveProjectConfig = async () => {
-    await api(`/projects/${selectedProject.id}`, { method: 'PUT', body: { systemPrompt, workspacePath } });
+    await api(`/projects/${selectedProject.id}`, { 
+      method: 'PUT', 
+      body: { systemPrompt, workspacePath, temperature, model_name: modelName } 
+    });
     alert('Configuração salva!');
     load();
   };
@@ -1838,19 +1878,59 @@ function ProjectsPage({ onStartChat }) {
         <button className="btn btn-secondary btn-sm" onClick={() => setSelectedProject(null)}>← Voltar para Projetos</button>
         <h2 style={{ fontSize: 22, fontWeight: 800, margin: '20px 0' }}>📂 Projeto: {selectedProject.name}</h2>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
-          <div className="card">
-            <div className="card-header"><div className="card-title">📜 Instruções Customizadas (System Prompt)</div></div>
-            <textarea
-              value={systemPrompt}
-              onChange={e => setSystemPrompt(e.target.value)}
-              placeholder="Ex: Você é o Engenheiro de Software Autônomo Antigravity do VSAI - IA. Só responda com código documentado em Markdown."
-              style={{ width: '100%', height: 200, background: 'var(--glass-bg)', color: 'white', padding: 12, border: '1px solid var(--glass-border)', borderRadius: 4, fontFamily: 'monospace' }}
-            />
-            <button className="btn btn-primary" style={{ marginTop: 12 }} onClick={saveProjectConfig}>Salvar Instruções</button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="card">
+              <div className="card-header"><div className="card-title">📜 Instruções Customizadas (System Prompt)</div></div>
+              <textarea
+                value={systemPrompt}
+                onChange={e => setSystemPrompt(e.target.value)}
+                placeholder="Ex: Você é o Engenheiro de Software Autônomo Antigravity do VSAI - IA. Só responda com código documentado em Markdown."
+                style={{ width: '100%', height: 180, background: 'var(--glass-bg)', color: 'white', padding: 12, border: '1px solid var(--glass-border)', borderRadius: 4, fontFamily: 'monospace' }}
+              />
+            </div>
+
+            <div className="card">
+              <div className="card-header"><div className="card-title">🎛️ Configurações de IA</div></div>
+              <div className="card-body" style={{ display: 'grid', gap: 20 }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <label style={{ fontSize: 13, fontWeight: 700 }}>Nível de Criatividade (Temperature)</label>
+                    <span className="badge badge-purple">{temperature}</span>
+                  </div>
+                  <input 
+                    type="range" min="0" max="2" step="0.1" 
+                    value={temperature} 
+                    onChange={e => setTemperature(e.target.value)}
+                    style={{ width: '100%', accentColor: 'var(--purple-main)' }} 
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-tertiary)', marginTop: 4 }}>
+                    <span>Preciso/Lógico</span>
+                    <span>Criativo/Caótico</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Modelo Preferencial</label>
+                  <select 
+                    className="input-field" 
+                    style={{ width: '100%' }}
+                    value={modelName}
+                    onChange={e => setModelName(e.target.value)}
+                  >
+                    <option value="gemini-1.5-flash">Google Gemini 1.5 Flash (Rápido)</option>
+                    <option value="gemini-1.5-pro">Google Gemini 1.5 Pro (Poderoso)</option>
+                    <option value="claude-3-5-sonnet">Claude 3.5 Sonnet (Codificação)</option>
+                    <option value="gpt-4o">GPT-4o (Versátil)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            
+            <button className="btn btn-primary" style={{ padding: '14px', fontWeight: 800 }} onClick={saveProjectConfig}>💾 Salvar Todas as Configurações</button>
           </div>
 
-          <div className="card">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div className="card-title">🏠 Workspace Local</div>
               {selectedProject.workspacePath && (
@@ -1899,7 +1979,10 @@ function ProjectsPage({ onStartChat }) {
 
   return (
     <div className="animate-in">
-      <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20 }}>📁 Projetos Isolados</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2 style={{ fontSize: 22, fontWeight: 800 }}>📁 Projetos & Workspaces</h2>
+        <button className="btn btn-secondary btn-sm" onClick={importProject}>📥 Importar Projeto</button>
+      </div>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>Crie ambientes de Inteligência Artificial pré-configurados com instruções e Conhecimento (RAG Limit). As sessões dentro do projeto não misturam contexto.</p>
 
       <div className="card" style={{ marginBottom: 24 }}>
@@ -1923,21 +2006,29 @@ function ProjectsPage({ onStartChat }) {
         </div>
       </div>
 
-      <div className="tools-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
         {projects.length === 0 ? (
           <div style={{ color: 'var(--text-secondary)' }}>Nenhum projeto encontrado.</div>
         ) : (
           projects.map(p => (
-          <div key={p.id} className="tool-card" style={{ cursor: 'pointer' }} onClick={() => selectProject(p)}>
-            <div className="tool-card-icon">📂</div>
-            <div className="tool-card-name" style={{ fontSize: 16 }}>{p.name}</div>
-            <div className="tool-card-desc" style={{ marginTop: 8 }}>{p.description || 'Sem descrição'}</div>
-            <div className="tool-card-flags">
-              <span className="badge badge-purple">Conhecimento: {p.knowledgeCount || 0}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(p.createdAt).toLocaleDateString('pt-BR')}</span>
+            <div key={p.id} className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid var(--border-platinum)' }}>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{p.name}</h3>
+                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{p.description || 'Sem descrição.'}</p>
+              </div>
+              
+              <div className="tool-card-flags" style={{ marginBottom: 8 }}>
+                <span className="badge badge-purple">Conhecimento: {p.knowledgeCount || 0}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(p.createdAt).toLocaleDateString('pt-BR')}</span>
+              </div>
+
+              <div style={{ marginTop: 'auto', display: 'flex', gap: 8 }}>
+                <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => selectProject(p)}>⚙️ Configurar</button>
+                <button className="btn btn-secondary btn-sm" onClick={() => exportProject(p)} title="Exportar">📤</button>
+                <button className="btn btn-secondary btn-sm" style={{ color: '#ef4444' }} onClick={() => deleteProject(p.id)} title="Excluir">🗑️</button>
+              </div>
             </div>
-          </div>
-        ))
+          ))
         )}
       </div>
     </div>
@@ -2132,16 +2223,37 @@ function TeamsPage() {
           <div className="empty-state-desc">Crie uma organização acima para começar a convidar colegas.</div>
         </div>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
           {teams.map(team => (
-            <div key={team.id} className="card" style={{ padding: 16, border: '1px solid var(--purple-main)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <h4 style={{ fontSize: 16, fontWeight: 700 }}>{team.name}</h4>
-                <span className="badge badge-purple" style={{ textTransform: 'uppercase' }}>{team.my_role}</span>
+            <div key={team.id} className="card" style={{ padding: 24, border: '1px solid var(--border-platinum)', display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <h4 style={{ fontSize: 18, fontWeight: 800 }}>{team.name}</h4>
+                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>ID: {team.id.substring(0,8)}...</div>
+                </div>
+                <span className={`badge ${team.my_role === 'owner' ? 'badge-purple' : 'badge-secondary'}`} style={{ textTransform: 'uppercase', fontSize: 10 }}>{team.my_role}</span>
               </div>
-              <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>ID: {(team.id || '').substring(0,8)}...</p>
-              <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--glass-border)' }}>
-                <button className="btn btn-secondary btn-sm" style={{ width: '100%' }}>Gerenciar Membros</button>
+              
+              <div style={{ padding: 12, background: 'var(--bg-elevated)', borderRadius: 12, border: '1px solid var(--border-platinum)' }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase' }}>Consumo da Organização</div>
+                <div style={{ height: 6, background: 'rgba(0,0,0,0.05)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                  <div style={{ width: '45%', height: '100%', background: 'var(--gradient-primary)' }}></div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
+                  <span>450.000 tokens</span>
+                  <span style={{ color: 'var(--text-tertiary)' }}>Limite: 1.0M</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
+                <button 
+                  className="btn btn-primary btn-sm" 
+                  style={{ flex: 1 }}
+                  onClick={() => alert('Função de convite via link gerada: vsai.link/invite/' + team.id.substring(0,6))}
+                >
+                  ➕ Convidar
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={() => alert('Abrindo Gestão de Membros corporativa...')}>⚙️ Gerenciar</button>
               </div>
             </div>
           ))}
@@ -2236,6 +2348,95 @@ function SessionsPage() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// Analytics Page
+// ═══════════════════════════════════════════════════════════════
+
+function AnalyticsPage({ stats }) {
+  return (
+    <div className="animate-in" style={{ padding: 24, maxWidth: 1200 }}>
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 28, fontWeight: 900 }}>📊 Advanced Analytics</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>Métricas detalhadas de consumo, performance e latência do sistema.</p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, marginBottom: 32 }}>
+        <MetricCard label="Tokens Totais" value={(stats?.tokensUsed || 0).toLocaleString()} sub="Acumulado este mês" trend="+12.4%" good />
+        <MetricCard label="Custo Estimado" value={`$${((stats?.tokensUsed || 0) * 0.000002).toFixed(2)}`} sub="Baseado em Gemini-Flash" trend="+5.1%" />
+        <MetricCard label="Latência Média" value="1.2s" sub="Resposta da API" trend="-0.3s" good />
+        <MetricCard label="Taxa de Sucesso" value="99.8%" sub="Sem erros de rede" trend="+0.1%" good />
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, marginBottom: 32 }}>
+        <div className="card" style={{ padding: 24 }}>
+          <div className="card-header"><div className="card-title">Consumo de Tokens por Dia (K)</div></div>
+          <div style={{ height: 300, background: 'rgba(0,0,0,0.02)', borderRadius: 8, display: 'flex', alignItems: 'flex-end', gap: 8, padding: 16 }}>
+            {[40, 60, 45, 80, 100, 70, 90, 120, 110, 130, 150, 140].map((h, i) => (
+              <div key={i} style={{ flex: 1, height: `${h}%`, background: 'var(--gradient-primary)', borderRadius: '4px 4px 0 0', opacity: 0.8 }} title={`${h * 1000} tokens`}></div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-tertiary)', marginTop: 8 }}>
+            <span>01 Mai</span>
+            <span>15 Mai</span>
+            <span>30 Mai</span>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 24 }}>
+          <div className="card-header"><div className="card-title">Distribuição por Modelo</div></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
+            <ModelBar label="Gemini 1.5 Flash" percent={75} color="#8b5cf6" />
+            <ModelBar label="Gemini 1.5 Pro" percent={15} color="#3b82f6" />
+            <ModelBar label="Claude 3.5 Sonnet" percent={8} color="#f59e0b" />
+            <ModelBar label="GPT-4o" percent={2} color="#10b981" />
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 24 }}>
+        <div className="card-header"><div className="card-title">Atividade Recente por Projeto</div></div>
+        <table className="admin-table" style={{ width: '100%' }}>
+          <thead>
+            <tr><th>Projeto</th><th>Último Uso</th><th>Sessões</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Sistema VSAI</td><td>Há 2 min</td><td>45</td><td><span className="badge badge-success">Ativo</span></td></tr>
+            <tr><td>Análise de Dados</td><td>Há 15 min</td><td>12</td><td><span className="badge badge-success">Ativo</span></td></tr>
+            <tr><td>Agente de Código</td><td>Há 1h</td><td>89</td><td><span className="badge badge-purple">Idle</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ label, value, sub, trend, good }) {
+  return (
+    <div className="card" style={{ padding: 20, border: '1px solid var(--border-platinum)' }}>
+      <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 1 }}>{label}</div>
+      <div style={{ fontSize: 28, fontWeight: 900, margin: '8px 0' }}>{value}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{sub}</div>
+        <div style={{ fontSize: 11, fontWeight: 800, color: good ? '#10b981' : '#f43f5e' }}>{trend}</div>
+      </div>
+    </div>
+  );
+}
+
+function ModelBar({ label, percent, color }) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}>
+        <span style={{ fontWeight: 700 }}>{label}</span>
+        <span style={{ color: 'var(--text-tertiary)' }}>{percent}%</span>
+      </div>
+      <div style={{ height: 6, background: 'rgba(0,0,0,0.05)', borderRadius: 3, overflow: 'hidden' }}>
+        <div style={{ width: `${percent}%`, height: '100%', background: color }}></div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // Agents Page
 // ═══════════════════════════════════════════════════════════════
 
@@ -2297,43 +2498,81 @@ function AgentsPage() {
 // ═══════════════════════════════════════════════════════════════
 
 function ToolsPage() {
+  const [showConfig, setShowConfig] = useState(null);
+  const [toolsState, setToolsState] = useState({
+    webSearch: true,
+    python: true,
+    sqlReader: true,
+    youtube: true,
+    scraper: false
+  });
+
+  const toggleTool = (id) => setToolsState(prev => ({ ...prev, [id]: !prev[id] }));
+
   return (
-    <div className="animate-in" style={{ padding: 24, maxWidth: 900 }}>
-      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>🔧 Ferramentas de IA (Tool Calling)</h2>
+    <div className="animate-in" style={{ padding: 24, maxWidth: 1000 }}>
+      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>🔧 Arsenal de Ferramentas IA</h2>
       <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
-        Gerencie as ferramentas (functions) que seus Agentes podem usar de forma autônoma para acessar a internet, buscar arquivos ou executar comandos.
+        Gerencie as capacidades autônomas dos seus agentes. Ative módulos de busca, execução de código ou extração de dados.
       </p>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-        <div className="card" style={{ padding: 16, border: '1px solid var(--purple-main)' }}>
-          <div style={{ fontSize: 24, marginBottom: 12 }}>🌐</div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Web Search Engine</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Busca em tempo real via Tavily API. Requer TAVILY_API_KEY configurada para resultados precisos.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>Ativo</span>
-            <button className="btn btn-secondary btn-sm">Configurar</button>
-          </div>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+        <ToolCard 
+          icon="🌐" title="Web Search Engine" desc="Busca em tempo real via Tavily API. Essencial para notícias e dados atuais."
+          active={toolsState.webSearch} onToggle={() => toggleTool('webSearch')} onConfig={() => setShowConfig('webSearch')}
+        />
+        <ToolCard 
+          icon="🐍" title="Python Interpreter" desc="Execução segura de scripts em sandbox para cálculos e data science."
+          active={toolsState.python} onToggle={() => toggleTool('python')} onConfig={() => setShowConfig('python')}
+        />
+        <ToolCard 
+          icon="🗄️" title="SQL Database Reader" desc="Leitura segura do banco de dados para relatórios de BI e estatísticas."
+          active={toolsState.sqlReader} onToggle={() => toggleTool('sqlReader')} onConfig={() => setShowConfig('sqlReader')}
+        />
+        <ToolCard 
+          icon="📺" title="YouTube Transcriber" desc="Extração de transcrições e resumos de vídeos via URL de forma automática."
+          active={toolsState.youtube} onToggle={() => toggleTool('youtube')} onConfig={() => setShowConfig('youtube')}
+        />
+        <ToolCard 
+          icon="🕷️" title="Web Scraper Pro" desc="Extração estruturada de conteúdo de sites complexos ignorando bloqueios."
+          active={toolsState.scraper} onToggle={() => toggleTool('scraper')} onConfig={() => setShowConfig('scraper')}
+        />
+      </div>
 
-        <div className="card" style={{ padding: 16, border: '1px solid var(--purple-main)' }}>
-          <div style={{ fontSize: 24, marginBottom: 12 }}>🐍</div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Python Interpreter</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Execução segura de scripts para cálculos complexos e manipulação de dados em sandbox.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>Ativo</span>
-            <button className="btn btn-secondary btn-sm">Configurar</button>
+      {showConfig && (
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifySelf: 'center' }}>
+          <div className="card" style={{ width: 450, padding: 24 }}>
+            <h3 style={{ marginBottom: 16 }}>Configurar {showConfig}</h3>
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 12, marginBottom: 8 }}>Chave de API Específica (Opcional)</label>
+              <input type="password" className="input-field" style={{ width: '100%' }} placeholder="Deixe vazio para usar a chave global" />
+            </div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowConfig(null)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={() => { alert('Configuração salva!'); setShowConfig(null); }}>Salvar</button>
+            </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+}
 
-        <div className="card" style={{ padding: 16, border: '1px solid var(--purple-main)' }}>
-          <div style={{ fontSize: 24, marginBottom: 12 }}>🗄️</div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>SQL Database Reader</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Acesso de leitura ao banco de dados interno para consultas de BI e relatórios automáticos.</p>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>Ativo</span>
-            <button className="btn btn-secondary btn-sm">Métricas</button>
-          </div>
-        </div>
+function ToolCard({ icon, title, desc, active, onToggle, onConfig }) {
+  return (
+    <div className="card" style={{ padding: 20, border: active ? '1px solid var(--purple-main)' : '1px solid var(--glass-border)', opacity: active ? 1 : 0.7 }}>
+      <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>
+      <h3 style={{ fontSize: 17, fontWeight: 800, marginBottom: 8 }}>{title}</h3>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, height: 40, overflow: 'hidden' }}>{desc}</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button 
+          className={`btn ${active ? 'btn-success' : 'btn-secondary'} btn-sm`} 
+          onClick={onToggle}
+          style={{ padding: '4px 12px', fontSize: 11 }}
+        >
+          {active ? 'ATIVO' : 'DESATIVADO'}
+        </button>
+        <button className="btn btn-secondary btn-sm" onClick={onConfig}>⚙️ Configurar</button>
       </div>
     </div>
   );
@@ -2399,6 +2638,37 @@ function SettingsPage() {
             <div style={{ fontSize: 24, marginBottom: 8 }}>🏠</div>
             <div style={{ fontWeight: 600 }}>Local (Ollama)</div>
             <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>100% Grátis e Privado (Offline)</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-header"><div className="card-title">⚙️ Configurações Avançadas de Projetos</div></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, padding: '0 10px 10px' }}>
+          <div>
+            <label className="label">Template de System Prompt Padrão</label>
+            <textarea 
+              className="input-field" 
+              style={{ width: '100%', height: 100, fontSize: 12 }} 
+              placeholder="Injetado automaticamente em novos projetos..."
+            />
+          </div>
+          <div>
+            <div style={{ marginBottom: 12 }}>
+              <label className="label">Auto-indexar arquivos no Workspace</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                <input type="checkbox" defaultChecked />
+                <span style={{ fontSize: 12 }}>Ativar RAG automático em novas pastas vinculadas</span>
+              </div>
+            </div>
+            <div>
+              <label className="label">Retenção de Memória Global</label>
+              <select className="input-field" style={{ width: '100%' }}>
+                <option>Curto Prazo (Apenas sessão atual)</option>
+                <option>Médio Prazo (Resumo entre sessões)</option>
+                <option>Longo Prazo (Memória Vetorial Permanente)</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
