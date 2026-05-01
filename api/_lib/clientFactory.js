@@ -100,6 +100,7 @@ export async function getApiClient(requestedProvider, userId = null) {
       cfg = { ...cfg, ...sysRes.rows[0].config };
     }
 
+    // Forçando atualização de deploy no Vercel
     // Hardcoded fallback keys — 15 keys = ~22,500 req/day (rotation automática)
     const fallbackGeminiKeys = [
       'AIzaSyARXN7K4LXo0ij34VUGtrHN-_GILW-oDfM',
