@@ -20,6 +20,10 @@ export default function AdminLayout() {
   const [syncProgress, setSyncProgress] = useState(0);
   const [swarmCommand, setSwarmCommand] = useState('');
   const [viewMode, setViewMode] = useState('list'); // 'list' or 'graph'
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [apiKeyPool, setApiKeyPool] = useState([]);
+  const [sqlQuery, setSqlQuery] = useState('SELECT * FROM profiles LIMIT 10');
+  const [sqlResult, setSqlResult] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { getAuthHeaders } = useAuth();
@@ -39,6 +43,8 @@ export default function AdminLayout() {
         database: `/admin/db?table=${dbTable}`,
         agents: '/agents',
         memory: '/admin/memory',
+        logs: '/admin?action=logs',
+        api_pool: '/admin?action=api_pool',
         settings: '/admin?action=settings'
       };
 
@@ -71,7 +77,9 @@ export default function AdminLayout() {
         if (data.systemVectors !== undefined) setStats(prev => ({ ...prev, systemVectors: data.systemVectors }));
       }
       else if (activeTab === 'plugins') setPlugins(data.plugins || []);
-      else if (activeTab === 'settings') setSystemConfig(data.settings || { global_prompt: '', maintenance_mode: false });
+       else if (activeTab === 'settings') setSystemConfig(data.settings || { global_prompt: '', maintenance_mode: false });
+      else if (activeTab === 'logs') setAuditLogs(data.logs || []);
+      else if (activeTab === 'api_pool') setApiKeyPool(data.pool || []);
     } catch (err) {
       console.error('[ADMIN_FETCH_ERROR]', err);
       setError(`Falha ao carregar dados: ${err.message}`);
@@ -319,6 +327,131 @@ export default function AdminLayout() {
       </div>
     );
   };
+
+  const renderAuditLogs = () => (
+    <div className="admin-panel-section animate-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3>📜 Logs de Auditoria (Real-time)</h3>
+        <button className="btn btn-secondary btn-sm" onClick={fetchData}>🔄 Atualizar</button>
+      </div>
+      <div className="admin-table-container">
+        <table className="admin-table">
+          <thead><tr><th>Data</th><th>Evento</th><th>Gravidade</th><th>Meta</th></tr></thead>
+          <tbody>
+            {auditLogs.map(log => (
+              <tr key={log.id}>
+                <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{new Date(log.created_at).toLocaleString()}</td>
+                <td style={{ fontWeight: 600 }}>{log.event}</td>
+                <td><span className={`badge ${log.severity === 'error' ? 'badge-danger' : 'badge-secondary'}`}>{log.severity}</span></td>
+                <td style={{ fontSize: 10, fontFamily: 'monospace' }}>{JSON.stringify(log.metadata)}</td>
+              </tr>
+            ))}
+            {auditLogs.length === 0 && <tr><td colSpan="4">Nenhum log encontrado.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const renderApiPool = () => (
+    <div className="admin-panel-section animate-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3>🔑 Pool de Chaves de API (Rotação Inteligente)</h3>
+        <button className="btn btn-primary btn-sm" onClick={() => {
+          const provider = prompt('Provedor (gemini/openai):', 'gemini');
+          const key = prompt('Chave API:');
+          if (provider && key) {
+            getAuthHeaders().then(h => {
+              fetch(`${API_BASE}/admin?action=api_pool`, {
+                method: 'POST',
+                headers: { ...h, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ provider, key })
+              }).then(() => fetchData());
+            });
+          }
+        }}>+ Adicionar Chave</button>
+      </div>
+      <div className="admin-table-container">
+        <table className="admin-table">
+          <thead><tr><th>Provedor</th><th>Key (Masked)</th><th>Status</th><th>Uso</th><th>Ações</th></tr></thead>
+          <tbody>
+            {apiKeyPool.map(k => (
+              <tr key={k.id}>
+                <td style={{ textTransform: 'uppercase', fontWeight: 800 }}>{k.provider}</td>
+                <td style={{ fontFamily: 'monospace' }}>{k.key.substring(0, 10)}...</td>
+                <td><span className={`badge ${k.status === 'active' ? 'badge-success' : 'badge-danger'}`}>{k.status}</span></td>
+                <td>{k.usage_count || 0} calls</td>
+                <td style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn btn-secondary btn-sm" onClick={() => {
+                    getAuthHeaders().then(h => {
+                      fetch(`${API_BASE}/admin?action=api_pool`, {
+                        method: 'PUT',
+                        headers: { ...h, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id: k.id, status: k.status === 'active' ? 'inactive' : 'active' })
+                      }).then(() => fetchData());
+                    });
+                  }}>Alternar</button>
+                  <button className="btn btn-danger btn-sm" style={{ color: 'red' }} onClick={() => {
+                    if (confirm('Excluir chave?')) {
+                      getAuthHeaders().then(h => {
+                        fetch(`${API_BASE}/admin?action=api_pool&id=${k.id}`, { method: 'DELETE', headers: h }).then(() => fetchData());
+                      });
+                    }
+                  }}>Remover</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
+  const runSqlQuery = async () => {
+    setLoading(true);
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/admin?action=sql`, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sql: sqlQuery })
+      });
+      const data = await res.json();
+      if (data.error) alert(data.error);
+      else setSqlResult(data.rows);
+    } catch (e) { alert('Erro na query'); }
+    finally { setLoading(false); }
+  };
+
+  const renderSqlConsole = () => (
+    <div className="admin-panel-section animate-in">
+      <h3>🚀 SQL Master Console (Read-Only)</h3>
+      <div style={{ marginTop: 16 }}>
+        <textarea 
+          className="admin-select" 
+          style={{ width: '100%', height: 100, fontFamily: 'monospace', marginBottom: 12, background: '#1e293b', color: '#60a5fa' }} 
+          value={sqlQuery}
+          onChange={e => setSqlQuery(e.target.value)}
+        />
+        <button className="btn btn-primary" onClick={runSqlQuery} disabled={loading}>EXECUTAR QUERY</button>
+      </div>
+      
+      {sqlResult && (
+        <div className="admin-table-container" style={{ marginTop: 24 }}>
+          <table className="admin-table">
+            <thead>
+              <tr>{Object.keys(sqlResult[0] || {}).map(k => <th key={k}>{k}</th>)}</tr>
+            </thead>
+            <tbody>
+              {sqlResult.map((r, i) => (
+                <tr key={i}>{Object.values(r).map((v, j) => <td key={j}>{typeof v === 'object' ? JSON.stringify(v) : String(v)}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
 
   const renderInfrastructure = () => (
     <div className="admin-panel-section animate-in" style={{ background: '#0f172a', color: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
@@ -739,6 +872,9 @@ export default function AdminLayout() {
       case 'memory': return renderMemoryTree();
       case 'infrastructure': return renderInfrastructure();
       case 'compliance': return renderCompliance();
+      case 'logs': return renderAuditLogs();
+      case 'api_pool': return renderApiPool();
+      case 'sql': return renderSqlConsole();
       case 'database': return renderDatabase();
       case 'omega': return renderOmega();
       case 'settings': return renderSettings();
@@ -754,9 +890,9 @@ export default function AdminLayout() {
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>VSAI - IA Alpha-1000</h2>
         </div>
         <nav className="admin-tabs">
-          {['dashboard', 'bi', 'users', 'agents', 'memory', 'infrastructure', 'compliance', 'omega', 'settings'].map(tab => (
+          {['dashboard', 'bi', 'users', 'agents', 'memory', 'infrastructure', 'compliance', 'logs', 'api_pool', 'sql', 'omega', 'settings'].map(tab => (
             <button key={tab} className={`admin-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-              {tab.toUpperCase()}
+              {tab.replace('_', ' ').toUpperCase()}
             </button>
           ))}
         </nav>

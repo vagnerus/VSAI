@@ -100,6 +100,54 @@ export default async function handler(req, res) {
       return res.status(200).json({ memories: data, systemVectors: parseInt(count[0].count, 10) || 0 });
     }
 
+    if (action === 'logs') {
+      await query('CREATE TABLE IF NOT EXISTS audit_logs (id SERIAL PRIMARY KEY, event TEXT NOT NULL, user_id UUID, severity VARCHAR(20), metadata JSONB, created_at TIMESTAMP DEFAULT NOW())').catch(() => {});
+      const { rows } = await query('SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 100');
+      return res.status(200).json({ logs: rows });
+    }
+
+    if (action === 'sql') {
+      if (req.method === 'POST') {
+        const { sql } = req.body;
+        const trimmedSql = sql.trim().toUpperCase();
+        if (!trimmedSql.startsWith('SELECT')) return res.status(403).json({ error: 'Apenas consultas SELECT são permitidas no console.' });
+        
+        // Bloqueio de palavras-chave perigosas
+        const forbidden = ['USERS', 'SECRETS', 'KEYS', 'PASSWORDS', 'SYSTEM_SETTINGS'];
+        if (forbidden.some(f => trimmedSql.includes(f))) return res.status(403).json({ error: 'Acesso a tabelas restritas negado.' });
+
+        const { rows } = await query(sql);
+        return res.status(200).json({ rows });
+      }
+    }
+
+    if (action === 'api_pool') {
+      await query('CREATE TABLE IF NOT EXISTS api_key_pool (id SERIAL PRIMARY KEY, provider VARCHAR(50), key TEXT NOT NULL, status VARCHAR(20) DEFAULT \'active\', usage_count INTEGER DEFAULT 0, last_used TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())').catch(() => {});
+      
+      if (req.method === 'GET') {
+        const { rows } = await query('SELECT * FROM api_key_pool ORDER BY created_at DESC');
+        return res.status(200).json({ pool: rows });
+      }
+      
+      if (req.method === 'POST') {
+        const { provider, key } = req.body;
+        await query('INSERT INTO api_key_pool (provider, key) VALUES ($1, $2)', [provider, key]);
+        return res.status(200).json({ success: true });
+      }
+
+      if (req.method === 'PUT') {
+        const { id, status } = req.body;
+        await query('UPDATE api_key_pool SET status = $1 WHERE id = $2', [status, id]);
+        return res.status(200).json({ success: true });
+      }
+
+      if (req.method === 'DELETE') {
+        const { id } = req.query;
+        await query('DELETE FROM api_key_pool WHERE id = $1', [id]);
+        return res.status(200).json({ success: true });
+      }
+    }
+
     if (action === 'settings') {
       if (req.method === 'GET') {
         const { rows } = await query('SELECT config FROM system_settings WHERE id = $1', ['main']).catch(() => ({ rows: [] }));

@@ -3,6 +3,7 @@ import { useAuth } from './providers/AuthProvider.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import AdminLayout from './pages/AdminLayout.jsx';
+import { AvatarWidget } from './components/AvatarSystem.jsx';
 import PricingPage from './pages/PricingPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
@@ -2002,6 +2003,18 @@ function AccountPage() {
             <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{profile.full_name || 'Usuário VSAI'}</h3>
             <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16 }}>{profile.email}</p>
             <div className="badge badge-purple" style={{ padding: '6px 16px', fontSize: 11 }}>PROXIMA ATUALIZAÇÃO: 01/06</div>
+            
+            <button 
+              className="btn btn-primary" 
+              style={{ width: '100%', marginTop: 24, background: 'var(--gradient-primary)', border: 'none', borderRadius: 16, padding: '12px', fontWeight: 800 }}
+              onClick={() => {
+                // Esse botão vai acionar o estúdio via widget ou estado global
+                const widgetMenu = document.querySelector('.avatar-draggable-wrapper');
+                if (widgetMenu) widgetMenu.click();
+              }}
+            >
+              🎨 Personalizar Avatar 3D
+            </button>
           </div>
 
           <div className="card" style={{ padding: 24, background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(139, 92, 246, 0.05))' }}>
@@ -2528,7 +2541,7 @@ function SettingsPage() {
 // ═══════════════════════════════════════════════════════════════
 
 function DashboardShell({ onSignOut, userProfile }) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, updateProfile } = useAuth();
   const [currentPage, setCurrentPage] = useState('dashboard');
   const [activeProjectId, setActiveProjectId] = useState(null);
   const [dashboardData, setDashboardData] = useState({ stats: {}, recentSessions: [] });
@@ -2629,6 +2642,7 @@ function DashboardShell({ onSignOut, userProfile }) {
           {renderPage()}
         </section>
       </main>
+      <AvatarWidget profile={userProfile} onUpdateProfile={updateProfile} />
     </div>
   );
 }

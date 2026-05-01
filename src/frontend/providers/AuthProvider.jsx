@@ -147,6 +147,39 @@ export function AuthProvider({ children }) {
     };
   };
 
+  const updateProfile = async (newProfileData) => {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/profile`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(newProfileData)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setProfile(data.profile);
+        localStorage.setItem('nexus_user', JSON.stringify(data.profile));
+        return data.profile;
+      }
+      throw new Error(data.error || 'Failed to update profile');
+    } catch (err) {
+      console.error('[Auth] Error updating profile:', err);
+      throw err;
+    }
+  };
+
+  const refreshProfile = useCallback(async () => {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/profile`, { headers });
+      const data = await res.json();
+      if (res.ok) {
+        setProfile(data.profile);
+        localStorage.setItem('nexus_user', JSON.stringify(data.profile));
+      }
+    } catch (e) { /* Ignore refresh errors */ }
+  }, []);
+
   const value = {
     user,
     profile,
@@ -161,8 +194,8 @@ export function AuthProvider({ children }) {
     signInWithOAuth,
     signOut,
     resetPassword,
-    getAuthHeaders,
-    refreshProfile: () => { /* No-op */ },
+    refreshProfile,
+    updateProfile,
   };
 
   return (
