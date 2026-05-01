@@ -1088,6 +1088,7 @@ function ChatPage({ projectId }) {
       name: 'Google Gemini',
       icon: '🔹',
       models: [
+        { id: 'gemini-3-flash-live', label: '🎥 Gemini 3 Flash Live' },
         { id: 'gemini-2.5-flash', label: '⚡ Gemini 2.5 Flash' },
         { id: 'gemini-1.5-pro', label: '🧠 Gemini 1.5 Pro' },
         { id: 'gemini-1.5-flash-8b', label: '🔹 Gemini 1.5 Flash 8B' },

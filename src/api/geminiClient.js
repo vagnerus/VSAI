@@ -53,6 +53,7 @@ export class GeminiClient {
 
   getAvailableModels() {
     return [
+      { id: 'gemini-3-flash-live', name: 'Gemini 3 Flash Live', description: 'Next generation live video model' },
       { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Latest and most capable flash model' },
       { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash', description: 'Fast and versatile' },
       { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', description: 'Most capable model' },
