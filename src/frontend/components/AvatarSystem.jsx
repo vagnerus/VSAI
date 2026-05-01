@@ -78,7 +78,7 @@ function MiniChatBubble({ initialPrompt, onClose }) {
         <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', opacity: 0.7 }}>✕</button>
       </header>
       
-      <div style={{ flex: 1, padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ flex: 1, minHeight: 0, padding: 16, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12 }}>
         {messages.map((m, i) => (
           <div key={i} style={{ 
             alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
@@ -154,30 +154,34 @@ export function AvatarWidget({ profile, onUpdateProfile, onNavigate }) {
           dragMomentum={false}
           onDragStart={() => setIsDragging(true)}
           onDragEnd={() => setIsDragging(false)}
-          whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9, cursor: 'grabbing' }}
           className="avatar-draggable-wrapper"
           style={{ width: 140, height: 140, cursor: 'grab', position: 'relative' }}
           onClick={() => !isDragging && setIsOpen(!isOpen)}
         >
           {/* Imagem do Avatar em 3D */}
-          <div className={`avatar-3d-image ${isDragging ? 'dragging' : 'floating'}`}>
+          <motion.div 
+            whileHover={{ scale: 1.15 }}
+            className={`avatar-3d-image ${isDragging ? 'dragging' : 'floating'}`}
+          >
             <img 
               src="/avatar3d.png" 
               alt="VSAI Avatar" 
               style={{ 
                 width: '100%', 
                 height: '100%', 
-                objectFit: 'contain', 
-                filter: `drop-shadow(0px 10px 15px ${config.bodyColor}66)`,
-                borderRadius: '50%'
+                objectFit: 'cover', 
+                borderRadius: '50%',
+                border: `3px solid ${config.bodyColor}`,
+                boxShadow: `0 10px 25px ${config.bodyColor}66, inset 0 0 10px rgba(0,0,0,0.1)`,
+                backgroundColor: '#fff'
               }} 
             />
             {/* Halo / Acessório */}
             {config.accessory === 'halo' && (
               <div className="avatar-halo" style={{ borderTopColor: '#fbbf24' }}></div>
             )}
-          </div>
+          </motion.div>
 
           {/* Menu de Interação */}
           <AnimatePresence>
@@ -297,8 +301,11 @@ function AvatarStudio({ config, onClose, onSave }) {
                   src="/avatar3d.png" 
                   alt="Preview" 
                   style={{ 
-                    width: '100%', height: '100%', objectFit: 'contain', 
-                    filter: `drop-shadow(0px 10px 20px ${localConfig.bodyColor})` 
+                    width: '100%', height: '100%', objectFit: 'cover', 
+                    borderRadius: '50%',
+                    border: `3px solid ${localConfig.bodyColor}`,
+                    boxShadow: `0 10px 25px ${localConfig.bodyColor}66, inset 0 0 10px rgba(0,0,0,0.1)`,
+                    backgroundColor: '#fff'
                   }} 
                 />
                 {localConfig.accessory === 'halo' && (
