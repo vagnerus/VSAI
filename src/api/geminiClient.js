@@ -20,7 +20,8 @@ export class GeminiClient {
       this.apiKeys = rawKeys && rawKeys.length > 10 ? [rawKeys] : [];
     }
 
-    this.currentKeyIndex = 0;
+    // Randomize starting key to distribute load across Vercel serverless invocations
+    this.currentKeyIndex = this.apiKeys.length > 1 ? Math.floor(Math.random() * this.apiKeys.length) : 0;
     this.defaultModel = config.model || 'gemini-2.5-flash';
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
     this.maxRetries = config.maxRetries || 3;
