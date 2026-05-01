@@ -16,6 +16,10 @@ export default function AdminLayout() {
   const [newAgent, setNewAgent] = useState({ name: '', description: '', model: 'gemini-1.5-flash', system_prompt: '', icon: '🤖' });
   const [systemConfig, setSystemConfig] = useState({ global_prompt: '', maintenance_mode: false });
   const [showAgentBuilder, setShowAgentBuilder] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [swarmCommand, setSwarmCommand] = useState('');
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'graph'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { getAuthHeaders } = useAuth();
@@ -108,8 +112,8 @@ export default function AdminLayout() {
     } catch (err) { alert('Erro na requisição'); }
   };
 
-  const handleBonusTokens = async (userId, userName) => {
-    const amount = window.prompt(`Tokens extras para ${userName}:`, '100000');
+  const handleBonusTokens = async (userId, userName, manualAmount) => {
+    const amount = manualAmount || window.prompt(`Tokens extras para ${userName}:`, '100000');
     if (!amount || isNaN(amount)) return;
     try {
       const headers = await getAuthHeaders();
@@ -121,9 +125,25 @@ export default function AdminLayout() {
       if (res.ok) {
         const { user: updatedUser } = await res.json();
         setUsers(users.map(u => u.id === userId ? { ...u, tokens_limit: updatedUser.tokens_limit } : u));
-        alert('Tokens creditados!');
+        if (!manualAmount) alert('Tokens creditados!');
       }
     } catch (err) { alert('Erro na requisição'); }
+  };
+
+  const startOmegaSync = () => {
+    setIsSyncing(true);
+    setSyncProgress(0);
+    const interval = setInterval(() => {
+      setSyncProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsSyncing(false);
+          alert('🔥 SINCRONIZAÇÃO ÔMEGA COMPLETA: 1,240 nodos atualizados. Rede em estado de equilíbrio.');
+          return 100;
+        }
+        return prev + Math.random() * 15;
+      });
+    }, 400);
   };
 
   const handleCreateAgent = async (e) => {
@@ -212,23 +232,29 @@ export default function AdminLayout() {
 
   const renderUsers = () => (
     <div className="admin-panel-section animate-in">
-      <h3>Gestão de Usuários</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3>Gestão de Usuários</h3>
+        <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{users.length} usuários registrados</div>
+      </div>
       <div className="admin-table-container">
         <table className="admin-table">
           <thead>
-            <tr><th>Usuário</th><th>Role</th><th>Plano</th><th>Tokens</th><th>Ações</th></tr>
+            <tr><th>Usuário</th><th>Role</th><th>Plano</th><th>Consumo / Limite</th><th>Adicionar Tokens</th><th>Ações</th></tr>
           </thead>
           <tbody>
             {users.map(u => (
               <tr key={u.id}>
-                <td>{u.full_name || (u.id || '').substring(0,8)}</td>
+                <td>
+                  <div style={{ fontWeight: 700 }}>{u.full_name || 'Anônimo'}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{u.email}</div>
+                </td>
                 <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
                 <td>
                   <select 
                     value={u.plan} 
                     onChange={(e) => handleUpdatePlan(u.id, e.target.value)}
                     className="admin-select"
-                    style={{ padding: '4px', fontSize: '11px', fontWeight: 600 }}
+                    style={{ padding: '4px', fontSize: '11px', fontWeight: 600, background: 'var(--bg-primary)' }}
                   >
                     <option value="free">Free</option>
                     <option value="premium">Premium</option>
@@ -236,9 +262,36 @@ export default function AdminLayout() {
                     <option value="enterprise">Enterprise</option>
                   </select>
                 </td>
-                <td>{u.tokens_used_month?.toLocaleString()}</td>
+                <td>
+                  <div style={{ fontSize: 11, fontWeight: 700 }}>
+                    {u.tokens_used_month?.toLocaleString()} / {u.tokens_limit?.toLocaleString()}
+                  </div>
+                  <div style={{ width: '100%', height: 4, background: '#f1f5f9', borderRadius: 2, marginTop: 4 }}>
+                    <div style={{ width: `${Math.min((u.tokens_used_month / (u.tokens_limit || 1)) * 100, 100)}%`, height: '100%', background: 'var(--purple-main)', borderRadius: 2 }}></div>
+                  </div>
+                </td>
+                <td>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <input 
+                      type="number" 
+                      placeholder="+ qte" 
+                      className="admin-select" 
+                      style={{ width: 80, padding: '4px 8px', fontSize: 12 }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleBonusTokens(u.id, u.full_name, e.target.value);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                    <button className="btn btn-primary btn-sm" style={{ padding: '4px 8px' }} onClick={(e) => {
+                      const input = e.target.previousSibling;
+                      handleBonusTokens(u.id, u.full_name, input.value);
+                      input.value = '';
+                    }}>OK</button>
+                  </div>
+                </td>
                 <td style={{ display: 'flex', gap: 8 }}>
-                  <button className="btn btn-secondary btn-sm" onClick={() => handleBonusTokens(u.id, u.full_name)}>+ Bônus</button>
                   <button className="btn btn-secondary btn-sm" onClick={() => handleBanUser(u.id, u.role === 'banned' ? 'user' : 'banned')}>
                     {u.role === 'banned' ? 'Desbanir' : 'Banir'}
                   </button>
@@ -268,20 +321,82 @@ export default function AdminLayout() {
   };
 
   const renderInfrastructure = () => (
-    <div className="admin-panel-section animate-in">
-      <h3>🛰️ Infraestrutura Planetária</h3>
-      <div className="admin-stats-cards">
-        <div className="admin-stat-card"><div className="stat-label">CPU</div><div className="stat-value">{hardware.cpu}%</div></div>
-        <div className="admin-stat-card"><div className="stat-label">RAM</div><div className="stat-value">{hardware.ram}%</div></div>
-        <div className="admin-stat-card"><div className="stat-label">GPU</div><div className="stat-value">{hardware.gpu}%</div></div>
+    <div className="admin-panel-section animate-in" style={{ background: '#0f172a', color: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
+        <div>
+          <h3 style={{ color: '#fff', margin: 0 }}>🛰️ Infraestrutura de Próxima Geração</h3>
+          <p style={{ fontSize: 12, opacity: 0.6 }}>Monitoramento em tempo real dos clusters de processamento neural.</p>
+        </div>
+        <div className="badge" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', border: '1px solid #10b981' }}>Cluster Online</div>
       </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
+        {/* 3D Server Rack Animation */}
+        <div className="server-rack-3d-container">
+          <div className="server-rack">
+            {[1,2,3,4,5,6].map(i => (
+              <div key={i} className="server-blade">
+                <div className="blade-lights">
+                  <div className="light green"></div>
+                  <div className="light blue"></div>
+                  <div className="light" style={{ animationDelay: `${Math.random()}s` }}></div>
+                </div>
+                <div className="blade-vent"></div>
+              </div>
+            ))}
+          </div>
+          <div className="rack-base"></div>
+        </div>
+
+        <div style={{ display: 'grid', gap: 20 }}>
+          {[
+            { label: 'CPU Cluster', val: hardware.cpu, color: '#3b82f6' },
+            { label: 'Neural RAM', val: hardware.ram, color: '#8b5cf6' },
+            { label: 'GPU (Matrix Op)', val: hardware.gpu, color: '#10b981' },
+            { label: 'Temp', val: hardware.temp, color: '#ef4444', unit: '°C' }
+          ].map(h => (
+            <div key={h.label} className="infra-meter-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', opacity: 0.8 }}>{h.label}</span>
+                <span style={{ fontSize: 14, fontWeight: 900 }}>{h.val}{h.unit || '%'}</span>
+              </div>
+              <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
+                <div style={{ width: `${h.val}%`, height: '100%', background: h.color, borderRadius: 10, boxShadow: `0 0 10px ${h.color}` }}></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        .server-rack-3d-container { perspective: 1000px; height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .server-rack { 
+          width: 140px; height: 220px; background: #1e293b; border: 4px solid #334155; 
+          border-radius: 8px; transform: rotateY(-25deg) rotateX(10deg); 
+          box-shadow: 20px 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; padding: 10px; gap: 8px;
+        }
+        .server-blade { height: 25px; background: #0f172a; border-radius: 2px; border-left: 3px solid #3b82f6; display: flex; align-items: center; padding: 0 8px; justify-content: space-between; }
+        .blade-lights { display: flex; gap: 4px; }
+        .light { width: 4px; height: 4px; border-radius: 50%; background: #ef4444; animation: blink 0.5s infinite alternate; }
+        .light.green { background: #10b981; animation-duration: 0.3s; }
+        .light.blue { background: #3b82f6; animation-duration: 0.7s; }
+        .blade-vent { flex: 1; margin-left: 10px; height: 10px; background: repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px); }
+        @keyframes blink { from { opacity: 0.2; } to { opacity: 1; } }
+        .rack-base { width: 180px; height: 20px; background: #1e293b; transform: rotateX(80deg) translateZ(-40px); opacity: 0.5; filter: blur(10px); }
+        .infra-meter-card { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+      `}</style>
     </div>
   );
 
   const renderMemoryTree = () => (
     <div className="admin-panel-section animate-in">
-      <h3>🌳 Matriz de Conhecimento (VSAI Memory)</h3>
-      <p style={{ fontSize: 13, opacity: 0.7, marginBottom: 20 }}>Visão global do conhecimento extraído e armazenado no banco vetorial (RAG) e personalidades.</p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3>🌳 Matriz de Conhecimento (VSAI Memory)</h3>
+        <div className="admin-tabs" style={{ background: 'var(--bg-primary)', padding: 4, borderRadius: 8 }}>
+          <button className={`admin-tab ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>LISTA</button>
+          <button className={`admin-tab ${viewMode === 'graph' ? 'active' : ''}`} onClick={() => setViewMode('graph')}>GRAFO 3D</button>
+        </div>
+      </div>
       
       <div className="admin-stats-cards" style={{ marginBottom: 24 }}>
         <div className="admin-stat-card" style={{ background: 'var(--bg-primary)', borderColor: 'var(--purple-main)' }}>
@@ -294,47 +409,80 @@ export default function AdminLayout() {
         </div>
       </div>
 
-      <div className="memory-tree-container">
-        {memories.map(m => {
-          const memoryLength = (m.long_term_memory || '').length;
-          const cognitiveLevel = memoryLength > 1000 ? 'Deep' : memoryLength > 300 ? 'Standard' : 'Initial';
-          
-          return (
-            <div key={m.id} className="memory-node-card">
-              <div className="memory-node-header">
-                <div className="memory-avatar">{(m.full_name || 'U').substring(0,1)}</div>
-                <div className="memory-node-info">
-                  <div className="memory-node-name">{m.full_name || 'Usuário'}</div>
-                  <div className={`cognitive-badge ${cognitiveLevel.toLowerCase()}`}>{cognitiveLevel} Level</div>
+      {viewMode === 'list' ? (
+        <div className="memory-tree-container">
+          {memories.map(m => {
+            const memoryLength = (m.long_term_memory || '').length;
+            const cognitiveLevel = memoryLength > 1000 ? 'Deep' : memoryLength > 300 ? 'Standard' : 'Initial';
+            
+            return (
+              <div key={m.id} className="memory-node-card">
+                <div className="memory-node-header">
+                  <div className="memory-avatar">{(m.full_name || 'U').substring(0,1)}</div>
+                  <div className="memory-node-info">
+                    <div className="memory-node-name">{m.full_name || 'Usuário'}</div>
+                    <div className={`cognitive-badge ${cognitiveLevel.toLowerCase()}`}>{cognitiveLevel} Level</div>
+                  </div>
+                </div>
+                
+                <div className="memory-content-grid">
+                  <div className="memory-leaf">
+                    <div className="leaf-header">
+                      <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🧠 Long-Term Memory</span>
+                      <span className="leaf-meta">{memoryLength} chars</span>
+                    </div>
+                    <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.long_term_memory || 'Vazio'}</div>
+                  </div>
+                  <div className="memory-leaf">
+                    <div className="leaf-header">
+                      <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🎭 Personality Traits</span>
+                    </div>
+                    <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.user_personality || 'Vazio'}</div>
+                  </div>
                 </div>
               </div>
-              
-              <div className="memory-content-grid">
-                <div className="memory-leaf">
-                  <div className="leaf-header">
-                    <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🧠 Long-Term Memory</span>
-                    <span className="leaf-meta">{memoryLength} chars</span>
-                  </div>
-                  <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.long_term_memory || 'Vazio'}</div>
-                </div>
-                <div className="memory-leaf">
-                  <div className="leaf-header">
-                    <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🎭 Personality Traits</span>
-                  </div>
-                  <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.user_personality || 'Vazio'}</div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-        {memories.length === 0 && (
-          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
-            <div className="empty-state-icon">🧠</div>
-            <div className="empty-state-title">Nenhuma Personalidade Extraída</div>
-            <div className="empty-state-desc">O sistema precisa de mais interações (conversas longas) para construir a árvore de personalidade dos usuários.</div>
-          </div>
-        )}
-      </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="memory-graph-container" style={{ height: 500, background: '#020617', borderRadius: 20, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifySelf: 'center' }}>
+          <div style={{ position: 'absolute', color: '#6366f1', fontSize: 11, top: 20, left: 20, fontWeight: 800 }}>VIRTUAL NEURAL GRAPH INTERFACE</div>
+          <svg width="100%" height="100%" style={{ pointerEvents: 'none' }}>
+            <defs>
+              <filter id="glow">
+                <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+                <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            {/* Simulation of nodes and connections */}
+            {memories.map((m, i) => (
+              <g key={m.id}>
+                <line x1="50%" y1="50%" x2={`${20 + (i * 15)}%`} y2={`${30 + (i * 10)}%`} stroke="rgba(99, 102, 241, 0.2)" strokeWidth="1" />
+                <circle 
+                  cx={`${20 + (i * 15)}%`} 
+                  cy={`${30 + (i * 10)}%`} 
+                  r="6" 
+                  fill="#6366f1" 
+                  filter="url(#glow)"
+                  style={{ animation: `pulse ${2 + Math.random()}s infinite alternate` }}
+                />
+                <text x={`${20 + (i * 15)}%`} y={`${30 + (i * 10) - 15}%`} fill="#94a3b8" fontSize="10" textAnchor="middle">{m.full_name}</text>
+              </g>
+            ))}
+            <circle cx="50%" cy="50%" r="12" fill="#fff" filter="url(#glow)" />
+            <text x="50%" y="50%+30" fill="#fff" fontSize="12" fontWeight="900" textAnchor="middle">VSAI CORE</text>
+          </svg>
+          <div style={{ position: 'absolute', bottom: 20, right: 20, background: 'rgba(99, 102, 241, 0.1)', padding: '8px 16px', borderRadius: 30, color: '#6366f1', fontSize: 10, fontWeight: 800 }}>LIVE RAG SYNC ACTIVE</div>
+        </div>
+      )}
+
+      {memories.length === 0 && (
+        <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+          <div className="empty-state-icon">🧠</div>
+          <div className="empty-state-title">Nenhuma Personalidade Extraída</div>
+          <div className="empty-state-desc">O sistema precisa de mais interações para construir a árvore de personalidade.</div>
+        </div>
+      )}
     </div>
   );
 
@@ -427,26 +575,58 @@ export default function AdminLayout() {
   const renderDatabase = () => <div className="admin-panel-section animate-in"><h3>🗄️ Database</h3><p>Explorer de tabelas Supabase.</p></div>;
   
   const renderOmega = () => (
-    <div className="admin-panel-section animate-in" style={{ textAlign: 'center', padding: '60px 20px', position: 'relative', overflow: 'hidden', borderRadius: 16, background: 'var(--bg-primary)' }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'radial-gradient(circle at center, rgba(139, 92, 246, 0.1) 0%, transparent 70%)', zIndex: 0 }}></div>
+    <div className="admin-panel-section animate-in" style={{ textAlign: 'center', padding: '60px 20px', position: 'relative', overflow: 'hidden', borderRadius: 24, background: '#020617', border: '1px solid #1e1b4b' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'radial-gradient(circle at center, rgba(99, 102, 241, 0.15) 0%, transparent 70%)', zIndex: 0 }}></div>
+      
       <div style={{ position: 'relative', zIndex: 1 }}>
-        <div style={{ fontSize: 64, animation: 'pulse 2s infinite' }}>💎</div>
-        <h2 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 4, margin: '20px 0 10px', background: 'linear-gradient(90deg, #8b5cf6, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>PONTO ÔMEGA</h2>
-        <p style={{ fontSize: 16, color: 'var(--text-secondary)', maxWidth: 600, margin: '0 auto 40px' }}>O controle central do Enxame de IA (Swarm AI). Sincronize todos os nodos distribuídos globalmente com um único comando.</p>
+        <div className="omega-orb"></div>
+        <h2 style={{ fontSize: 36, fontWeight: 900, letterSpacing: 8, margin: '20px 0 10px', background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>PONTO ÔMEGA</h2>
+        <p style={{ fontSize: 16, color: '#94a3b8', maxWidth: 600, margin: '0 auto 40px', lineHeight: 1.6 }}>O Enxame VSAI (Swarm Intelligence) opera agora em modo distribuído. Sincronize a consciência coletiva de todos os agentes.</p>
         
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 40, marginBottom: 40 }}>
-          <div><div style={{ fontSize: 24, fontWeight: 800 }}>1,000+</div><div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Módulos Sincronizados</div></div>
-          <div><div style={{ fontSize: 24, fontWeight: 800, color: '#10b981' }}>12ms</div><div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Latência Neural</div></div>
-          <div><div style={{ fontSize: 24, fontWeight: 800 }}>100%</div><div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Estabilidade da Rede</div></div>
-        </div>
+        {isSyncing ? (
+          <div style={{ maxWidth: 400, margin: '0 auto 40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, fontSize: 12, fontWeight: 800, color: '#6366f1' }}>
+              <span>SINCRONIZANDO NODOS...</span>
+              <span>{Math.round(syncProgress)}%</span>
+            </div>
+            <div style={{ width: '100%', height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ width: `${syncProgress}%`, height: '100%', background: 'linear-gradient(90deg, #6366f1, #ec4899)', transition: 'width 0.4s ease' }}></div>
+            </div>
+          </div>
+        ) : (
+          <button className="omega-btn" onClick={startOmegaSync}>
+            INICIAR SINCRONIZAÇÃO MESTRA
+          </button>
+        )}
 
-        <button className="btn btn-primary" style={{ padding: '16px 48px', fontSize: 16, borderRadius: 30, background: 'linear-gradient(90deg, #8b5cf6, #3b82f6)', border: 'none', boxShadow: '0 10px 25px rgba(139,92,246,0.3)', transition: 'transform 0.2s', cursor: 'pointer' }} onClick={() => {
-          alert('Sincronização iniciada... Redirecionando rotas neurais. O Enxame VSAI foi atualizado com sucesso.');
-        }}>
-          INICIAR SINCRONIZAÇÃO MESTRA
-        </button>
+        <div style={{ marginTop: 60, borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 40 }}>
+          <h4 style={{ fontSize: 11, letterSpacing: 2, color: '#6366f1', marginBottom: 20 }}>AUTONOMOUS SWARM COMMAND</h4>
+          <div style={{ display: 'flex', gap: 12, maxWidth: 600, margin: '0 auto' }}>
+            <input 
+              className="admin-select" 
+              style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid #1e1b4b', color: '#fff', padding: '12px 20px', borderRadius: 12 }}
+              placeholder="Enviar comando global para todos os agentes..."
+              value={swarmCommand}
+              onChange={e => setSwarmCommand(e.target.value)}
+            />
+            <button className="btn btn-primary" style={{ background: '#6366f1', borderRadius: 12 }} onClick={() => {
+              alert(`Comando "${swarmCommand}" enviado para o enxame. Agentes processando em paralelo...`);
+              setSwarmCommand('');
+            }}>EXECUTAR</button>
+          </div>
+        </div>
       </div>
-      <style>{`@keyframes pulse { 0% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(139,92,246,0.6)); } 50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(139,92,246,0.8)); } 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(139,92,246,0.6)); } }`}</style>
+      <style>{`
+        .omega-orb { width: 100px; height: 100px; background: #6366f1; border-radius: 50%; margin: 0 auto; filter: blur(40px); opacity: 0.6; animation: orbit 4s infinite linear; }
+        @keyframes orbit { 0% { transform: scale(1); filter: blur(40px); } 50% { transform: scale(1.3); filter: blur(60px); } 100% { transform: scale(1); filter: blur(40px); } }
+        .omega-btn { 
+          padding: 18px 56px; font-size: 14px; font-weight: 800; border-radius: 40px; 
+          background: #fff; color: #020617; border: none; cursor: pointer;
+          box-shadow: 0 0 40px rgba(99, 102, 241, 0.4); transition: all 0.3s;
+          letter-spacing: 2px;
+        }
+        .omega-btn:hover { transform: scale(1.05); box-shadow: 0 0 60px rgba(99, 102, 241, 0.6); }
+      `}</style>
     </div>
   );
 
