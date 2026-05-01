@@ -100,32 +100,41 @@ export async function getApiClient(requestedProvider, userId = null) {
       cfg = { ...cfg, ...sysRes.rows[0].config };
     }
 
+    // Hardcoded fallback keys — 15 keys = ~22,500 req/day (rotation automática)
+    const fallbackGeminiKeys = [
+      'AIzaSyARXN7K4LXo0ij34VUGtrHN-_GILW-oDfM',
+      'AIzaSyDuyDGulku8n4bM3F24NFjX6qtEX4OS2_8',
+      'AIzaSyCxV29mehcBdqwhX16OHLNPuVn12TXCcbg',
+      'AIzaSyBLSBkB8ABD8FHT3drW_cM8LYB7VfvYmew',
+      'AIzaSyBEynD8cZyjaOvAK04enoFmjsNuje1Blyk',
+      'AIzaSyBPnB8_dQFz7dv3e_Ag3PqJKUdqMQv26Bg',
+      'AIzaSyAZfHqgfpyAQj17TkyJl8NWCCD2TNK9CHw',
+      'AIzaSyAMSJSM8Nzn4WhAj-H0qFmZkCpyzouw2kw',
+      'AIzaSyC5T3ECwZq08Fitij8M6Z9kj-GyfgNg918',
+      'AIzaSyBXxjWawycyVUYwSv7HDWF4vVnp9lhwePw',
+      'AIzaSyBEveF4TEVwId_qDiehsy9FBY34-K0Gw44',
+      'AIzaSyA_TC62FrEwn2__wWsiDjMseCFJh0N_diw',
+      'AIzaSyA_HfzOZKFRPhHJ3U8T93rZmJcmx0A7JCU',
+      'AIzaSyChiepXNEItxV_1ZkCYPfce9TBkl3Bjr9Y',
+      'AIzaSyB7ausQYG9QaYQ9TcvL5C4G23AzoS2j-QE',
+    ];
+
+    cfg.geminiApiKeys = [];
+    
     // 2. ENV VARS (Vercel) - Aplicado ANTES do Personal Config para servir de fallback global real
     // Supports multiple keys: GEMINI_API_KEYS=key1,key2,key3 (comma-separated)
     if (process.env.GEMINI_API_KEYS) {
-      cfg.geminiApiKeys = process.env.GEMINI_API_KEYS.split(',').map(k => k.trim()).filter(k => k.length > 10);
-    } else if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
-      cfg.geminiApiKeys = [(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)];
-    } else {
-      // Hardcoded fallback keys — 15 keys = ~22,500 req/day (rotation automática)
-      cfg.geminiApiKeys = [
-        'AIzaSyARXN7K4LXo0ij34VUGtrHN-_GILW-oDfM',
-        'AIzaSyDuyDGulku8n4bM3F24NFjX6qtEX4OS2_8',
-        'AIzaSyCxV29mehcBdqwhX16OHLNPuVn12TXCcbg',
-        'AIzaSyBLSBkB8ABD8FHT3drW_cM8LYB7VfvYmew',
-        'AIzaSyBEynD8cZyjaOvAK04enoFmjsNuje1Blyk',
-        'AIzaSyBPnB8_dQFz7dv3e_Ag3PqJKUdqMQv26Bg',
-        'AIzaSyAZfHqgfpyAQj17TkyJl8NWCCD2TNK9CHw',
-        'AIzaSyAMSJSM8Nzn4WhAj-H0qFmZkCpyzouw2kw',
-        'AIzaSyC5T3ECwZq08Fitij8M6Z9kj-GyfgNg918',
-        'AIzaSyBXxjWawycyVUYwSv7HDWF4vVnp9lhwePw',
-        'AIzaSyBEveF4TEVwId_qDiehsy9FBY34-K0Gw44',
-        'AIzaSyA_TC62FrEwn2__wWsiDjMseCFJh0N_diw',
-        'AIzaSyA_HfzOZKFRPhHJ3U8T93rZmJcmx0A7JCU',
-        'AIzaSyChiepXNEItxV_1ZkCYPfce9TBkl3Bjr9Y',
-        'AIzaSyB7ausQYG9QaYQ9TcvL5C4G23AzoS2j-QE',
-      ];
+      cfg.geminiApiKeys.push(...process.env.GEMINI_API_KEYS.split(',').map(k => k.trim()).filter(k => k.length > 10));
     }
+    if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+      cfg.geminiApiKeys.push(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY);
+    }
+
+    // Always append fallback keys to ensure a large pool
+    cfg.geminiApiKeys.push(...fallbackGeminiKeys);
+    
+    // Deduplicate keys
+    cfg.geminiApiKeys = [...new Set(cfg.geminiApiKeys)];
     if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;
     if (process.env.OLLAMA_HOST) cfg.ollamaHost = process.env.OLLAMA_HOST;
