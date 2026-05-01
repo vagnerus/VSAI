@@ -8,7 +8,7 @@ import PricingPage from './pages/PricingPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import ArtifactsPanel, { extractArtifacts } from './components/ArtifactsPanel.jsx';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+// import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import { 
   LayoutDashboard, 
@@ -2805,6 +2805,14 @@ function SettingsPage() {
     </div>
   );
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Placeholder Pages (To be implemented)
+// ═══════════════════════════════════════════════════════════════
+
+function HooksPage() { return <div style={{ padding: 24 }}><h2>🪝 Webhooks & Automação</h2><p>Configure gatilhos externos para suas conversas.</p></div>; }
+function PermissionsPage() { return <div style={{ padding: 24 }}><h2>🔐 Permissões Avançadas</h2><p>Controle de acesso granular por usuário e projeto.</p></div>; }
+function PluginsPage() { return <div style={{ padding: 24 }}><h2>🔌 Plugins do Sistema</h2><p>Estenda as capacidades da IA com módulos de terceiros.</p></div>; }
 
 // ═══════════════════════════════════════════════════════════════
 // Dashboard Shell (Authenticated Area)
