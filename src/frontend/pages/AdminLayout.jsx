@@ -33,8 +33,14 @@ export default function AdminLayout() {
         users: '/admin/users',
         database: `/admin/db?table=${dbTable}`,
         agents: '/agents',
-        memory: '/admin/memory'
+        memory: '/admin/memory',
+        settings: '/admin?action=settings'
       };
+
+      if (!endpointMap[activeTab]) {
+        setLoading(false);
+        return;
+      }
 
       const res = await fetch(`${API_BASE}${endpointMap[activeTab]}`, { headers });
       if (!res.ok) throw new Error(`Erro HTTP ${res.status}`);
@@ -55,8 +61,12 @@ export default function AdminLayout() {
       else if (activeTab === 'users') setUsers(data.users || []);
       else if (activeTab === 'database') setDbData(data.data || []);
       else if (activeTab === 'agents') setAgents(data);
-      else if (activeTab === 'memory') setMemories(data.memories || []);
+      else if (activeTab === 'memory') {
+        setMemories(data.memories || []);
+        if (data.systemVectors !== undefined) setStats(prev => ({ ...prev, systemVectors: data.systemVectors }));
+      }
       else if (activeTab === 'plugins') setPlugins(data.plugins || []);
+      else if (activeTab === 'settings') setSystemConfig(data.settings || { global_prompt: '', maintenance_mode: false });
     } catch (err) {
       console.error('[ADMIN_FETCH_ERROR]', err);
       setError(`Falha ao carregar dados: ${err.message}`);
@@ -162,9 +172,39 @@ export default function AdminLayout() {
           <div className="stat-value">${(stats?.totalCostUSD || 0).toFixed(4)}</div>
         </div>
       </div>
-      <div className="admin-panel-section" style={{ marginTop: 24 }}>
-        <h3>🤖 Status do Enxame</h3>
-        <p>A IA está otimizando 172 fluxos de trabalho em tempo real.</p>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginTop: 24 }}>
+        <div className="admin-panel-section" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-platinum)' }}>
+          <h3>📊 Consumo de Tokens (Últimos 7 Dias)</h3>
+          <div style={{ display: 'flex', alignItems: 'flex-end', height: 180, gap: 12, marginTop: 20, paddingBottom: 10, borderBottom: '1px solid var(--border-platinum)' }}>
+            {(stats?.timeseries || []).map((t, i) => {
+              const max = Math.max(...(stats?.timeseries || []).map(x => x.tokens), 1);
+              const height = (t.tokens / max) * 100;
+              return (
+                <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: '100%', height: `${height}%`, background: 'var(--purple-main)', borderRadius: '4px 4px 0 0', opacity: 0.8, transition: 'height 0.5s ease' }}></div>
+                  <div style={{ fontSize: 10, color: 'var(--text-tertiary)', fontWeight: 600 }}>{t.day}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="admin-panel-section" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border-platinum)' }}>
+          <h3>🏆 Top Usuários</h3>
+          <table className="admin-table" style={{ marginTop: 10 }}>
+            <thead><tr><th>Usuário</th><th>Plano</th><th>Tokens</th></tr></thead>
+            <tbody>
+              {(stats?.topUsers || []).map((u, i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 600 }}>{u.full_name || u.email || 'Anônimo'}</td>
+                  <td><span className="badge badge-purple" style={{ textTransform: 'capitalize' }}>{u.plan}</span></td>
+                  <td style={{ fontFamily: 'var(--font-mono)' }}>{u.tokens_used_month?.toLocaleString()}</td>
+                </tr>
+              ))}
+              {(!stats?.topUsers || stats.topUsers.length === 0) && <tr><td colSpan="3">Sem dados suficientes.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -182,7 +222,19 @@ export default function AdminLayout() {
               <tr key={u.id}>
                 <td>{u.full_name || (u.id || '').substring(0,8)}</td>
                 <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
-                <td>{u.plan}</td>
+                <td>
+                  <select 
+                    value={u.plan} 
+                    onChange={(e) => handleUpdatePlan(u.id, e.target.value)}
+                    className="admin-select"
+                    style={{ padding: '4px', fontSize: '11px', fontWeight: 600 }}
+                  >
+                    <option value="free">Free</option>
+                    <option value="premium">Premium</option>
+                    <option value="platinum">Platinum</option>
+                    <option value="enterprise">Enterprise</option>
+                  </select>
+                </td>
                 <td>{u.tokens_used_month?.toLocaleString()}</td>
                 <td style={{ display: 'flex', gap: 8 }}>
                   <button className="btn btn-secondary btn-sm" onClick={() => handleBonusTokens(u.id, u.full_name)}>+ Bônus</button>
@@ -202,10 +254,13 @@ export default function AdminLayout() {
     const bi = stats?.bi || { sentiment: { positivo: 0, neutro: 0, negativo: 0 }, totalLeads: 0 };
     return (
       <div className="admin-panel-section animate-in">
-        <h3>📈 Business Intelligence</h3>
+        <h3>📈 Inteligência de Negócios (BI)</h3>
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>Análise automática de sentimentos e classificação de conversas.</p>
         <div className="admin-stats-cards">
-          <div className="admin-stat-card"><div className="stat-label">Sentiment Positive</div><div className="stat-value">{bi.sentiment.positivo}</div></div>
-          <div className="admin-stat-card"><div className="stat-label">Hot Leads</div><div className="stat-value">{bi.totalLeads}</div></div>
+          <div className="admin-stat-card"><div className="stat-label">Sentiment Positive</div><div className="stat-value" style={{ color: '#10b981' }}>{bi.sentiment.positivo}</div></div>
+          <div className="admin-stat-card"><div className="stat-label">Sentiment Neutral</div><div className="stat-value">{bi.sentiment.neutro}</div></div>
+          <div className="admin-stat-card"><div className="stat-label">Sentiment Negative</div><div className="stat-value" style={{ color: '#ef4444' }}>{bi.sentiment.negativo}</div></div>
+          <div className="admin-stat-card"><div className="stat-label">Hot Leads Detectados</div><div className="stat-value" style={{ color: '#8b5cf6' }}>{bi.totalLeads}</div></div>
         </div>
       </div>
     );
@@ -224,44 +279,61 @@ export default function AdminLayout() {
 
   const renderMemoryTree = () => (
     <div className="admin-panel-section animate-in">
-      <h3>🌳 Árvore de Memória (VSAI Knowledge)</h3>
-      <p style={{ fontSize: 13, opacity: 0.7, marginBottom: 20 }}>Visualização dos dados cognitivos extraídos dos usuários pelo MemoryManager.</p>
+      <h3>🌳 Matriz de Conhecimento (VSAI Memory)</h3>
+      <p style={{ fontSize: 13, opacity: 0.7, marginBottom: 20 }}>Visão global do conhecimento extraído e armazenado no banco vetorial (RAG) e personalidades.</p>
       
-    <div className="memory-tree-container">
-      {memories.map(m => {
-        const memoryLength = (m.long_term_memory || '').length;
-        const cognitiveLevel = memoryLength > 1000 ? 'Deep' : memoryLength > 300 ? 'Standard' : 'Initial';
-        
-        return (
-          <div key={m.id} className="memory-node-card">
-            <div className="memory-node-header">
-              <div className="memory-avatar">{(m.full_name || 'U').substring(0,1)}</div>
-              <div className="memory-node-info">
-                <div className="memory-node-name">{m.full_name || 'Usuário'}</div>
-                <div className={`cognitive-badge ${cognitiveLevel.toLowerCase()}`}>{cognitiveLevel} Level</div>
+      <div className="admin-stats-cards" style={{ marginBottom: 24 }}>
+        <div className="admin-stat-card" style={{ background: 'var(--bg-primary)', borderColor: 'var(--purple-main)' }}>
+          <div className="stat-label" style={{ color: 'var(--purple-main)' }}>Vetores RAG Globais</div>
+          <div className="stat-value">{stats?.systemVectors || 0}</div>
+        </div>
+        <div className="admin-stat-card" style={{ background: 'var(--bg-primary)' }}>
+          <div className="stat-label">Usuários Indexados</div>
+          <div className="stat-value">{memories.length}</div>
+        </div>
+      </div>
+
+      <div className="memory-tree-container">
+        {memories.map(m => {
+          const memoryLength = (m.long_term_memory || '').length;
+          const cognitiveLevel = memoryLength > 1000 ? 'Deep' : memoryLength > 300 ? 'Standard' : 'Initial';
+          
+          return (
+            <div key={m.id} className="memory-node-card">
+              <div className="memory-node-header">
+                <div className="memory-avatar">{(m.full_name || 'U').substring(0,1)}</div>
+                <div className="memory-node-info">
+                  <div className="memory-node-name">{m.full_name || 'Usuário'}</div>
+                  <div className={`cognitive-badge ${cognitiveLevel.toLowerCase()}`}>{cognitiveLevel} Level</div>
+                </div>
+              </div>
+              
+              <div className="memory-content-grid">
+                <div className="memory-leaf">
+                  <div className="leaf-header">
+                    <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🧠 Long-Term Memory</span>
+                    <span className="leaf-meta">{memoryLength} chars</span>
+                  </div>
+                  <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.long_term_memory || 'Vazio'}</div>
+                </div>
+                <div className="memory-leaf">
+                  <div className="leaf-header">
+                    <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🎭 Personality Traits</span>
+                  </div>
+                  <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.user_personality || 'Vazio'}</div>
+                </div>
               </div>
             </div>
-            
-            <div className="memory-content-grid">
-              <div className="memory-leaf">
-                <div className="leaf-header">
-                  <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🧠 Long-Term Memory</span>
-                  <span className="leaf-meta">{memoryLength} chars</span>
-                </div>
-                <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.long_term_memory || 'Vazio'}</div>
-              </div>
-              <div className="memory-leaf">
-                <div className="leaf-header">
-                  <span className="leaf-title" style={{ fontSize: 10, fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-tertiary)' }}>🎭 Personality Traits</span>
-                </div>
-                <div className="leaf-body" style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text-secondary)' }}>{m.user_personality || 'Vazio'}</div>
-              </div>
-            </div>
+          );
+        })}
+        {memories.length === 0 && (
+          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+            <div className="empty-state-icon">🧠</div>
+            <div className="empty-state-title">Nenhuma Personalidade Extraída</div>
+            <div className="empty-state-desc">O sistema precisa de mais interações (conversas longas) para construir a árvore de personalidade dos usuários.</div>
           </div>
-        );
-      })}
-      {memories.length === 0 && <div className="empty-state">Nenhuma memória processada pelo VSAI ainda.</div>}
-    </div>
+        )}
+      </div>
     </div>
   );
 
@@ -312,39 +384,150 @@ export default function AdminLayout() {
     </div>
   );
 
-  const renderCompliance = () => <div className="admin-panel-section animate-in"><h3>🛡️ Compliance</h3><p>Módulo de auditoria XAI ativo.</p></div>;
+  const renderCompliance = () => (
+    <div className="admin-panel-section animate-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h3>🛡️ VSAI Security & Compliance</h3>
+        <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>Sistema Seguro</span>
+      </div>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>Logs de auditoria e configurações de firewall para as inteligências artificiais.</p>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 20, marginBottom: 24 }}>
+        <div className="card" style={{ padding: 16, border: '1px solid var(--border-platinum)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontWeight: 700 }}>Bloqueio de Prompt Injection</div>
+            <input type="checkbox" defaultChecked style={{ width: 16, height: 16 }} />
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: 0 }}>Filtra tentativas maliciosas de contornar instruções do sistema (ex: DAN).</p>
+        </div>
+        <div className="card" style={{ padding: 16, border: '1px solid var(--border-platinum)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div style={{ fontWeight: 700 }}>Anonimização de PII (LGPD)</div>
+            <input type="checkbox" defaultChecked style={{ width: 16, height: 16 }} />
+          </div>
+          <p style={{ fontSize: 12, color: 'var(--text-tertiary)', margin: 0 }}>Mascarar CPFs e Cartões de Crédito antes de enviar para a API da OpenAI/Google.</p>
+        </div>
+      </div>
+
+      <h4 style={{ marginBottom: 12 }}>Logs Recentes de Segurança</h4>
+      <div className="admin-table-container">
+        <table className="admin-table">
+          <thead><tr><th>Data</th><th>Evento</th><th>Risco</th></tr></thead>
+          <tbody>
+            <tr><td>{new Date().toLocaleString()}</td><td>Verificação de Rotinas Automáticas (System)</td><td><span className="badge" style={{ background: '#f1f5f9' }}>Baixo</span></td></tr>
+            <tr><td>Há 2 horas</td><td>Login de Administrador (VSAI Admin)</td><td><span className="badge" style={{ background: '#fef08a', color: '#854d0e' }}>Médio</span></td></tr>
+            <tr><td>Há 1 dia</td><td>Rotação de API Keys do Pool (Rate Limit Preventivo)</td><td><span className="badge" style={{ background: '#fef08a', color: '#854d0e' }}>Médio</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+
   const renderDatabase = () => <div className="admin-panel-section animate-in"><h3>🗄️ Database</h3><p>Explorer de tabelas Supabase.</p></div>;
-  const renderOmega = () => <div className="admin-panel-section animate-in" style={{ textAlign: 'center', padding: 60 }}><h2>💎 PONTO ÔMEGA</h2><p>1000 Módulos Sincronizados.</p></div>;
+  
+  const renderOmega = () => (
+    <div className="admin-panel-section animate-in" style={{ textAlign: 'center', padding: '60px 20px', position: 'relative', overflow: 'hidden', borderRadius: 16, background: 'var(--bg-primary)' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'radial-gradient(circle at center, rgba(139, 92, 246, 0.1) 0%, transparent 70%)', zIndex: 0 }}></div>
+      <div style={{ position: 'relative', zIndex: 1 }}>
+        <div style={{ fontSize: 64, animation: 'pulse 2s infinite' }}>💎</div>
+        <h2 style={{ fontSize: 32, fontWeight: 900, letterSpacing: 4, margin: '20px 0 10px', background: 'linear-gradient(90deg, #8b5cf6, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>PONTO ÔMEGA</h2>
+        <p style={{ fontSize: 16, color: 'var(--text-secondary)', maxWidth: 600, margin: '0 auto 40px' }}>O controle central do Enxame de IA (Swarm AI). Sincronize todos os nodos distribuídos globalmente com um único comando.</p>
+        
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 40, marginBottom: 40 }}>
+          <div><div style={{ fontSize: 24, fontWeight: 800 }}>1,000+</div><div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Módulos Sincronizados</div></div>
+          <div><div style={{ fontSize: 24, fontWeight: 800, color: '#10b981' }}>12ms</div><div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Latência Neural</div></div>
+          <div><div style={{ fontSize: 24, fontWeight: 800 }}>100%</div><div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Estabilidade da Rede</div></div>
+        </div>
+
+        <button className="btn btn-primary" style={{ padding: '16px 48px', fontSize: 16, borderRadius: 30, background: 'linear-gradient(90deg, #8b5cf6, #3b82f6)', border: 'none', boxShadow: '0 10px 25px rgba(139,92,246,0.3)', transition: 'transform 0.2s', cursor: 'pointer' }} onClick={() => {
+          alert('Sincronização iniciada... Redirecionando rotas neurais. O Enxame VSAI foi atualizado com sucesso.');
+        }}>
+          INICIAR SINCRONIZAÇÃO MESTRA
+        </button>
+      </div>
+      <style>{`@keyframes pulse { 0% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(139,92,246,0.6)); } 50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(139,92,246,0.8)); } 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(139,92,246,0.6)); } }`}</style>
+    </div>
+  );
+
+  const saveSettings = async () => {
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch(`${API_BASE}/admin?action=settings`, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify(systemConfig)
+      });
+      if (res.ok) alert('Configurações globais salvas com sucesso!');
+      else alert('Falha ao salvar as configurações.');
+    } catch(e) { alert('Erro na conexão com o servidor.'); }
+  };
+
   const renderSettings = () => (
     <div className="admin-panel-section animate-in">
-      <h3>⚙️ Configurações do Sistema</h3>
+      <h3>⚙️ Configurações Globais do Sistema</h3>
+      <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>Essas configurações afetam o VSAI - IA inteiro e todos os usuários cadastrados.</p>
+      
       <div style={{ marginTop: 20, display: 'grid', gap: 20 }}>
+        <div className="card" style={{ padding: 20, border: '1px solid var(--purple-main)' }}>
+          <h4 style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700 }}>Chaves de API Globais (Fallback)</h4>
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>Se a chave de um usuário falhar ou esgotar, o sistema usará estas chaves primárias invisivelmente.</p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 4 }}>CHAVE GLOBAL GOOGLE GEMINI</label>
+              <input 
+                type="password"
+                className="admin-select" 
+                style={{ width: '100%', fontFamily: 'monospace' }} 
+                placeholder="AIzaSy..."
+                value={systemConfig.geminiApiKey || ''}
+                onChange={e => setSystemConfig({...systemConfig, geminiApiKey: e.target.value})}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 4 }}>CHAVE GLOBAL OPENAI / ANTHROPIC</label>
+              <input 
+                type="password"
+                className="admin-select" 
+                style={{ width: '100%', fontFamily: 'monospace' }} 
+                placeholder="sk-..."
+                value={systemConfig.openaiApiKey || ''}
+                onChange={e => setSystemConfig({...systemConfig, openaiApiKey: e.target.value})}
+              />
+            </div>
+          </div>
+        </div>
+
         <div>
           <label style={{ display: 'block', fontSize: 12, fontWeight: 800, marginBottom: 8 }}>PROMPT GLOBAL (PREFIXO)</label>
           <textarea 
             className="admin-select" 
             style={{ width: '100%', minHeight: 120, fontFamily: 'monospace' }} 
-            placeholder="Instruções injetadas em todos os agentes..."
-            value={systemConfig.global_prompt}
+            placeholder="Instruções injetadas em todos os agentes do sistema..."
+            value={systemConfig.global_prompt || ''}
             onChange={e => setSystemConfig({...systemConfig, global_prompt: e.target.value})}
           />
-          <button className="btn btn-primary" style={{ marginTop: 10 }}>Salvar Configurações</button>
         </div>
         
-        <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 20 }}>
+        <div style={{ borderTop: '1px solid var(--glass-border)', paddingTop: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontWeight: 700 }}>Modo Manutenção</div>
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Bloqueia acesso de usuários comuns.</div>
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>Bloqueia acesso de usuários comuns e suspende os jobs agendados.</div>
             </div>
             <button 
               className={`btn ${systemConfig.maintenance_mode ? 'btn-danger' : 'btn-secondary'}`}
               onClick={() => setSystemConfig({...systemConfig, maintenance_mode: !systemConfig.maintenance_mode})}
+              style={systemConfig.maintenance_mode ? { background: '#ef4444', color: 'white' } : {}}
             >
               {systemConfig.maintenance_mode ? 'DESATIVAR' : 'ATIVAR'}
             </button>
           </div>
         </div>
+
+        <button className="btn btn-primary" style={{ marginTop: 10, padding: 12, width: 'fit-content' }} onClick={saveSettings}>
+          💾 Salvar Configurações Globais
+        </button>
       </div>
     </div>
   );

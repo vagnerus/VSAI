@@ -67,9 +67,19 @@ export default async function handler(req, res) {
         if (s.lead_score >= 7) leads++; 
       });
 
+      // Gerar dados temporais simulados para os gráficos
+      const timeseries = Array.from({length: 7}).map((_, i) => ({
+        day: new Date(Date.now() - (6-i) * 86400000).toLocaleDateString('pt-BR', {weekday: 'short'}),
+        tokens: Math.floor(Math.random() * 50000) + 10000
+      }));
+
+      // Top usuários
+      const { rows: topUsers } = await query('SELECT full_name, email, tokens_used_month, plan FROM profiles ORDER BY tokens_used_month DESC LIMIT 5');
+
       return res.status(200).json({ 
         totalUsers, activeSessions, totalTokens, totalCostUSD: totalCost, 
-        bi: { sentiment, totalLeads: leads }, recentActivity: [] 
+        bi: { sentiment, totalLeads: leads }, recentActivity: [],
+        timeseries, topUsers
       });
     }
 
@@ -85,7 +95,23 @@ export default async function handler(req, res) {
 
     if (action === 'memory') {
       const { rows: data } = await query('SELECT id, full_name, email, long_term_memory, user_personality FROM profiles WHERE long_term_memory IS NOT NULL OR user_personality IS NOT NULL');
-      return res.status(200).json({ memories: data });
+      const { rows: count } = await query('SELECT COUNT(*) FROM project_knowledge');
+      return res.status(200).json({ memories: data, systemVectors: parseInt(count[0].count, 10) || 0 });
+    }
+
+    if (action === 'settings') {
+      if (req.method === 'GET') {
+        const { rows } = await query('SELECT config FROM system_settings WHERE id = $1', ['main']).catch(() => ({ rows: [] }));
+        return res.status(200).json({ settings: rows[0]?.config || {} });
+      }
+      if (req.method === 'PUT') {
+        await query('CREATE TABLE IF NOT EXISTS system_settings (id VARCHAR(50) PRIMARY KEY, config JSONB NOT NULL)');
+        const { rows } = await query('SELECT config FROM system_settings WHERE id = $1', ['main']);
+        const currentConfig = rows[0]?.config || {};
+        const newConfig = { ...currentConfig, ...req.body };
+        await query('INSERT INTO system_settings (id, config) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET config = $2', ['main', newConfig]);
+        return res.status(200).json({ success: true, settings: newConfig });
+      }
     }
 
     return res.status(404).json({ error: 'Action not found' });

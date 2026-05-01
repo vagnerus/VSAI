@@ -2254,6 +2254,194 @@ function TeamsPage() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Sessions Page
+// ═══════════════════════════════════════════════════════════════
+
+function SessionsPage() {
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api('/sessions').then(data => {
+      if (Array.isArray(data)) setSessions(data);
+      else if (data && Array.isArray(data.sessions)) setSessions(data.sessions);
+      setLoading(false);
+    });
+  }, []);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Tem certeza que deseja apagar este histórico?')) return;
+    try {
+      const headers = { 'Authorization': `Bearer ${localStorage.getItem('vsai_token') || ''}` };
+      await fetch(`/api/sessions?id=${id}`, { method: 'DELETE', headers });
+      setSessions(sessions.filter(s => s.id !== id));
+    } catch (e) {
+      alert('Erro ao excluir sessão.');
+    }
+  };
+
+  if (loading) return <div style={{ padding: 24 }}>Carregando sessões...</div>;
+
+  return (
+    <div className="animate-in" style={{ padding: 24, maxWidth: 1000 }}>
+      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>🔄 Histórico de Sessões</h2>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+        Acesse suas conversas anteriores, retome análises ou exclua históricos para liberar sua base de conhecimento.
+      </p>
+
+      {sessions.length === 0 ? (
+        <div className="empty-state">
+          <div className="empty-state-icon">💬</div>
+          <div className="empty-state-title">Nenhuma conversa encontrada</div>
+          <div className="empty-state-desc">Inicie um novo chat para que as sessões apareçam aqui.</div>
+        </div>
+      ) : (
+        <div className="admin-table-container">
+          <table className="admin-table" style={{ width: '100%', background: 'var(--glass-bg)', borderRadius: 12 }}>
+            <thead>
+              <tr>
+                <th>Título / Resumo</th>
+                <th>Tokens Gastos</th>
+                <th>Última Atividade</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessions.map(s => (
+                <tr key={s.id}>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{(s.title || 'Nova Conversa').substring(0, 60)}...</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>ID: {s.id.substring(0, 8)}</div>
+                  </td>
+                  <td>
+                    <span className="badge badge-purple">{(s.tokens_used || 0).toLocaleString()} tk</span>
+                  </td>
+                  <td>
+                    {new Date(s.updated_at).toLocaleString('pt-BR')}
+                  </td>
+                  <td style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-primary btn-sm" onClick={() => window.location.href = `/app?session=${s.id}`}>
+                      Continuar
+                    </button>
+                    <button className="btn btn-secondary btn-sm" style={{ color: 'var(--accent-danger)' }} onClick={() => handleDelete(s.id)}>
+                      Excluir
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Agents Page
+// ═══════════════════════════════════════════════════════════════
+
+function AgentsPage() {
+  const [agents, setAgents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api('/agents').then(data => {
+      if (Array.isArray(data)) setAgents(data);
+      setLoading(false);
+    });
+  }, []);
+
+  if (loading) return <div style={{ padding: 24 }}>Carregando agentes...</div>;
+
+  return (
+    <div className="animate-in" style={{ padding: 24, maxWidth: 1000 }}>
+      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>🤖 Equipe de Agentes Especiais</h2>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+        Inicie conversas isoladas com agentes especialistas. Cada agente possui instruções rígidas e capacidades únicas para tarefas complexas.
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+        {agents.length === 0 ? (
+          <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
+            <div className="empty-state-icon">🛡️</div>
+            <div className="empty-state-title">Nenhum Agente Ativo</div>
+            <div className="empty-state-desc">Os administradores do sistema ainda não disponibilizaram agentes especiais.</div>
+          </div>
+        ) : (
+          agents.map(a => (
+            <div key={a.id} className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12, border: '1px solid var(--border-platinum)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 32, background: 'var(--bg-elevated)', width: 60, height: 60, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {a.icon || '🤖'}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: 18, fontWeight: 800 }}>{a.name}</h3>
+                  <div className="badge badge-purple" style={{ fontSize: 10 }}>{a.model || 'gemini-1.5-flash'}</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)', flex: 1 }}>
+                {a.description || (a.system_prompt || '').substring(0, 100) + '...'}
+              </p>
+              <button className="btn btn-primary" style={{ width: '100%' }} onClick={() => window.location.href = `/app?agent=${a.id}`}>
+                💬 Iniciar Missão
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Tools Page
+// ═══════════════════════════════════════════════════════════════
+
+function ToolsPage() {
+  return (
+    <div className="animate-in" style={{ padding: 24, maxWidth: 900 }}>
+      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>🔧 Ferramentas de IA (Tool Calling)</h2>
+      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+        Gerencie as ferramentas (functions) que seus Agentes podem usar de forma autônoma para acessar a internet, buscar arquivos ou executar comandos.
+      </p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 24, marginBottom: 12 }}>🌐</div>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Web Search Engine</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Permite aos agentes buscar informações em tempo real na internet (Tavily/DuckDuckGo).</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>Ativo</span>
+            <button className="btn btn-secondary btn-sm">Configurar</button>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 24, marginBottom: 12 }}>🐍</div>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Python Code Interpreter</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Ambiente sandboxed para o agente rodar scripts de análise de dados e matemática.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>Ativo</span>
+            <button className="btn btn-secondary btn-sm">Configurar</button>
+          </div>
+        </div>
+
+        <div className="card" style={{ padding: 16 }}>
+          <div style={{ fontSize: 24, marginBottom: 12 }}>🗄️</div>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>SQL Database Reader</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Acesso apenas de leitura para extrair métricas do banco de dados e gerar BI.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="badge" style={{ background: '#f1f5f9', color: '#64748b' }}>Inativo</span>
+            <button className="btn btn-primary btn-sm">Ativar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsPage() {
   const [config, setConfig] = useState({
     geminiApiKey: '',
