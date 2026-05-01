@@ -371,45 +371,155 @@ function MiniChatBubble({ onClose, onSetEmotion, pageContext, profile, config, o
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
+  const userName = profile?.full_name?.split(' ')[0] || 'visitante';
+  const rank = getAvatarRank(config.avatarXP);
+
   useEffect(() => {
-    const name = profile?.full_name?.split(' ')[0] || 'visitante';
-    setMessages([{ role: 'assistant', content: `Olá **${name}**! Seu Super Avatar Nível ${getAvatarRank(config.avatarXP).level} está pronto. No que posso ajudar?` }]);
+    setMessages([{ 
+      role: 'assistant', 
+      content: `Olá **${userName}**! Sou seu assistente **${config.avatarName}** (Nível ${rank.level} - ${rank.title}).\n\nComo posso ajudar você no canal **${pageContext}** hoje?` 
+    }]);
   }, []);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, loading]);
 
+  const handleCommand = (cmd, arg) => {
+    switch (cmd) {
+      case '/ajuda':
+        setMessages(p => [...p, { role: 'assistant', content: `**Comandos Disponíveis:**\n- \`/matrix\`: Ativa o efeito visual Matrix\n- \`/festa\`: Ativa o efeito de aura de fogo\n- \`/lembrar [texto]\`: Salva uma nota na minha memória\n- \`/notas\`: Lista todas as notas salvas\n- \`/limpar\`: Limpa o histórico do chat\n- \`/normal\`: Remove todos os efeitos visuais` }]);
+        return true;
+      case '/matrix':
+        onUpdateConfig({ ...config, particles: 'matrix' });
+        setMessages(p => [...p, { role: 'assistant', content: 'Entrando na Matrix... 🟢' }]);
+        onEarnXP(5);
+        return true;
+      case '/festa':
+        onUpdateConfig({ ...config, particles: 'fire' });
+        setMessages(p => [...p, { role: 'assistant', content: 'Iniciando modo festa! 🔥' }]);
+        onEarnXP(5);
+        return true;
+      case '/normal':
+        onUpdateConfig({ ...config, particles: 'none' });
+        setMessages(p => [...p, { role: 'assistant', content: 'Efeitos desativados.' }]);
+        return true;
+      case '/lembrar':
+        if (!arg) { setMessages(p => [...p, { role: 'assistant', content: 'Uso: `/lembrar [seu lembrete]`' }]); return true; }
+        const newNotes = [...(config.avatarNotes || []), { id: Date.now(), text: arg, date: new Date().toLocaleString() }];
+        onUpdateConfig({ ...config, avatarNotes: newNotes });
+        setMessages(p => [...p, { role: 'assistant', content: `✅ Memorizado: "${arg}"` }]);
+        onEarnXP(15);
+        return true;
+      case '/notas':
+        const list = config.avatarNotes?.length 
+          ? config.avatarNotes.map(n => `- ${n.text} (${n.date})`).join('\n')
+          : 'Nenhuma nota salva ainda.';
+        setMessages(p => [...p, { role: 'assistant', content: `**Minhas Memórias:**\n${list}` }]);
+        return true;
+      case '/limpar':
+        setMessages([{ role: 'assistant', content: 'Histórico limpo. Como posso ajudar?' }]);
+        return true;
+      default: return false;
+    }
+  };
+
   const sendMessage = async (text) => {
     const txt = text.trim(); if (!txt) return;
-    setMessages(p => [...p, { role: 'user', content: txt }]); setInput(''); setLoading(true);
+    setInput('');
+
+    // Check for Slash Commands
+    if (txt.startsWith('/')) {
+      const [cmd, ...args] = txt.split(' ');
+      if (handleCommand(cmd.toLowerCase(), args.join(' '))) return;
+    }
+
+    setMessages(p => [...p, { role: 'user', content: txt }]); 
+    setLoading(true);
+    onSetEmotion('thinking');
+
     try {
+      const memories = config.avatarNotes?.map(n => n.text).join('; ') || 'Nenhuma';
+      const customPrompt = `
+        Você é ${config.avatarName}, o assistente pessoal do usuário ${userName}.
+        Contexto Atual: O usuário está na página "${pageContext}".
+        Suas Memórias (Notas do Usuário): ${memories}.
+        Rank Atual: ${rank.title} (Nível ${rank.level}).
+        Responda de forma prestativa, tecnológica e curta. Use markdown.
+      `.trim();
+
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('nexus_access_token')}` },
-        body: JSON.stringify({ content: txt, messages: messages.map(m => ({ role: m.role, content: m.content })), customInstructions: `Nome: ${config.avatarName}.` })
+        body: JSON.stringify({ 
+          content: txt, 
+          messages: messages.map(m => ({ role: m.role, content: m.content })), 
+          customInstructions: customPrompt 
+        })
       });
       const data = await res.json();
-      setMessages(p => [...p, { role: 'assistant', content: data.reply || data.content, isNew: true }]);
+      const reply = data.reply || data.content || 'Sem resposta do núcleo.';
+      
+      setMessages(p => [...p, { role: 'assistant', content: reply, isNew: true }]);
+      onSetEmotion('happy');
       onEarnXP(10);
-    } catch (err) { setMessages(p => [...p, { role: 'assistant', content: 'Erro neural.' }]); }
+      AudioFX.pop();
+    } catch (err) { 
+      setMessages(p => [...p, { role: 'assistant', content: '🚨 Erro de sincronização neural.' }]); 
+      onSetEmotion('sad');
+      AudioFX.error();
+    }
     finally { setLoading(false); }
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} style={{ position: 'absolute', bottom: 160, right: 0, width: 360, height: 500, display: 'flex', flexDirection: 'column', borderRadius: 24, overflow: 'hidden', boxShadow: '0 30px 70px rgba(0,0,0,0.8)', border: '1px solid #333', background: '#0a0a0f', zIndex: 10000 }}>
-      <header style={{ padding: 20, background: '#111', display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #222' }}>
-        <h3 style={{ margin: 0, fontSize: 16, color: '#fff' }}>💬 {config.avatarName}</h3>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer' }}>✕</button>
+    <motion.div initial={{ opacity: 0, scale: 0.9, y: 30 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} style={{ position: 'absolute', bottom: 160, right: 0, width: 380, height: 550, display: 'flex', flexDirection: 'column', borderRadius: 24, overflow: 'hidden', boxShadow: '0 30px 70px rgba(0,0,0,0.8)', border: '1px solid #333', background: 'rgba(10,10,15,0.95)', backdropFilter: 'blur(20px)', zIndex: 10000 }}>
+      <header style={{ padding: '20px 25px', background: 'rgba(255,255,255,0.03)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #222' }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 16, color: '#fff', fontWeight: 900, letterSpacing: -0.5 }}>{config.avatarName}</h3>
+          <div style={{ fontSize: 10, color: '#8b5cf6', fontWeight: 800 }}>SISTEMA {rank.title.toUpperCase()}</div>
+        </div>
+        <button onClick={onClose} style={{ background: '#222', border: 'none', color: '#fff', width: 32, height: 32, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>✕</button>
       </header>
-      <div style={{ flex: 1, padding: 20, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 15 }}>
+
+      <div style={{ flex: 1, padding: 25, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 20 }}>
         {messages.map((m, i) => (
-          <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', background: m.role === 'user' ? '#8b5cf6' : '#222', padding: 12, borderRadius: 15, color: '#fff', fontSize: 14 }}>{m.content}</div>
+          <motion.div key={i} initial={{ opacity: 0, x: m.role === 'user' ? 20 : -20 }} animate={{ opacity: 1, x: 0 }} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+             <div style={{ background: m.role === 'user' ? '#8b5cf6' : '#1a1a20', padding: '12px 18px', borderRadius: m.role === 'user' ? '20px 20px 4px 20px' : '20px 20px 20px 4px', color: '#fff', fontSize: 14, lineHeight: 1.6, boxShadow: '0 5px 15px rgba(0,0,0,0.2)', border: m.role === 'assistant' ? '1px solid #333' : 'none' }}>
+               <MarkdownRenderer content={m.content} />
+             </div>
+          </motion.div>
         ))}
+        {loading && <div style={{ color: '#555', fontSize: 12, paddingLeft: 10 }}>Processando resposta...</div>}
         <div ref={messagesEndRef} />
       </div>
-      <div style={{ padding: 15, borderTop: '1px solid #222', display: 'flex', gap: 10 }}>
-        <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMessage(input)} style={{ flex: 1, background: '#000', border: '1px solid #333', padding: 12, borderRadius: 20, color: '#fff' }} />
-        <button onClick={() => sendMessage(input)} style={{ background: '#8b5cf6', border: 'none', borderRadius: '50%', width: 40, height: 40, color: '#fff' }}>➤</button>
+
+      <div style={{ padding: 20, background: 'rgba(0,0,0,0.2)', borderTop: '1px solid #222', display: 'flex', gap: 12 }}>
+        <input 
+          type="text" 
+          value={input} 
+          placeholder="Digite algo ou use /ajuda..."
+          onChange={e => setInput(e.target.value)} 
+          onKeyDown={e => e.key === 'Enter' && sendMessage(input)} 
+          style={{ flex: 1, background: '#000', border: '1px solid #333', padding: '14px 20px', borderRadius: 25, color: '#fff', fontSize: 14, outline: 'none', transition: '0.3s' }} 
+        />
+        <button onClick={() => sendMessage(input)} style={{ background: '#8b5cf6', border: 'none', borderRadius: '50%', width: 50, height: 50, color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: '0.3s' }} onMouseEnter={e => e.target.style.transform = 'scale(1.1)'} onMouseLeave={e => e.target.style.transform = 'scale(1)'}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
       </div>
     </motion.div>
   );
 }
+
+function MarkdownRenderer({ content }) {
+  // Simple markdown-to-html (bold, bullet points)
+  const parts = content.split(/(\*\*.*?\*\*|- .*)/g);
+  return (
+    <div style={{ whiteSpace: 'pre-wrap' }}>
+      {parts.map((p, i) => {
+        if (p.startsWith('**') && p.endsWith('**')) return <strong key={i}>{p.slice(2, -2)}</strong>;
+        if (p.startsWith('- ')) return <div key={i} style={{ marginLeft: 10 }}>• {p.slice(2)}</div>;
+        return p;
+      })}
+    </div>
+  );
+}
+
