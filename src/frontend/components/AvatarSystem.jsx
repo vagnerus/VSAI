@@ -1,74 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Float, Sphere, MeshDistortMaterial, Text, PerspectiveCamera } from '@react-three/drei';
-import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
-import * as THREE from 'three';
-
-// ─── Componente de Avatar 3D (Three.js) ─────────────────────
-function ThreeAvatar({ config, isDragging }) {
-  const group = useRef();
-  const legs = useRef();
-
-  // Animação de idle e drag
-  useFrame((state) => {
-    const t = state.clock.getElapsedTime();
-    
-    if (isDragging) {
-      // Animação de "batendo as pernas" (kicking)
-      legs.current.rotation.x = Math.sin(t * 15) * 0.5;
-      group.current.rotation.y = Math.sin(t * 10) * 0.2;
-    } else {
-      // Idle sutil
-      legs.current.rotation.x = Math.sin(t * 2) * 0.1;
-      group.current.rotation.y = Math.sin(t * 0.5) * 0.1;
-    }
-  });
-
-  return (
-    <group ref={group}>
-      {/* Corpo Principal */}
-      <Sphere args={[1, 32, 32]} position={[0, 1, 0]}>
-        <MeshDistortMaterial 
-          color={config.bodyColor || '#8b5cf6'} 
-          speed={2} 
-          distort={0.3} 
-          metalness={0.8} 
-          roughness={0.2} 
-        />
-      </Sphere>
-
-      {/* Olhos */}
-      <group position={[0, 1.2, 0.8]}>
-        <Sphere args={[0.1, 16, 16]} position={[-0.3, 0, 0]}>
-          <meshStandardMaterial color="#000" />
-        </Sphere>
-        <Sphere args={[0.1, 16, 16]} position={[0.3, 0, 0]}>
-          <meshStandardMaterial color="#000" />
-        </Sphere>
-      </group>
-
-      {/* Pernas (Batendo) */}
-      <group ref={legs} position={[0, 0.2, 0]}>
-        <mesh position={[-0.4, -0.4, 0]}>
-          <capsuleGeometry args={[0.15, 0.4, 4, 8]} />
-          <meshStandardMaterial color={config.bodyColor || '#8b5cf6'} />
-        </mesh>
-        <mesh position={[0.4, -0.4, 0]}>
-          <capsuleGeometry args={[0.15, 0.4, 4, 8]} />
-          <meshStandardMaterial color={config.bodyColor || '#8b5cf6'} />
-        </mesh>
-      </group>
-
-      {/* Acessório (Ex: Auréola ou Chapéu) */}
-      {config.accessory === 'halo' && (
-        <mesh position={[0, 2.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.5, 0.05, 16, 32]} />
-          <meshStandardMaterial color="#fbbf24" emissive="#fbbf24" emissiveIntensity={2} />
-        </mesh>
-      )}
-    </group>
-  );
-}
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ─── Widget Principal do Avatar ────────────────────────────
 export function AvatarWidget({ profile, onUpdateProfile, onNavigate }) {
@@ -136,18 +67,27 @@ export function AvatarWidget({ profile, onUpdateProfile, onNavigate }) {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9, cursor: 'grabbing' }}
           className="avatar-draggable-wrapper"
-          style={{ width: 120, height: 120, cursor: 'grab' }}
+          style={{ width: 140, height: 140, cursor: 'grab', position: 'relative' }}
           onClick={() => !isDragging && setIsOpen(!isOpen)}
         >
-          <Canvas shadows camera={{ position: [0, 0, 5], fov: 40 }}>
-            <ambientLight intensity={0.5} />
-            <pointLight position={[10, 10, 10]} intensity={1.5} />
-            <Suspense fallback={null}>
-              <Float speed={2} rotationIntensity={0.5} floatIntensity={1}>
-                <ThreeAvatar config={config} isDragging={isDragging} />
-              </Float>
-            </Suspense>
-          </Canvas>
+          {/* Imagem do Avatar em 3D */}
+          <div className={`avatar-3d-image ${isDragging ? 'dragging' : 'floating'}`}>
+            <img 
+              src="/avatar3d.png" 
+              alt="VSAI Avatar" 
+              style={{ 
+                width: '100%', 
+                height: '100%', 
+                objectFit: 'contain', 
+                filter: `drop-shadow(0px 10px 15px ${config.bodyColor}66)`,
+                borderRadius: '50%'
+              }} 
+            />
+            {/* Halo / Acessório */}
+            {config.accessory === 'halo' && (
+              <div className="avatar-halo" style={{ borderTopColor: '#fbbf24' }}></div>
+            )}
+          </div>
 
           {/* Menu de Interação */}
           <AnimatePresence>
@@ -182,6 +122,43 @@ export function AvatarWidget({ profile, onUpdateProfile, onNavigate }) {
           />
         )}
       </AnimatePresence>
+
+      <style>{`
+        .avatar-3d-image {
+          width: 100%;
+          height: 100%;
+          position: relative;
+          transition: transform 0.3s ease;
+        }
+        .avatar-3d-image.floating {
+          animation: floatAvatar 3s ease-in-out infinite;
+        }
+        .avatar-3d-image.dragging {
+          transform: scale(0.95);
+        }
+        .avatar-halo {
+          position: absolute;
+          top: -10px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 60px;
+          height: 20px;
+          border-radius: 50%;
+          border: 4px solid transparent;
+          border-top-color: #fbbf24;
+          box-shadow: 0 -5px 15px rgba(251, 191, 36, 0.5);
+          animation: floatHalo 3s ease-in-out infinite alternate;
+        }
+        @keyframes floatAvatar {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+          100% { transform: translateY(0px); }
+        }
+        @keyframes floatHalo {
+          0% { transform: translateX(-50%) translateY(0px) rotateX(70deg); }
+          100% { transform: translateX(-50%) translateY(-5px) rotateX(70deg); }
+        }
+      `}</style>
     </>
   );
 }
@@ -208,34 +185,42 @@ function AvatarStudio({ config, onClose, onSave }) {
           <button onClick={onClose}>✕</button>
         </header>
 
-        <div className="studio-content">
-          <div className="studio-preview">
-            <Canvas camera={{ position: [0, 0, 5] }}>
-              <ambientLight intensity={0.7} />
-              <pointLight position={[5, 5, 5]} />
-              <ThreeAvatar config={localConfig} />
-              <OrbitControls enableZoom={false} />
-            </Canvas>
+        <div className="studio-content" style={{ display: 'flex', gap: 30, padding: 20 }}>
+          <div className="studio-preview" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 20 }}>
+             <div className="avatar-3d-image floating" style={{ width: 160, height: 160 }}>
+                <img 
+                  src="/avatar3d.png" 
+                  alt="Preview" 
+                  style={{ 
+                    width: '100%', height: '100%', objectFit: 'contain', 
+                    filter: `drop-shadow(0px 10px 20px ${localConfig.bodyColor})` 
+                  }} 
+                />
+                {localConfig.accessory === 'halo' && (
+                  <div className="avatar-halo"></div>
+                )}
+             </div>
           </div>
 
-          <div className="studio-controls">
-            <div className="control-group">
-              <label>Cor do Corpo</label>
-              <div className="color-grid">
+          <div className="studio-controls" style={{ flex: 1 }}>
+            <div className="control-group" style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', marginBottom: 10, fontWeight: 800 }}>Aura de Energia (Cor do Avatar)</label>
+              <div className="color-grid" style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {['#8b5cf6', '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#f472b6'].map(color => (
                   <button 
                     key={color} 
-                    style={{ background: color }} 
-                    className={localConfig.bodyColor === color ? 'active' : ''}
+                    style={{ background: color, width: 30, height: 30, borderRadius: '50%', border: localConfig.bodyColor === color ? '3px solid white' : 'none' }} 
                     onClick={() => setLocalConfig({ ...localConfig, bodyColor: color })}
                   />
                 ))}
               </div>
             </div>
 
-            <div className="control-group">
-              <label>Acessórios</label>
+            <div className="control-group" style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', marginBottom: 10, fontWeight: 800 }}>Acessórios</label>
               <select 
+                className="input"
+                style={{ width: '100%', padding: 10, borderRadius: 8, background: 'var(--bg-primary)', color: 'white' }}
                 value={localConfig.accessory} 
                 onChange={(e) => setLocalConfig({ ...localConfig, accessory: e.target.value })}
               >
@@ -244,7 +229,7 @@ function AvatarStudio({ config, onClose, onSave }) {
               </select>
             </div>
 
-            <button className="btn-save-avatar" onClick={() => onSave(localConfig)}>
+            <button className="btn btn-primary" style={{ width: '100%', padding: 15 }} onClick={() => onSave(localConfig)}>
               Salvar Identidade
             </button>
           </div>
