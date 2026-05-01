@@ -89,7 +89,11 @@ async function api(path, options = {}) {
     return res.json();
   } catch (err) {
     console.error(`[API_FETCH_CRITICAL] ${path}:`, err);
-    return { stats: { apiConfigured: false }, error: err.message };
+    let message = err.message;
+    if (message === 'fetch failed') {
+      message = 'Não foi possível conectar ao servidor backend. Verifique se o servidor está rodando (npm run dev:server).';
+    }
+    return { stats: { apiConfigured: false }, error: message };
   }
 }
 
@@ -770,6 +774,7 @@ function ChatPage({ projectId }) {
   const [showArtifacts, setShowArtifacts] = useState(false);
   const [showPromptLibrary, setShowPromptLibrary] = useState(false);
   const [activeArtifactIdx, setActiveArtifactIdx] = useState(0);
+  const [showOtherModels, setShowOtherModels] = useState(false);
   const [errorState, setErrorState] = useState(null);
   const abortControllerRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -1110,6 +1115,7 @@ function ChatPage({ projectId }) {
   useEffect(() => {
     api('/config').then(data => {
       if (data) {
+        setShowOtherModels(!!data.showOtherModels);
         setConfiguredProviders({
           gemini: true, // Always true because of global fallback
           anthropic: !!data.anthropicApiKey,
@@ -1132,15 +1138,18 @@ function ChatPage({ projectId }) {
         }}
         style={{ background: 'transparent', border: 'none', color: '#1e293b', fontWeight: 700, fontSize: 13, cursor: 'pointer', outline: 'none', flex: 1 }}
       >
-        {Object.entries(AI_CONFIG).map(([pId, pCfg]) => (
-          configuredProviders[pId] ? (
+        {Object.entries(AI_CONFIG).map(([pId, pCfg]) => {
+          // If showOtherModels is false, only show Google Gemini
+          if (!showOtherModels && pId !== 'gemini') return null;
+          
+          return configuredProviders[pId] ? (
             <optgroup key={pId} label={pCfg.name}>
               {pCfg.models.map(m => (
                 <option key={m.id} value={`${pId}:${m.id}`}>{pCfg.icon} {m.label}</option>
               ))}
             </optgroup>
-          ) : null
-        ))}
+          ) : null;
+        })}
       </select>
       <button 
         onClick={() => setShowSettings(!showSettings)}
@@ -2250,7 +2259,8 @@ function SettingsPage() {
     anthropicApiKey: '',
     defaultProvider: 'gemini',
     googleModel: 'gemini-1.5-flash',
-    anthropicModel: 'claude-sonnet-4-20250514'
+    anthropicModel: 'claude-sonnet-4-20250514',
+    showOtherModels: false
   });
   const [loading, setLoading] = useState(true);
 
@@ -2384,6 +2394,24 @@ function SettingsPage() {
                 value={config.ollamaModel}
                 onChange={e => setConfig({ ...config, ollamaModel: e.target.value })}
                 placeholder="llama3:8b"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-header"><div className="card-title">🧩 Interface & Visibilidade</div></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 0' }}>
+              <div>
+                <div style={{ fontWeight: 600 }}>Mostrar outros modelos no Chat</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Habilita GPT-4, Claude e outros no seletor do chat.</div>
+              </div>
+              <input 
+                type="checkbox" 
+                checked={config.showOtherModels} 
+                onChange={e => setConfig({ ...config, showOtherModels: e.target.checked })}
+                style={{ width: 20, height: 20, cursor: 'pointer' }}
               />
             </div>
           </div>

@@ -98,7 +98,8 @@ export default async function handler(req, res) {
           googleModel: req.body.googleModel,
           anthropicModel: req.body.anthropicModel,
           ollamaHost: req.body.ollamaHost,
-          ollamaModel: req.body.ollamaModel
+          ollamaModel: req.body.ollamaModel,
+          showOtherModels: req.body.showOtherModels
         };
 
         try {
@@ -134,6 +135,7 @@ export default async function handler(req, res) {
       } catch (e) { console.error('Erro ao ler config do perfil', e.message); }
 
       return res.json({
+        showOtherModels: false, // Default
         ...savedConfig,
         models: [
           { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'Google', speed: 'ultra' },
