@@ -1507,112 +1507,7 @@ function ChatPage({ projectId }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Tools Page
-// ═══════════════════════════════════════════════════════════════
 
-function ToolsPage() {
-  const [tools, setTools] = useState([]);
-
-  useEffect(() => {
-    api('/tools').then(data => setTools(data.tools || []));
-  }, []);
-
-  const toolIcons = {
-    bash: '🖥️', file_read: '📖', file_write: '📝', file_patch: '🔧',
-    web_search: '🔍', web_fetch: '🌐', code_generate: '💻',
-    translate: '🌍', summarize: '📋', analyze_sentiment: '🎭',
-    seo_analyze: '📊', compose_email: '✉️', format_data: '🗃️',
-    calculate: '🧮', regex: '🔣', calculate_tokens: '🔢',
-  };
-
-  return (
-    <div className="animate-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-        <div>
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>VSAI - IA Alpha-1000</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginTop: 4 }}>
-            {tools.length} ferramentas disponíveis no sistema
-          </p>
-        </div>
-      </div>
-
-      <div className="tools-grid">
-        {tools.map(tool => (
-          <div key={tool.name} className="tool-card">
-            <div className="tool-card-icon">{toolIcons[tool.name] || '🔧'}</div>
-            <div className="tool-card-name">{tool.name}</div>
-            <div className="tool-card-desc">{tool.description}</div>
-            <div className="tool-card-flags">
-              {tool.isEnabled && <span className="badge badge-success">Ativo</span>}
-              {tool.isReadOnly && <span className="badge badge-info">Read-Only</span>}
-              {tool.isConcurrencySafe && <span className="badge badge-purple">Concorrente</span>}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════
-// Sessions Page
-// ═══════════════════════════════════════════════════════════════
-
-function SessionsPage() {
-  const [sessions, setSessions] = useState([]);
-
-  useEffect(() => {
-    api('/sessions?limit=50').then(data => setSessions(data.sessions || []));
-  }, []);
-
-  const formatBytes = (bytes) => {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
-
-  return (
-    <div className="animate-in">
-      <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20 }}>📝 Sessões</h2>
-
-      {sessions.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">📭</div>
-          <div className="empty-state-title">Nenhuma sessão ainda</div>
-          <div className="empty-state-desc">Inicie uma conversa no Chat para criar sua primeira sessão.</div>
-        </div>
-      ) : (
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Primeira Mensagem</th>
-                <th>Mensagens</th>
-                <th>Tamanho</th>
-                <th>Última Atividade</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessions.map(s => (
-                <tr key={s.id}>
-                  <td><code style={{ fontSize: 11 }}>{(s.id || '').substring(0, 12)}...</code></td>
-                  <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.title || '-'}
-                  </td>
-                  <td>{s.message_count || 0}</td>
-                  <td>{formatBytes(s.size || 0)}</td>
-                  <td>{s.updated_at ? new Date(s.updated_at).toLocaleString('pt-BR') : '-'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Hooks Page
@@ -1778,55 +1673,7 @@ function PermissionsPage() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════
-// Agents Page
-// ═══════════════════════════════════════════════════════════════
 
-function AgentsPage() {
-  return (
-    <div className="animate-in">
-      <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20 }}>🤖 Multi-Agent Coordinator</h2>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
-        Sistema de coordenação multi-agente: Leader → Workers paralelos com mailbox IPC.
-      </p>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card-icon">👑</div>
-          <div className="stat-card-value">Leader</div>
-          <div className="stat-card-label">Coordinator Mode</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">🔧</div>
-          <div className="stat-card-value">0</div>
-          <div className="stat-card-label">Workers Ativos</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">📬</div>
-          <div className="stat-card-value">0</div>
-          <div className="stat-card-label">Mensagens no Mailbox</div>
-        </div>
-      </div>
-
-      <div className="card" style={{ marginTop: 16 }}>
-        <div className="card-header">
-          <div className="card-title">📋 Workflow do Coordenador</div>
-        </div>
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          {['📖 Research (Parallel)', '🧠 Synthesis (Coordinator)', '🔨 Implementation (Workers)', '✅ Verification (Fresh)'].map((phase, i) => (
-            <div key={i} style={{
-              flex: '1 1 200px', padding: 16, background: 'var(--glass-bg)',
-              border: '1px solid var(--glass-border)', borderRadius: 'var(--radius-md)', textAlign: 'center',
-            }}>
-              <div style={{ fontSize: 15, fontWeight: 600 }}>{phase}</div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>Fase {i + 1}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Analytics Page
@@ -2840,14 +2687,4 @@ function MainApp() {
       return <LandingPage onNavigate={navigate} />;
   }
 }
-// ═══════════════════════════════════════════════════════════════
-// Placeholder Pages (Stubs)
-// ═══════════════════════════════════════════════════════════════
 
-function HooksPage() { return <div style={{ padding: 24 }}><h3>🪝 Webhooks</h3><p>Configure integrações externas via webhooks.</p></div>; }
-function PermissionsPage() { return <div style={{ padding: 24 }}><h3>🔐 Permissões</h3><p>Gerencie o acesso granular dos usuários.</p></div>; }
-function AnalyticsPage({ stats }) { return <div style={{ padding: 24 }}><h3>📊 Analytics Avançado</h3><p>Métricas detalhadas de uso e performance.</p></div>; }
-function PluginsPage() { return <div style={{ padding: 24 }}><h3>🔌 Marketplace de Plugins</h3><p>Expanda as capacidades do VSAI com plugins.</p></div>; }
-function ProfilePage() { return <div style={{ padding: 24 }}><h3>👤 Perfil do Usuário</h3><p>Gerencie suas informações pessoais e segurança.</p></div>; }
-function TeamsPage() { return <div style={{ padding: 24 }}><h3>👥 Gestão de Equipe</h3><p>Convide colaboradores e organize workspaces.</p></div>; }
-function ProjectsPage({ onStartChat }) { return <div style={{ padding: 24 }}><h3>📁 Projetos</h3><p>Selecione um projeto para começar a trabalhar.</p></div>; }
