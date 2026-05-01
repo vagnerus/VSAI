@@ -5,22 +5,49 @@
  * B1 Fix: Iterates ALL parts for functionCall detection
  * B2 Fix: Unified tool_result formatting (no duplicates)
  * Added: Retry logic with exponential backoff
+ * Added: Multi-key rotation for unlimited free-tier usage
  */
 
 export class GeminiClient {
   constructor(config = {}) {
-    this.apiKey = config.apiKey || '';
+    // Support single key (string) or multiple keys (array/comma-separated)
+    const rawKeys = config.apiKeys || config.apiKey || '';
+    if (Array.isArray(rawKeys)) {
+      this.apiKeys = rawKeys.filter(k => k && k.length > 10);
+    } else if (typeof rawKeys === 'string' && rawKeys.includes(',')) {
+      this.apiKeys = rawKeys.split(',').map(k => k.trim()).filter(k => k.length > 10);
+    } else {
+      this.apiKeys = rawKeys && rawKeys.length > 10 ? [rawKeys] : [];
+    }
+
+    this.currentKeyIndex = 0;
     this.defaultModel = config.model || 'gemini-2.5-flash';
     this.baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models';
     this.maxRetries = config.maxRetries || 3;
 
-    if (!this.apiKey) {
-      console.warn('[GeminiClient] No API key configured. Set GEMINI_API_KEY in .env');
+    if (this.apiKeys.length === 0) {
+      console.warn('[GeminiClient] No API keys configured. Set GEMINI_API_KEY in .env');
+    } else {
+      console.log(`[GeminiClient] Initialized with ${this.apiKeys.length} API key(s) — rotation ${this.apiKeys.length > 1 ? 'ENABLED' : 'disabled'}`);
     }
   }
 
+  /** Get the current active API key */
+  get apiKey() {
+    return this.apiKeys?.[this.currentKeyIndex] || '';
+  }
+
+  /** Rotate to the next API key (round-robin) */
+  _rotateKey() {
+    if (this.apiKeys.length <= 1) return false;
+    const prevIndex = this.currentKeyIndex;
+    this.currentKeyIndex = (this.currentKeyIndex + 1) % this.apiKeys.length;
+    console.log(`[GeminiClient] 🔄 Key rotation: slot ${prevIndex} → ${this.currentKeyIndex} (of ${this.apiKeys.length})`);
+    return true;
+  }
+
   isConfigured() {
-    return !!this.apiKey && this.apiKey.length > 10;
+    return this.apiKeys && this.apiKeys.length > 0 && this.apiKeys[0].length > 10;
   }
 
   getAvailableModels() {
@@ -113,10 +140,6 @@ export class GeminiClient {
   async *stream({ model, max_tokens, system, messages, tools, temperature, top_p }) {
     let targetModel = model || this.defaultModel;
     
-    // gemini-2.5-flash is now GA — no mapping needed
-
-    const url = `${this.baseUrl}/${targetModel}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
-    
     const body = {
       contents: this._translateMessages(messages),
       generationConfig: {
@@ -135,13 +158,21 @@ export class GeminiClient {
       body.tools = geminiTools;
     }
 
-    // Retry logic with exponential backoff
+    // Retry logic with key rotation on rate limits
+    // Total attempts = retries per key × number of keys
+    const maxAttempts = this.maxRetries * Math.max(this.apiKeys.length, 1);
     let lastError = null;
-    for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+    let keysExhausted = 0;
+
+    for (let attempt = 0; attempt <= maxAttempts; attempt++) {
       try {
-        if (attempt > 0) {
-          const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 30000);
-          console.log(`[GeminiClient] Retry attempt ${attempt}/${this.maxRetries} after ${Math.round(delay)}ms...`);
+        // Build URL with CURRENT key (may change after rotation)
+        const url = `${this.baseUrl}/${targetModel}:streamGenerateContent?alt=sse&key=${this.apiKey}`;
+
+        if (attempt > 0 && keysExhausted < this.apiKeys.length) {
+          // Only delay if we didn't just rotate to a fresh key
+          const delay = Math.min(1000 * Math.pow(2, Math.floor(attempt / Math.max(this.apiKeys.length, 1))) + Math.random() * 500, 30000);
+          console.log(`[GeminiClient] Retry attempt ${attempt}/${maxAttempts} after ${Math.round(delay)}ms (key slot ${this.currentKeyIndex})...`);
           await new Promise(r => setTimeout(r, delay));
         }
 
@@ -156,9 +187,18 @@ export class GeminiClient {
           const error = new Error(`Gemini Error ${response.status}: ${errText}`);
           error.status = response.status;
           
-          // Only retry on retryable errors
+          // On rate limit (429), try rotating to next key IMMEDIATELY
+          if (response.status === 429 && this._rotateKey()) {
+            keysExhausted++;
+            lastError = error;
+            if (keysExhausted < this.apiKeys.length) {
+              // Fresh key available — retry immediately without delay
+              continue;
+            }
+          }
+
           const isRetryable = response.status === 429 || response.status === 503 || response.status === 500;
-          if (isRetryable && attempt < this.maxRetries) {
+          if (isRetryable && attempt < maxAttempts) {
             lastError = error;
             continue;
           }
@@ -170,8 +210,14 @@ export class GeminiClient {
 
       } catch (error) {
         lastError = error;
+        
+        // Rotate key on rate limit errors
+        if (error.status === 429) {
+          this._rotateKey();
+        }
+        
         const isRetryable = error.status === 429 || error.status === 503 || error.status === 500;
-        if (!isRetryable || attempt >= this.maxRetries) {
+        if (!isRetryable || attempt >= maxAttempts) {
           throw error;
         }
       }

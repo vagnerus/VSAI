@@ -101,11 +101,30 @@ export async function getApiClient(requestedProvider, userId = null) {
     }
 
     // 2. ENV VARS (Vercel) - Aplicado ANTES do Personal Config para servir de fallback global real
-    if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
-      cfg.geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+    // Supports multiple keys: GEMINI_API_KEYS=key1,key2,key3 (comma-separated)
+    if (process.env.GEMINI_API_KEYS) {
+      cfg.geminiApiKeys = process.env.GEMINI_API_KEYS.split(',').map(k => k.trim()).filter(k => k.length > 10);
+    } else if (process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY) {
+      cfg.geminiApiKeys = [(process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY)];
     } else {
-      // B12 Fix: Updated to the most recent working key
-      cfg.geminiApiKey = 'AIzaSyARXN7K4LXo0ij34VUGtrHN-_GILW-oDfM'; 
+      // Hardcoded fallback keys — 15 keys = ~22,500 req/day (rotation automática)
+      cfg.geminiApiKeys = [
+        'AIzaSyARXN7K4LXo0ij34VUGtrHN-_GILW-oDfM',
+        'AIzaSyDuyDGulku8n4bM3F24NFjX6qtEX4OS2_8',
+        'AIzaSyCxV29mehcBdqwhX16OHLNPuVn12TXCcbg',
+        'AIzaSyBLSBkB8ABD8FHT3drW_cM8LYB7VfvYmew',
+        'AIzaSyBEynD8cZyjaOvAK04enoFmjsNuje1Blyk',
+        'AIzaSyBPnB8_dQFz7dv3e_Ag3PqJKUdqMQv26Bg',
+        'AIzaSyAZfHqgfpyAQj17TkyJl8NWCCD2TNK9CHw',
+        'AIzaSyAMSJSM8Nzn4WhAj-H0qFmZkCpyzouw2kw',
+        'AIzaSyC5T3ECwZq08Fitij8M6Z9kj-GyfgNg918',
+        'AIzaSyBXxjWawycyVUYwSv7HDWF4vVnp9lhwePw',
+        'AIzaSyBEveF4TEVwId_qDiehsy9FBY34-K0Gw44',
+        'AIzaSyA_TC62FrEwn2__wWsiDjMseCFJh0N_diw',
+        'AIzaSyA_HfzOZKFRPhHJ3U8T93rZmJcmx0A7JCU',
+        'AIzaSyChiepXNEItxV_1ZkCYPfce9TBkl3Bjr9Y',
+        'AIzaSyB7ausQYG9QaYQ9TcvL5C4G23AzoS2j-QE',
+      ];
     }
     if (process.env.ANTHROPIC_API_KEY) cfg.anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     if (process.env.OPENAI_API_KEY) cfg.openaiApiKey = process.env.OPENAI_API_KEY;
@@ -119,7 +138,7 @@ export async function getApiClient(requestedProvider, userId = null) {
       const userRes = await query('SELECT config FROM profiles WHERE id = $1', [userId]);
       if (userRes.rows.length > 0 && userRes.rows[0].config) {
         const userCfg = userRes.rows[0].config;
-        if (userCfg.geminiApiKey) cfg.geminiApiKey = userCfg.geminiApiKey;
+        if (userCfg.geminiApiKey) cfg.geminiApiKeys = [userCfg.geminiApiKey, ...(cfg.geminiApiKeys || [])];
         if (userCfg.anthropicApiKey) cfg.anthropicApiKey = userCfg.anthropicApiKey;
         if (userCfg.openaiApiKey) cfg.openaiApiKey = userCfg.openaiApiKey;
         if (userCfg.defaultProvider) cfg.defaultProvider = userCfg.defaultProvider;
@@ -130,7 +149,7 @@ export async function getApiClient(requestedProvider, userId = null) {
   }
 
   const clients = {
-    gemini: new GeminiClient({ apiKey: cfg.geminiApiKey, model: cfg.googleModel }),
+    gemini: new GeminiClient({ apiKeys: cfg.geminiApiKeys, model: cfg.googleModel }),
     anthropic: new AnthropicClient({ apiKey: cfg.anthropicApiKey, model: cfg.anthropicModel }),
     openai: new OpenAIClient({ apiKey: cfg.openaiApiKey, model: cfg.openaiModel }),
     local: new OllamaClient({ host: cfg.ollamaHost, model: cfg.ollamaModel })

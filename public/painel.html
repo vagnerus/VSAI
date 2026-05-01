@@ -623,16 +623,29 @@
       let fullText = '';
 
       try {
+        // Build headers with auth token
+        const headers = { 'Content-Type': 'application/json' };
+        try {
+          const token = localStorage.getItem('nexus_access_token');
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+        } catch (e) { /* no auth */ }
+
         const res = await fetch(`${API_BASE}/chat`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           signal: abortController.signal,
           body: JSON.stringify({
             content: typeof userPayload === 'string' ? userPayload : content,
             messages: messages.filter(m => m.role === 'user' || m.role === 'assistant').map(m => ({ role: m.role, content: m.content })),
             model: 'gemini-2.5-flash',
+            provider: 'gemini',
           }),
         });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || errData.details || `HTTP ${res.status}`);
+        }
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -658,8 +671,10 @@
                 case 'assistant':
                   fullText = msg.content || fullText;
                   break;
+                case 'done':
+                  break;
                 case 'error':
-                  fullText += `\n\n> ❌ **Erro na Conexão:** ${msg.message}`;
+                  fullText += `\n\n> ❌ **Erro:** ${msg.message}`;
                   updateStream(fullText);
                   break;
               }
