@@ -74,62 +74,101 @@ const getItemsForCategory = (catId) => {
   return items;
 };
 
-// ─── Motor de Renderização Realista (Holograma 3D) ──────────
+// ─── Motor de Renderização Quantum AI (Holograma 3D Realista) ───
 const AvatarCharacter = ({ config, lookRotation, isAsleep, emotion }) => {
-  const outfit = config.outfit || { acessorio: 1, camisa: 1, calca: 1, tenis: 1, blusa: 1 };
-  
-  // Imagem Realista Gerada
-  const baseImg = "https://images.unsplash.com/photo-1675271591211-126ad94e495d?q=80&w=2000&auto=format&fit=crop"; // Fallback Realista
+  const glowColor = config.bodyColor || '#8b5cf6';
   
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%', perspective: '1000px' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', perspective: '1200px' }}>
       <motion.div 
         animate={{ 
-          rotateX: lookRotation.x, rotateY: lookRotation.y,
+          rotateX: lookRotation.x * 1.5, rotateY: lookRotation.y * 1.5,
           y: isAsleep ? 40 : 0,
-          scale: emotion === 'happy' ? 1.1 : 1
+          scale: emotion === 'happy' ? 1.15 : 1
         }}
         style={{ 
           width: '100%', height: '100%', position: 'relative', transformStyle: 'preserve-3d',
-          filter: isAsleep ? 'grayscale(1) brightness(0.5)' : 'none'
+          filter: isAsleep ? 'grayscale(1) brightness(0.4)' : 'none'
         }}
       >
-        {/* Camada de Fundo (Aura de Profundidade) */}
-        <div style={{ position: 'absolute', inset: -20, borderRadius: '50%', background: `radial-gradient(circle, ${config.bodyColor}33 0%, transparent 70%)`, zIndex: -1 }}></div>
-        
-        {/* Imagem Principal (Realistic Render) */}
-        <img 
-          src={baseImg} 
-          style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: `2px solid ${config.bodyColor}44`, boxShadow: `0 0 50px ${config.bodyColor}22` }} 
-          alt="Avatar" 
+        {/* Esfera de Vidro Externa (Outer Glass Shell) */}
+        <div style={{ 
+          position: 'absolute', inset: 0, borderRadius: '50%', 
+          background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 60%)`,
+          border: '1px solid rgba(255,255,255,0.1)',
+          boxShadow: `inset 0 0 30px rgba(255,255,255,0.1), 0 0 40px ${glowColor}22`,
+          backdropFilter: 'blur(4px)', transform: 'translateZ(20px)'
+        }}></div>
+
+        {/* Núcleo de Energia (Energy Core) */}
+        <motion.div 
+          animate={{ scale: [1, 1.1, 1], opacity: [0.7, 1, 0.7] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          style={{ 
+            position: 'absolute', inset: '25%', borderRadius: '50%', 
+            background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
+            filter: 'blur(10px)', transform: 'translateZ(0px)'
+          }}
         />
 
-        {/* Overlay de Customização (Simulação de Roupas/Cores) */}
-        <div style={{ 
-          position: 'absolute', inset: 0, borderRadius: '50%', 
-          background: `linear-gradient(135deg, ${config.bodyColor}22 0%, transparent 50%, rgba(255,255,255,0.1) 100%)`,
-          mixBlendMode: 'overlay', pointerEvents: 'none' 
-        }}></div>
-
-        {/* Efeito de Vidro/Reflexo Dinâmico */}
-        <div style={{ 
-          position: 'absolute', inset: 0, borderRadius: '50%', 
-          background: `radial-gradient(circle at ${50 + lookRotation.y}% ${50 - lookRotation.x}%, rgba(255,255,255,0.4) 0%, transparent 60%)`,
-          pointerEvents: 'none' 
-        }}></div>
-
-        {/* Scanner de Dados (Efeito Sci-Fi) */}
-        {!isAsleep && (
+        {/* Anéis Orbitais 3D */}
+        {[0, 120, 240].map((angle, i) => (
           <motion.div 
-            animate={{ top: ['0%', '100%', '0%'] }} 
-            transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-            style={{ position: 'absolute', left: 0, right: 0, height: '2px', background: 'rgba(0,255,255,0.3)', boxShadow: '0 0 10px #0ff', zIndex: 5, pointerEvents: 'none' }} 
+            key={i}
+            animate={{ rotateZ: 360 }}
+            transition={{ duration: 10 + i * 5, repeat: Infinity, ease: 'linear' }}
+            style={{ 
+              position: 'absolute', inset: -10, border: `1px solid ${glowColor}44`,
+              borderRadius: '50%', transform: `rotateX(70deg) rotateY(${angle}deg) translateZ(0px)`,
+              pointerEvents: 'none'
+            }}
           />
-        )}
+        ))}
+
+        {/* Face Digital (Abstract AI Face) */}
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translateZ(40px)' }}>
+          <svg width="60" height="60" viewBox="0 0 100 100">
+            {/* Olhos Pixelados */}
+            <rect x="25" y="35" width="10" height="10" fill={glowColor} filter="drop-shadow(0 0 5px #0ff)" />
+            <rect x="65" y="35" width="10" height="10" fill={glowColor} filter="drop-shadow(0 0 5px #0ff)" />
+            {/* Boca Dinâmica */}
+            <motion.rect 
+              animate={{ height: emotion === 'happy' ? 5 : 2 }}
+              x="35" y="65" width="30" height="2" fill={glowColor} 
+            />
+          </svg>
+        </div>
+
+        {/* Reflexos de Fresnel Dinâmicos */}
+        <div style={{ 
+          position: 'absolute', inset: 0, borderRadius: '50%', 
+          background: `radial-gradient(circle at ${50 + lookRotation.y}% ${50 - lookRotation.x}%, rgba(255,255,255,0.3) 0%, transparent 50%)`,
+          pointerEvents: 'none', transform: 'translateZ(50px)'
+        }}></div>
+
+        {/* Partículas Internas */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', transform: 'translateZ(10px)' }}>
+          {Array.from({ length: 10 }).map((_, i) => (
+            <motion.div 
+              key={i}
+              animate={{ x: [0, Math.random() * 20 - 10], y: [0, Math.random() * 20 - 10], opacity: [0, 1, 0] }}
+              transition={{ duration: 3 + Math.random() * 2, repeat: Infinity }}
+              style={{ position: 'absolute', left: '50%', top: '50%', width: 3, height: 3, background: glowColor, borderRadius: '50%' }}
+            />
+          ))}
+        </div>
       </motion.div>
+
+      {/* Sombra no Chão / Projeção */}
+      <div style={{ 
+        position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%) scaleX(2)', 
+        width: 60, height: 10, background: `radial-gradient(ellipse, ${glowColor}44 0%, transparent 70%)`,
+        filter: 'blur(5px)', zIndex: -2
+      }}></div>
     </div>
   );
 };
+
 
 
 // ─── Estúdio de Personalização Massiva ──────────────────────
