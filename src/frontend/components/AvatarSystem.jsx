@@ -74,100 +74,117 @@ const getItemsForCategory = (catId) => {
   return items;
 };
 
-// ─── Motor de Renderização Quantum AI (Holograma 3D Realista) ───
+// ─── Motor de Renderização Android Premium (Holograma Humanóide) ───
 const AvatarCharacter = ({ config, lookRotation, isAsleep, emotion }) => {
-  const glowColor = config.bodyColor || '#8b5cf6';
+  const outfit = config.outfit || { acessorio: 1, camisa: 1, calca: 1, tenis: 1, blusa: 1 };
+  const primary = config.bodyColor || '#8b5cf6';
   
+  // Função para pegar a cor/estilo do item
+  const getStyle = (cat, id) => getItemsForCategory(cat).find(it => it.id === id) || { color: '#333' };
+  
+  const styles = {
+    head: getStyle('acessorio', outfit.acessorio),
+    shirt: getStyle('camisa', outfit.camisa),
+    pants: getStyle('calca', outfit.calca),
+    shoes: getStyle('tenis', outfit.tenis),
+    jacket: getStyle('blusa', outfit.blusa)
+  };
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', perspective: '1200px' }}>
       <motion.div 
         animate={{ 
-          rotateX: lookRotation.x * 1.5, rotateY: lookRotation.y * 1.5,
-          y: isAsleep ? 40 : 0,
-          scale: emotion === 'happy' ? 1.15 : 1
+          rotateX: lookRotation.x, rotateY: lookRotation.y,
+          y: isAsleep ? 50 : 0, scale: isAsleep ? 0.8 : 1
         }}
         style={{ 
           width: '100%', height: '100%', position: 'relative', transformStyle: 'preserve-3d',
           filter: isAsleep ? 'grayscale(1) brightness(0.4)' : 'none'
         }}
       >
-        {/* Esfera de Vidro Externa (Outer Glass Shell) */}
-        <div style={{ 
-          position: 'absolute', inset: 0, borderRadius: '50%', 
-          background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 60%)`,
-          border: '1px solid rgba(255,255,255,0.1)',
-          boxShadow: `inset 0 0 30px rgba(255,255,255,0.1), 0 0 40px ${glowColor}22`,
-          backdropFilter: 'blur(4px)', transform: 'translateZ(20px)'
-        }}></div>
+        <svg viewBox="0 0 200 200" style={{ width: '100%', height: '100%' }}>
+          <defs>
+            <filter id="neon">
+              <feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+            <linearGradient id="chrome" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#fff" stopOpacity="0.8" /><stop offset="50%" stopColor="#888" /><stop offset="100%" stopColor="#444" />
+            </linearGradient>
+          </defs>
 
-        {/* Núcleo de Energia (Energy Core) */}
-        <motion.div 
-          animate={{ scale: [1, 1.1, 1], opacity: [0.7, 1, 0.7] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          style={{ 
-            position: 'absolute', inset: '25%', borderRadius: '50%', 
-            background: `radial-gradient(circle, ${glowColor} 0%, transparent 70%)`,
-            filter: 'blur(10px)', transform: 'translateZ(0px)'
-          }}
-        />
+          {/* Sombra / Aura Circular */}
+          <circle cx="100" cy="180" r="40" fill={primary} opacity="0.1" filter="blur(10px)" />
 
-        {/* Anéis Orbitais 3D */}
-        {[0, 120, 240].map((angle, i) => (
-          <motion.div 
-            key={i}
-            animate={{ rotateZ: 360 }}
-            transition={{ duration: 10 + i * 5, repeat: Infinity, ease: 'linear' }}
-            style={{ 
-              position: 'absolute', inset: -10, border: `1px solid ${glowColor}44`,
-              borderRadius: '50%', transform: `rotateX(70deg) rotateY(${angle}deg) translateZ(0px)`,
-              pointerEvents: 'none'
-            }}
-          />
-        ))}
+          <g transform="translate(100, 100) scale(0.9) translate(-100, -100)">
+            {/* CORPO BASE (Android Chrome/Glass) */}
+            <g opacity={isAsleep ? 0.3 : 1}>
+              {/* Pernas Base */}
+              <rect x="85" y="140" width="12" height="40" rx="6" fill="url(#chrome)" />
+              <rect x="103" y="140" width="12" height="40" rx="6" fill="url(#chrome)" />
+              
+              {/* Tronco Base */}
+              <rect x="75" y="80" width="50" height="65" rx="15" fill="url(#chrome)" />
+              
+              {/* Braços Base */}
+              <rect x="60" y="85" width="12" height="45" rx="6" fill="url(#chrome)" transform="rotate(-10, 66, 85)" />
+              <rect x="128" y="85" width="12" height="45" rx="6" fill="url(#chrome)" transform="rotate(10, 134, 85)" />
+              
+              {/* Cabeça Base */}
+              <path d="M80,50 Q80,20 100,20 Q120,20 120,50 Q120,70 100,70 Q80,70 80,50" fill="url(#chrome)" />
+            </g>
 
-        {/* Face Digital (Abstract AI Face) */}
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translateZ(40px)' }}>
-          <svg width="60" height="60" viewBox="0 0 100 100">
-            {/* Olhos Pixelados */}
-            <rect x="25" y="35" width="10" height="10" fill={glowColor} filter="drop-shadow(0 0 5px #0ff)" />
-            <rect x="65" y="35" width="10" height="10" fill={glowColor} filter="drop-shadow(0 0 5px #0ff)" />
-            {/* Boca Dinâmica */}
-            <motion.rect 
-              animate={{ height: emotion === 'happy' ? 5 : 2 }}
-              x="35" y="65" width="30" height="2" fill={glowColor} 
-            />
-          </svg>
-        </div>
+            {/* ROUPAS E ACESSÓRIOS (Layered System) */}
+            
+            {/* 1. Calças */}
+            {outfit.calca > 0 && (
+              <g filter="url(#neon)">
+                <rect x="84" y="140" width="14" height="35" rx="4" fill={styles.pants.color} />
+                <rect x="102" y="140" width="14" height="35" rx="4" fill={styles.pants.color} />
+                <rect x="75" y="125" width="50" height="20" rx="5" fill={styles.pants.color} />
+              </g>
+            )}
 
-        {/* Reflexos de Fresnel Dinâmicos */}
-        <div style={{ 
-          position: 'absolute', inset: 0, borderRadius: '50%', 
-          background: `radial-gradient(circle at ${50 + lookRotation.y}% ${50 - lookRotation.x}%, rgba(255,255,255,0.3) 0%, transparent 50%)`,
-          pointerEvents: 'none', transform: 'translateZ(50px)'
-        }}></div>
+            {/* 2. Camisa */}
+            {outfit.camisa > 0 && (
+              <rect x="75" y="80" width="50" height="50" rx="10" fill={styles.shirt.color} opacity="0.9" />
+            )}
 
-        {/* Partículas Internas */}
-        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', transform: 'translateZ(10px)' }}>
-          {Array.from({ length: 10 }).map((_, i) => (
-            <motion.div 
-              key={i}
-              animate={{ x: [0, Math.random() * 20 - 10], y: [0, Math.random() * 20 - 10], opacity: [0, 1, 0] }}
-              transition={{ duration: 3 + Math.random() * 2, repeat: Infinity }}
-              style={{ position: 'absolute', left: '50%', top: '50%', width: 3, height: 3, background: glowColor, borderRadius: '50%' }}
-            />
-          ))}
-        </div>
+            {/* 3. Blusa / Casaco */}
+            {outfit.blusa > 1 && (
+              <path d="M70,80 L130,80 L135,130 L115,135 L100,120 L85,135 L65,130 Z" fill={styles.jacket.color} opacity="0.85" />
+            )}
+
+            {/* 4. Calçados */}
+            {outfit.tenis > 0 && (
+              <g>
+                <rect x="80" y="175" width="18" height="10" rx="3" fill={styles.shoes.color} />
+                <rect x="102" y="175" width="18" height="10" rx="3" fill={styles.shoes.color} />
+              </g>
+            )}
+
+            {/* 5. Acessórios de Cabeça */}
+            {outfit.acessorio > 1 && (
+              <path d="M75,35 Q100,15 125,35" stroke={styles.head.color} strokeWidth="5" fill="none" filter="url(#neon)" />
+            )}
+
+            {/* FACE DIGITAL (Interativa) */}
+            {!isAsleep && (
+              <g transform={`translate(${lookRotation.y * 0.2}, ${lookRotation.x * 0.2})`}>
+                <circle cx="92" cy="45" r="2.5" fill="#0ff" filter="url(#neon)" />
+                <circle cx="108" cy="45" r="2.5" fill="#0ff" filter="url(#neon)" />
+                <rect x="90" y="58" width="20" height={emotion === 'happy' ? 4 : 1} rx="2" fill="#0ff" opacity="0.8" />
+              </g>
+            )}
+          </g>
+        </svg>
       </motion.div>
 
-      {/* Sombra no Chão / Projeção */}
-      <div style={{ 
-        position: 'absolute', bottom: -20, left: '50%', transform: 'translateX(-50%) scaleX(2)', 
-        width: 60, height: 10, background: `radial-gradient(ellipse, ${glowColor}44 0%, transparent 70%)`,
-        filter: 'blur(5px)', zIndex: -2
-      }}></div>
+      {/* Base Holográfica Circular */}
+      <div style={{ position: 'absolute', bottom: -10, left: '50%', transform: 'translateX(-50%)', width: 100, height: 20, background: `radial-gradient(ellipse, ${primary}44 0%, transparent 75%)`, borderRadius: '50%', zIndex: -1 }}></div>
     </div>
   );
 };
+
 
 
 
