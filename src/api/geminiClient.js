@@ -188,8 +188,8 @@ export class GeminiClient {
           const error = new Error(`Gemini Error ${response.status}: ${errText}`);
           error.status = response.status;
           
-          // On rate limit (429), try rotating to next key IMMEDIATELY
-          if (response.status === 429 && this._rotateKey()) {
+          // On rate limit (429) or invalid/leaked key (403, 400), try rotating to next key IMMEDIATELY
+          if ((response.status === 429 || response.status === 403 || response.status === 400) && this._rotateKey()) {
             keysExhausted++;
             lastError = error;
             if (keysExhausted < this.apiKeys.length) {
@@ -198,7 +198,7 @@ export class GeminiClient {
             }
           }
 
-          const isRetryable = response.status === 429 || response.status === 503 || response.status === 500;
+          const isRetryable = response.status === 429 || response.status === 403 || response.status === 400 || response.status === 503 || response.status === 500;
           if (isRetryable && attempt < maxAttempts) {
             lastError = error;
             continue;
@@ -212,12 +212,12 @@ export class GeminiClient {
       } catch (error) {
         lastError = error;
         
-        // Rotate key on rate limit errors
-        if (error.status === 429) {
+        // Rotate key on rate limit or invalid key errors
+        if (error.status === 429 || error.status === 403 || error.status === 400) {
           this._rotateKey();
         }
         
-        const isRetryable = error.status === 429 || error.status === 503 || error.status === 500;
+        const isRetryable = error.status === 429 || error.status === 403 || error.status === 400 || error.status === 503 || error.status === 500;
         if (!isRetryable || attempt >= maxAttempts) {
           throw error;
         }
