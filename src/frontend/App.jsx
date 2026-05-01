@@ -8,7 +8,7 @@ import PricingPage from './pages/PricingPage.jsx';
 import TermsPage from './pages/TermsPage.jsx';
 import PrivacyPage from './pages/PrivacyPage.jsx';
 import ArtifactsPanel, { extractArtifacts } from './components/ArtifactsPanel.jsx';
-// import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { SpeedInsights } from "@vercel/speed-insights/react"
 import { 
   LayoutDashboard, 
@@ -675,29 +675,33 @@ function DashboardPage({ stats, recentSessions }) {
         </div>
       </div>
 
-      <div className="card" style={{ marginTop: 24, marginBottom: 24, padding: 24, background: 'var(--glass-bg)', border: '1px solid var(--glass-border)' }}>
-        <div style={{ marginBottom: 20 }}>
-          <h3 style={{ margin: 0, fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}>📈 Atividade da API</h3>
-          <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: 13 }}>Consumo de tokens estimado nos últimos 7 dias</p>
+      <div className="card-metallic" style={{ marginTop: 24, marginBottom: 24, padding: 24, border: '1px solid rgba(139,92,246,0.2)' }}>
+        <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 18, display: 'flex', alignItems: 'center', gap: 8, fontWeight: 900 }}>📈 PERFORMANCE DO ENXAME (API LOAD)</h3>
+            <p style={{ margin: '4px 0 0 0', color: 'var(--text-secondary)', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>Tokens Processados / Latência Média</p>
+          </div>
+          <div className="badge-liquid">Sincronizado via Ômega</div>
         </div>
         <div style={{ width: '100%', height: 320 }}>
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+            <AreaChart data={stats?.timeseries || chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--accent-primary)" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="var(--accent-primary)" stopOpacity={0}/>
+                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
                 </linearGradient>
               </defs>
-              <XAxis dataKey="name" stroke="var(--text-tertiary)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-              <YAxis stroke="var(--text-tertiary)" fontSize={12} tickLine={false} axisLine={false} />
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" vertical={false} />
+              <XAxis dataKey="day" stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} dy={10} />
+              <YAxis stroke="rgba(255,255,255,0.2)" fontSize={11} tickLine={false} axisLine={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <Tooltip 
-                contentStyle={{ backgroundColor: 'rgba(10,10,15,0.95)', border: '1px solid rgba(139,92,246,0.3)', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}
-                itemStyle={{ color: '#fff', fontWeight: 600 }}
-                labelStyle={{ color: 'var(--text-secondary)', marginBottom: 4 }}
+                contentStyle={{ backgroundColor: '#020617', border: '1px solid #1e293b', borderRadius: 12, boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }}
+                itemStyle={{ color: '#8b5cf6', fontWeight: 800 }}
+                labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4, fontSize: 10 }}
               />
-              <Area type="monotone" dataKey="tokens" name="Tokens Processados" stroke="#8b5cf6" strokeWidth={3} fillOpacity={1} fill="url(#colorTokens)" />
+              <Area type="monotone" dataKey="tokens" name="Tokens" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorTokens)" />
+              <Area type="monotone" dataKey="chamadas" name="Reqs" stroke="#06b6d4" strokeWidth={2} fill="transparent" />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -1958,25 +1962,31 @@ function ProjectsPage({ onStartChat }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
         {projects.length === 0 ? (
-          <div style={{ color: 'var(--text-secondary)' }}>Nenhum projeto encontrado.</div>
+          <div style={{ color: 'var(--text-secondary)', padding: 40, textAlign: 'center', background: 'var(--glass-bg)', borderRadius: 16, border: '1px dashed var(--glass-border)' }}>Nenhum projeto encontrado.</div>
         ) : (
           projects.map(p => (
-            <div key={p.id} className="card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 16, border: '1px solid var(--border-platinum)' }}>
-              <div>
-                <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{p.name}</h3>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{p.description || 'Sem descrição.'}</p>
+            <div key={p.id} className="card-metallic project-card-premium" style={{ padding: 24, cursor: 'pointer', position: 'relative', overflow: 'hidden' }} onClick={() => selectProject(p)}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+                <div className="project-icon-box" style={{ width: 44, height: 44, background: 'rgba(139,92,246,0.1)', borderRadius: 12, display: 'flex', alignItems: 'center', justifyCenter: 'center', fontSize: 20, border: '1px solid rgba(139,92,246,0.2)' }}>📂</div>
+                <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
+                  <button className="btn-icon-v2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: 8, borderRadius: 8, cursor: 'pointer' }} onClick={() => exportProject(p)} title="Exportar">📤</button>
+                  <button className="btn-icon-v2 delete" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: 8, borderRadius: 8, cursor: 'pointer' }} onClick={() => deleteProject(p.id)} title="Excluir">🗑️</button>
+                </div>
               </div>
               
-              <div className="tool-card-flags" style={{ marginBottom: 8 }}>
-                <span className="badge badge-purple">Conhecimento: {p.knowledgeCount || 0}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(p.createdAt).toLocaleDateString('pt-BR')}</span>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 900, letterSpacing: -0.5 }}>{p.name}</h3>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 6, lineHeight: 1.5, height: 36, overflow: 'hidden' }}>{p.description || 'Nenhuma descrição definida para este workspace.'}</p>
+              
+              <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="badge-glass-v2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '4px 12px', borderRadius: 100, fontSize: 10, fontWeight: 800, color: 'var(--purple-main)' }}>{p.model_name || 'gemini-1.5-flash'}</span>
+                <span style={{ fontSize: 10, opacity: 0.4, fontWeight: 700 }}>{p.knowledgeCount || 0} DOCS</span>
               </div>
-
-              <div style={{ marginTop: 'auto', display: 'flex', gap: 8 }}>
-                <button className="btn btn-primary btn-sm" style={{ flex: 1 }} onClick={() => selectProject(p)}>⚙️ Configurar</button>
-                <button className="btn btn-secondary btn-sm" onClick={() => exportProject(p)} title="Exportar">📤</button>
-                <button className="btn btn-secondary btn-sm" style={{ color: '#ef4444' }} onClick={() => deleteProject(p.id)} title="Excluir">🗑️</button>
-              </div>
+              <style>{`
+                .project-card-premium { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); border: 1px solid rgba(255,255,255,0.05); }
+                .project-card-premium:hover { border-color: var(--purple-main); transform: translateY(-8px) scale(1.02); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+                .btn-icon-v2:hover { background: rgba(255,255,255,0.1) !important; transform: scale(1.1); border-color: #fff !important; }
+                .btn-icon-v2.delete:hover { background: #ef4444 !important; border-color: #ef4444 !important; color: #fff !important; }
+              `}</style>
             </div>
           ))
         )}
@@ -2026,91 +2036,105 @@ function AccountPage() {
   if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando dados da conta...</div>;
 
   return (
-    <div className="animate-in" style={{ padding: '24px 40px', maxWidth: 1000, margin: '0 auto' }}>
-      <div style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 28, fontWeight: 900 }}>👤 Minha Conta</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>Gerencie sua identidade, bio e preferências de personalização no VSAI.</p>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 32 }}>
-        {/* Lado Esquerdo: Avatar e Plano */}
+    <div className="animate-in" style={{ padding: '0 40px 40px', maxWidth: 1100, margin: '0 auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 40 }}>
+        {/* Lado Esquerdo: Identidade Visual Platinum */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div className="card" style={{ textAlign: 'center', padding: 32 }}>
-            <div className="profile-avatar-container" onClick={() => document.getElementById('avatar-input').click()}>
-              <img src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.id} className="profile-avatar-preview" alt="Avatar" />
-              <div className="avatar-overlay">📸</div>
+          <div className="card-metallic" style={{ textAlign: 'center', padding: '40px 32px', border: '1px solid var(--purple-main)', background: 'radial-gradient(circle at top, rgba(139,92,246,0.1), transparent)' }}>
+            <div className="profile-avatar-wrapper" onClick={() => document.getElementById('avatar-input').click()}>
+              <img src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.id} className="profile-avatar-img" alt="Avatar" />
+              <div className="avatar-edit-overlay">✨ EDITAR</div>
               <input id="avatar-input" type="file" hidden accept="image/*" onChange={handleAvatarChange} />
             </div>
-            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{profile.full_name || 'Usuário VSAI'}</h3>
-            <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16 }}>{profile.email}</p>
-            <div className="badge badge-purple" style={{ padding: '6px 16px', fontSize: 11 }}>PROXIMA ATUALIZAÇÃO: 01/06</div>
             
+            <h3 style={{ fontSize: 24, fontWeight: 900, marginBottom: 4, letterSpacing: -1 }}>{profile.full_name || 'Usuário Nexus'}</h3>
+            <div className="badge-liquid" style={{ display: 'inline-block', fontSize: 10, padding: '4px 16px', borderRadius: 100, marginBottom: 24 }}>MEMBRO PLATINUM</div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+              <div className="mini-stat-box">
+                <div className="ms-label">SESSÕES</div>
+                <div className="ms-val">{profile.tokens_used_month ? Math.floor(profile.tokens_used_month/100) : 0}</div>
+              </div>
+              <div className="mini-stat-box">
+                <div className="ms-label">LEVEL</div>
+                <div className="ms-val">{(profile.plan === 'premium' ? 42 : 12)}</div>
+              </div>
+            </div>
+
             <button 
-              className="btn btn-primary" 
-              style={{ width: '100%', marginTop: 24, background: 'var(--gradient-primary)', border: 'none', borderRadius: 16, padding: '12px', fontWeight: 800 }}
+              className="btn-liquid w-full py-4 font-black text-sm"
               onClick={() => {
-                // Esse botão vai acionar o estúdio via widget ou estado global
                 const widgetMenu = document.querySelector('.avatar-draggable-wrapper');
                 if (widgetMenu) widgetMenu.click();
               }}
             >
-              🎨 Personalizar Avatar 3D
+              🎨 PERSONALIZAR AVATAR 3D
             </button>
           </div>
 
-          <div className="card" style={{ padding: 24, background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(139, 92, 246, 0.05))' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <span style={{ fontWeight: 800, fontSize: 13 }}>Status do Plano</span>
-              <span className="badge badge-purple" style={{ textTransform: 'uppercase' }}>{profile.plan || 'Free'}</span>
+          <div className="card-metallic" style={{ padding: 24, background: 'rgba(255,255,255,0.02)' }}>
+            <h4 style={{ margin: '0 0 16px 0', fontSize: 13, fontWeight: 900, letterSpacing: 1, opacity: 0.6 }}>CONSUMO DE COTA</h4>
+            <div style={{ fontSize: 22, fontWeight: 900, fontFamily: 'var(--font-mono)', marginBottom: 8, color: 'var(--purple-main)' }}>
+              {(profile.tokens_used_month || 0).toLocaleString()} <span style={{ fontSize: 12, color: 'var(--text-tertiary)', fontWeight: 500 }}>/ {(profile.tokens_limit || 50000).toLocaleString()} TK</span>
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>Consumo de Tokens (Mês)</div>
-            <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'var(--font-mono)', marginBottom: 8 }}>
-              {(profile.tokens_used_month || 0).toLocaleString()} / {(profile.tokens_limit || 50000).toLocaleString()}
+            <div style={{ width: '100%', height: 8, background: 'rgba(255,255,255,0.05)', borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ width: `${Math.min(((profile.tokens_used_month || 0) / (profile.tokens_limit || 50000)) * 100, 100)}%`, height: '100%', background: 'var(--gradient-primary)', boxShadow: '0 0 20px var(--purple-main)' }}></div>
             </div>
-            <div style={{ width: '100%', height: 6, background: 'var(--glass-border)', borderRadius: 10, overflow: 'hidden' }}>
-              <div style={{ width: `${Math.min(((profile.tokens_used_month || 0) / (profile.tokens_limit || 50000)) * 100, 100)}%`, height: '100%', background: 'var(--purple-main)' }}></div>
-            </div>
-            <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: 20 }}>Upgrade para Platinum</button>
+            <button className="btn btn-secondary w-full py-3" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}>UPGRADE DE COTA</button>
           </div>
         </div>
 
-        {/* Lado Direito: Formulário */}
-        <div className="card" style={{ padding: 32 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-            <div className="form-group">
-              <label className="form-label">Nome Completo</label>
-              <input className="form-input" value={profile.full_name || ''} onChange={e => setProfile({...profile, full_name: e.target.value})} placeholder="Seu nome" />
+        {/* Lado Direito: Core Configuration */}
+        <div className="card-metallic" style={{ padding: 40 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 32 }}>
+            <div className="form-group-v2">
+              <label className="label-v2">NOME DE EXIBIÇÃO</label>
+              <input className="input-v2" value={profile.full_name || ''} onChange={e => setProfile({...profile, full_name: e.target.value})} />
             </div>
-            <div className="form-group">
-              <label className="form-label">E-mail</label>
-              <input className="form-input" value={profile.email || ''} disabled style={{ opacity: 0.6 }} />
+            <div className="form-group-v2">
+              <label className="label-v2">E-MAIL (IDENTIFICADOR)</label>
+              <input className="input-v2" value={profile.email || ''} disabled style={{ opacity: 0.4, cursor: 'not-allowed' }} />
             </div>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Telefone</label>
-            <input className="form-input" value={profile.phone || ''} onChange={e => setProfile({...profile, phone: e.target.value})} placeholder="+55 (11) 99999-9999" />
+          <div className="form-group-v2" style={{ marginBottom: 32 }}>
+            <label className="label-v2">BIO / CONTEXTO PROFISSIONAL</label>
+            <textarea className="input-v2" style={{ minHeight: 100 }} value={profile.bio || ''} onChange={e => setProfile({...profile, bio: e.target.value})} placeholder="Ex: Desenvolvedor Full Stack, Especialista em Marketing..." />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Biografia / Cargo</label>
-            <textarea className="form-input" style={{ minHeight: 80, resize: 'vertical' }} value={profile.bio || ''} onChange={e => setProfile({...profile, bio: e.target.value})} placeholder="Conte um pouco sobre você ou sua empresa..." />
+          <div className="form-group-v2" style={{ marginBottom: 40 }}>
+            <label className="label-v2">INSTRUÇÕES MESTRAS (MEMÓRIA DE LONGO PRAZO)</label>
+            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 12 }}>Estas instruções serão injetadas em todas as suas interações com a IA do sistema.</p>
+            <textarea 
+              className="input-v2" 
+              style={{ minHeight: 150, border: '1px solid var(--purple-main)', background: 'rgba(139,92,246,0.02)' }} 
+              value={profile.custom_instructions || ''} 
+              onChange={e => setProfile({...profile, custom_instructions: e.target.value})} 
+              placeholder="Ex: Responda sempre em Português de Portugal. Use tom formal. Priorize soluções performáticas em Rust..."
+            />
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Instruções Customizadas (Persona da IA)</label>
-            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>Como você quer que a IA responda? (Ex: "Seja formal", "Sempre responda em português", "Sou desenvolvedor Python")</p>
-            <textarea className="form-input" style={{ minHeight: 120, resize: 'vertical' }} value={profile.custom_instructions || ''} onChange={e => setProfile({...profile, custom_instructions: e.target.value})} />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 12 }}>
-            <button className="btn btn-secondary" onClick={() => window.location.reload()}>Descartar</button>
-            <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>
-              {saving ? 'Salvando...' : '💾 Salvar Alterações'}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 16 }}>
+            <button className="btn btn-secondary px-8 py-3" onClick={() => window.location.reload()}>CANCELAR</button>
+            <button className="btn-liquid px-12 py-3 font-black" onClick={saveProfile} disabled={saving}>
+              {saving ? 'PROCESSANDO...' : 'SALVAR NA MATRIZ VSAI'}
             </button>
           </div>
         </div>
       </div>
+      <style>{`
+        .profile-avatar-wrapper { width: 120px; height: 120px; margin: 0 auto 24px; border-radius: 50%; overflow: hidden; position: relative; border: 4px solid var(--purple-main); cursor: pointer; box-shadow: 0 0 30px rgba(139,92,246,0.3); }
+        .profile-avatar-img { width: 100%; height: 100%; object-fit: cover; transition: all 0.5s; }
+        .avatar-edit-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; font-size: 10px; font-weight: 900; }
+        .profile-avatar-wrapper:hover .avatar-edit-overlay { opacity: 1; }
+        .profile-avatar-wrapper:hover .profile-avatar-img { transform: scale(1.1); }
+        .mini-stat-box { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 12px; }
+        .ms-label { font-size: 8px; font-weight: 900; opacity: 0.4; letter-spacing: 1px; margin-bottom: 4px; }
+        .ms-val { font-size: 18px; font-weight: 900; }
+        .label-v2 { display: block; font-size: 10px; font-weight: 900; letter-spacing: 1.5px; color: rgba(255,255,255,0.4); margin-bottom: 10px; }
+        .input-v2 { width: 100%; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 12px 16px; color: #fff; font-size: 14px; transition: all 0.3s; }
+        .input-v2:focus { border-color: var(--purple-main); background: rgba(139,92,246,0.05); outline: none; box-shadow: 0 0 20px rgba(139,92,246,0.1); }
+      `}</style>
     </div>
   );
 }
@@ -2485,14 +2509,26 @@ function ToolsPage() {
   const toggleTool = (id) => setToolsState(prev => ({ ...prev, [id]: !prev[id] }));
 
   const handleSaveConfig = async () => {
-    // In a real app, this would hit /api/config
-    const res = await api('/config', { 
-      method: 'POST', 
-      body: { tool: showConfig, apiKey: configValue } 
-    });
-    alert(`Configuração para ${showConfig} aplicada com sucesso!`);
-    setShowConfig(null);
-    setConfigValue('');
+    setIsSyncing(true);
+    try {
+      const res = await api('/config', { 
+        method: 'POST', 
+        body: { tool: showConfig, apiKey: configValue } 
+      });
+      if (res.error) {
+        alert(`Erro ao salvar: ${res.error}`);
+      } else {
+        alert(`🔥 CONFIGURAÇÃO APLICADA: O módulo ${showConfig} foi reconfigurado com sucesso na Matriz VSAI.`);
+        setShowConfig(null);
+        setConfigValue('');
+        // Recarregar status do sistema
+        window.dispatchEvent(new CustomEvent('vsai-config-updated'));
+      }
+    } catch (err) {
+      alert('Falha na comunicação com o servidor Nexus.');
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   return (
@@ -2818,7 +2854,7 @@ function SettingsPage() {
 // Placeholder Pages (To be implemented)
 // ═══════════════════════════════════════════════════════════════
 
-function PricingPage() { return <div style={{ padding: 24 }}><h2>💎 Planos & Upgrade</h2><p>Gerencie sua assinatura e limites de processamento.</p></div>; }
+
 
 // ═══════════════════════════════════════════════════════════════
 // Dashboard Shell (Authenticated Area)

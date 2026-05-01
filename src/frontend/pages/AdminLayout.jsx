@@ -123,7 +123,7 @@ export default function AdminLayout() {
     const amount = manualAmount || window.prompt(`Tokens extras para ${userName}:`, '100000');
     if (!amount || isNaN(amount)) return;
     
-    setIsSyncing(true); // Feedback visual de processamento
+    setIsSyncing(true);
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/admin/users`, {
@@ -133,8 +133,8 @@ export default function AdminLayout() {
       });
       
       if (res.ok) {
-        const { user: updatedUser } = await res.json();
-        setUsers(prev => prev.map(u => u.id === userId ? { ...u, tokens_limit: updatedUser.tokens_limit } : u));
+        const data = await res.json();
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, tokens_limit: data.user.tokens_limit } : u));
         alert(`🚀 SUCESSO: ${parseInt(amount).toLocaleString()} tokens creditados para ${userName}.`);
       } else {
         const errData = await res.json();
@@ -485,34 +485,36 @@ export default function AdminLayout() {
   );
 
   const renderInfrastructure = () => (
-    <div className="admin-panel-section animate-in" style={{ background: 'radial-gradient(circle at top right, #1e1b4b, #020617)', color: '#f8fafc', overflow: 'hidden', position: 'relative', minHeight: 600 }}>
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.1, backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+    <div className="admin-panel-section animate-in" style={{ background: 'radial-gradient(circle at top right, #0a0a0b, #020617)', color: '#f8fafc', overflow: 'hidden', position: 'relative', minHeight: 600, border: '1px solid rgba(255,255,255,0.1)' }}>
+      <div className="scanline"></div>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.15, backgroundImage: 'radial-gradient(#4f46e5 0.5px, transparent 0.5px)', backgroundSize: '24px 24px' }}></div>
       
-      <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
+      <div style={{ position: 'relative', zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
         <div>
-          <h3 style={{ color: '#fff', margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -1 }}>🛰️ PLATINUM NODES CLUSTER</h3>
-          <p style={{ fontSize: 13, opacity: 0.6 }}>Topologia de rede neural distribuída em tempo real.</p>
+          <h3 style={{ color: '#fff', margin: 0, fontSize: 26, fontWeight: 900, letterSpacing: -1, textShadow: '0 0 20px rgba(79, 70, 229, 0.4)' }}>🛰️ PLATINUM NODES CLUSTER</h3>
+          <p style={{ fontSize: 13, opacity: 0.6, fontFamily: 'var(--font-mono)' }}>CORE SYSTEM • STATUS: OPTIMIZED</p>
         </div>
         <div style={{ display: 'flex', gap: 12 }}>
-          <div className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid #10b981', padding: '6px 12px' }}>Latency: 14ms</div>
-          <div className="badge" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid #3b82f6', padding: '6px 12px' }}>Region: Global-Edge</div>
+          <div className="badge-glass">Latency: 12ms</div>
+          <div className="badge-glass">Region: Global-Edge</div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 60, alignItems: 'center', position: 'relative', zIndex: 2 }}>
-        {/* 3D Server Rack Animation */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 60, alignItems: 'center', position: 'relative', zIndex: 5 }}>
+        {/* 3D Server Rack Animation — Enhanced */}
         <div className="server-container-3d">
           <div className="server-rack-isometric">
-            {[1,2,3,4,5,6,7,8].map(i => (
-              <div key={i} className="server-unit" style={{ animationDelay: `${i * 0.2}s` }}>
+            {[1,2,3,4,5,6,7,8,9,10].map(i => (
+              <div key={i} className="server-unit" style={{ animationDelay: `${i * 0.15}s` }}>
                 <div className="unit-front">
                   <div className="unit-leds">
                     <div className="led green"></div>
-                    <div className="led blue"></div>
-                    <div className="led" style={{ animation: `blink ${0.2 + Math.random()}s infinite` }}></div>
+                    <div className="led blue" style={{ animation: `pulse ${0.5 + Math.random()}s infinite` }}></div>
+                    <div className="led" style={{ animation: `blink ${0.1 + Math.random() * 0.5}s infinite` }}></div>
                   </div>
                   <div className="unit-grill"></div>
-                  <div className="unit-id">NODE-{(100+i).toString(16).toUpperCase()}</div>
+                  <div className="unit-id">NXP-{i.toString().padStart(2, '0')}</div>
+                  <div className="unit-load-bar"><div className="fill" style={{ width: `${30 + Math.random() * 60}%` }}></div></div>
                 </div>
                 <div className="unit-side"></div>
                 <div className="unit-top"></div>
@@ -522,93 +524,88 @@ export default function AdminLayout() {
           <div className="rack-shadow"></div>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-          <div className="infra-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div className="mini-card">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div className="infra-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div className="mini-card-dark">
               <div className="mini-label">UPTIME</div>
-              <div className="mini-value">99.998%</div>
+              <div className="mini-value" style={{ color: '#10b981' }}>99.999%</div>
             </div>
-            <div className="mini-card">
-              <div className="mini-label">LOAD AVG</div>
-              <div className="mini-value">{(hardware.cpu / 20).toFixed(2)}</div>
+            <div className="mini-card-dark">
+              <div className="mini-label">ACTIVE NODES</div>
+              <div className="mini-value">256 / 256</div>
             </div>
           </div>
 
           {[
-            { label: 'Neural Processors (NPU)', val: hardware.cpu, color: '#4f46e5', icon: '🧠' },
-            { label: 'Quantum Memory (QRAM)', val: hardware.ram, color: '#8b5cf6', icon: '💎' },
-            { label: 'Matrix Ops (GPU)', val: hardware.gpu, color: '#10b981', icon: '⚡' },
-            { label: 'Thermal Shield', val: hardware.temp, color: '#f43f5e', icon: '🔥', unit: '°C' }
+            { label: 'Neural Core (H100)', val: hardware.cpu, color: '#4f46e5', icon: '🧠' },
+            { label: 'High-Speed Memory', val: hardware.ram, color: '#8b5cf6', icon: '💎' },
+            { label: 'Compute Power', val: hardware.gpu, color: '#06b6d4', icon: '⚡' },
+            { label: 'System Temperature', val: hardware.temp, color: '#f43f5e', icon: '🔥', unit: '°C' }
           ].map(h => (
-            <div key={h.label} className="infra-meter-card-v2">
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 18 }}>{h.icon}</span>
-                  <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>{h.label}</span>
+            <div key={h.label} className="infra-meter-v3">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>{h.icon}</span>
+                  <span style={{ fontSize: 11, fontWeight: 900, color: 'rgba(255,255,255,0.5)', letterSpacing: 1 }}>{h.label}</span>
                 </div>
-                <span style={{ fontSize: 18, fontWeight: 900, color: h.color }}>{h.val}{h.unit || '%'}</span>
+                <span style={{ fontSize: 16, fontWeight: 900, color: h.color, fontFamily: 'var(--font-mono)' }}>{h.val}{h.unit || '%'}</span>
               </div>
-              <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 10 }}>
-                <div style={{ width: `${h.val}%`, height: '100%', background: `linear-gradient(90deg, ${h.color}cc, ${h.color})`, borderRadius: 10, boxShadow: `0 0 15px ${h.color}66` }}></div>
+              <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: 1, border: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ width: `${h.val}%`, height: '100%', background: `linear-gradient(90deg, ${h.color}88, ${h.color})`, borderRadius: 10, boxShadow: `0 0 15px ${h.color}44`, transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
               </div>
             </div>
           ))}
+
+          <div style={{ marginTop: 10, padding: 16, borderRadius: 12, background: 'rgba(79, 70, 229, 0.05)', border: '1px solid rgba(79, 70, 229, 0.2)', fontSize: 12, color: 'rgba(255,255,255,0.7)', lineHeight: 1.5 }}>
+            <strong>DIAGNÓSTICO:</strong> Todos os sistemas estão operando dentro dos parâmetros de pico. A redundância quântica está ativada no cluster secundário.
+          </div>
         </div>
       </div>
 
       <style>{`
-        .server-container-3d { perspective: 1200px; height: 450px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .scanline { width: 100%; height: 100px; z-index: 8; background: linear-gradient(0deg, transparent, rgba(79, 70, 229, 0.05), transparent); position: absolute; animation: scan 4s linear infinite; pointer-events: none; }
+        @keyframes scan { from { top: -100px; } to { top: 100%; } }
+        
+        .badge-glass { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 100px; font-size: 11px; font-weight: 800; backdrop-filter: blur(4px); }
+        
+        .server-container-3d { perspective: 1200px; height: 500px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .server-rack-isometric { 
           transform: rotateX(55deg) rotateZ(-35deg); transform-style: preserve-3d;
-          display: flex; flex-direction: column; gap: 4px;
-          animation: rackFloat 8s infinite ease-in-out;
+          display: flex; flex-direction: column; gap: 6px;
+          animation: rackFloat 10s infinite ease-in-out;
         }
-        @keyframes rackFloat { 0%, 100% { transform: rotateX(55deg) rotateZ(-35deg) translateY(0); } 50% { transform: rotateX(50deg) rotateZ(-30deg) translateY(-20px); } }
+        @keyframes rackFloat { 0%, 100% { transform: rotateX(55deg) rotateZ(-35deg) translateY(0); } 50% { transform: rotateX(52deg) rotateZ(-32deg) translateY(-30px); } }
         
-        .server-unit { 
-          width: 220px; height: 35px; position: relative; transform-style: preserve-3d; 
-          transition: all 0.3s;
-        }
-        .server-unit:hover { transform: translateZ(10px); }
+        .server-unit { width: 240px; height: 32px; position: relative; transform-style: preserve-3d; transition: all 0.4s; }
+        .server-unit:hover { transform: translateZ(20px) scale(1.05); }
         
-        .unit-front { 
-          position: absolute; width: 100%; height: 100%; background: #1e293b; border: 1px solid #334155;
-          display: flex; align-items: center; padding: 0 12px; gap: 10px;
-          transform: translateZ(15px);
-        }
-        .unit-side { 
-          position: absolute; width: 30px; height: 100%; background: #0f172a; 
-          right: -15px; transform: rotateY(90deg);
-        }
-        .unit-top {
-          position: absolute; width: 100%; height: 30px; background: #334155;
-          top: -15px; transform: rotateX(90deg);
-        }
+        .unit-front { position: absolute; width: 100%; height: 100%; background: #0f172a; border: 1px solid #334155; display: flex; align-items: center; padding: 0 12px; gap: 8px; transform: translateZ(16px); }
+        .unit-side { position: absolute; width: 32px; height: 100%; background: #020617; right: -16px; transform: rotateY(90deg); }
+        .unit-top { position: absolute; width: 100%; height: 32px; background: #1e293b; top: -16px; transform: rotateX(90deg); }
         
-        .unit-leds { display: flex; gap: 4px; }
-        .led { width: 4px; height: 4px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 5px currentColor; }
-        .led.green { background: #10b981; }
-        .led.blue { background: #3b82f6; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        .unit-leds { display: flex; gap: 3px; }
+        .led { width: 4px; height: 4px; border-radius: 50%; background: #ef4444; }
+        .led.green { background: #10b981; box-shadow: 0 0 8px #10b981; }
+        .led.blue { background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.1; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.5; } }
         
-        .unit-grill { flex: 1; height: 12px; background: repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(255,255,255,0.05) 3px, rgba(255,255,255,0.05) 5px); border-radius: 2px; }
-        .unit-id { font-size: 8px; font-family: monospace; opacity: 0.4; }
+        .unit-grill { flex: 1; height: 10px; background: repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px); }
+        .unit-id { font-size: 8px; font-family: 'Geist Mono'; opacity: 0.3; color: #fff; }
+        .unit-load-bar { width: 40px; height: 4px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden; }
+        .unit-load-bar .fill { height: 100%; background: #4f46e5; border-radius: 2px; }
         
-        .rack-shadow { 
-          width: 300px; height: 150px; background: rgba(79, 70, 229, 0.15); 
-          filter: blur(40px); transform: rotateX(80deg) translateY(100px); border-radius: 50%;
-        }
+        .rack-shadow { width: 320px; height: 160px; background: rgba(79, 70, 229, 0.2); filter: blur(50px); transform: rotateX(80deg) translateY(120px); border-radius: 50%; position: absolute; bottom: 40px; }
         
-        .mini-card { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
-        .mini-label { fontSize: 10px; color: rgba(255,255,255,0.4); fontWeight: 800; letterSpacing: 1px; marginBottom: 4px; }
-        .mini-value { fontSize: 20px; fontWeight: 900; }
+        .mini-card-dark { background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .mini-label { font-size: 9px; color: rgba(255,255,255,0.3); font-weight: 900; letter-spacing: 1.5px; margin-bottom: 4px; }
+        .mini-value { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
         
-        .infra-meter-card-v2 { 
-          background: rgba(255,255,255,0.02); padding: 20px; border-radius: 16px; 
-          border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;
-        }
-        .infra-meter-card-v2:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+        .infra-meter-v3 { background: rgba(255,255,255,0.02); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; }
+        .infra-meter-v3:hover { background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); transform: translateX(5px); }
       `}</style>
+    </div>
+  );
     </div>
   );
 
@@ -978,7 +975,7 @@ export default function AdminLayout() {
         <nav className="admin-tabs">
           {['dashboard', 'bi', 'users', 'agents', 'memory', 'infrastructure', 'compliance', 'logs', 'api_pool', 'sql', 'omega', 'settings'].map(tab => (
             <button key={tab} className={`admin-tab ${activeTab === tab ? 'active' : ''}`} onClick={() => setActiveTab(tab)}>
-              {tab.replace('_', ' ').toUpperCase()}
+              {tab === 'settings' ? 'SISTEMA' : tab.replace('_', ' ').toUpperCase()}
             </button>
           ))}
         </nav>

@@ -89,33 +89,37 @@ export default async function handler(req, res) {
   if (path === 'config' || path === 'models') {
     if (req.method === 'POST') {
       try {
-        // Only save keys and core settings
-        const newConfig = {
-          geminiApiKey: req.body.geminiApiKey,
-          anthropicApiKey: req.body.anthropicApiKey,
-          openaiApiKey: req.body.openaiApiKey,
-          defaultProvider: req.body.defaultProvider,
-          googleModel: req.body.googleModel,
-          anthropicModel: req.body.anthropicModel,
-          ollamaHost: req.body.ollamaHost,
-          ollamaModel: req.body.ollamaModel,
-          showOtherModels: req.body.showOtherModels
-        };
-
-        try {
-          // Garante que a coluna config existe na tabela profiles (sintaxe PostgreSQL 11+ nativa e segura)
-          await query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}'::jsonb;`);
-          
-          await query(`
-            UPDATE profiles SET config = $1 WHERE id = $2
-          `, [newConfig, auth.user.id]);
-          
-          console.log(`[CONFIG] Novas configurações salvas para o usuário ${auth.user.id}`);
-        } catch (dbErr) {
-          console.warn('[CONFIG_DB_WARN] Não foi possível gravar no banco:', dbErr.message);
-        }
+        const { tool, apiKey, ...rest } = req.body;
         
-        return res.json({ status: 'success', message: 'Configurações aplicadas e salvas no banco de dados.' });
+        // Buscar config atual
+        const { rows: currentRows } = await query('SELECT config FROM profiles WHERE id = $1', [auth.user.id]);
+        const currentConfig = currentRows[0]?.config || {};
+        
+        let newConfig = { ...currentConfig, ...rest };
+
+        // Se for uma configuração de ferramenta específica (ex: webSearch)
+        if (tool && apiKey) {
+          newConfig.tools = newConfig.tools || {};
+          newConfig.tools[tool] = { 
+            apiKey, 
+            active: true,
+            updatedAt: new Date().toISOString() 
+          };
+          
+          // Mapeamento de chaves legadas para compatibilidade
+          if (tool === 'webSearch') newConfig.tavilyApiKey = apiKey;
+          if (tool === 'python') newConfig.pythonKey = apiKey;
+        }
+
+        // Atualizar campos globais se presentes
+        if (req.body.geminiApiKey) newConfig.geminiApiKey = req.body.geminiApiKey;
+        if (req.body.anthropicApiKey) newConfig.anthropicApiKey = req.body.anthropicApiKey;
+        if (req.body.defaultProvider) newConfig.defaultProvider = req.body.defaultProvider;
+
+        await query(`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS config JSONB DEFAULT '{}'::jsonb;`).catch(() => {});
+        await query('UPDATE profiles SET config = $1 WHERE id = $2', [newConfig, auth.user.id]);
+        
+        return res.json({ status: 'success', message: 'Configurações sincronizadas com a nuvem VSAI.', config: newConfig });
       } catch (err) {
         console.error('[CONFIG_SAVE_ERROR]', err);
         return res.status(500).json({ error: 'Falha ao processar configurações.', details: err.message });
