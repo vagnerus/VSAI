@@ -606,8 +606,6 @@ export default function AdminLayout() {
       `}</style>
     </div>
   );
-    </div>
-  );
 
   const renderMemoryTree = () => (
     <div className="admin-panel-section animate-in">
