@@ -285,7 +285,7 @@ export default function AdminLayout() {
                       }}
                     />
                     <button className="btn btn-primary btn-sm" style={{ padding: '4px 8px' }} onClick={(e) => {
-                      const input = e.target.previousSibling;
+                      const input = e.currentTarget.previousElementSibling;
                       handleBonusTokens(u.id, u.full_name, input.value);
                       input.value = '';
                     }}>OK</button>
@@ -369,21 +369,26 @@ export default function AdminLayout() {
       </div>
 
       <style>{`
-        .server-rack-3d-container { perspective: 1000px; height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .server-rack-3d-container { perspective: 1000px; height: 350px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .server-rack { 
-          width: 140px; height: 220px; background: #1e293b; border: 4px solid #334155; 
+          width: 160px; height: 260px; background: #1e293b; border: 4px solid #334155; 
           border-radius: 8px; transform: rotateY(-25deg) rotateX(10deg); 
-          box-shadow: 20px 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; padding: 10px; gap: 8px;
+          box-shadow: 20px 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; padding: 12px; gap: 10px;
+          animation: float 6s infinite ease-in-out;
         }
-        .server-blade { height: 25px; background: #0f172a; border-radius: 2px; border-left: 3px solid #3b82f6; display: flex; align-items: center; padding: 0 8px; justify-content: space-between; }
-        .blade-lights { display: flex; gap: 4px; }
-        .light { width: 4px; height: 4px; border-radius: 50%; background: #ef4444; animation: blink 0.5s infinite alternate; }
+        @keyframes float { 0%, 100% { transform: rotateY(-25deg) rotateX(10deg) translateY(0); } 50% { transform: rotateY(-20deg) rotateX(15deg) translateY(-10px); } }
+        .server-blade { height: 28px; background: #0f172a; border-radius: 2px; border-left: 4px solid #3b82f6; display: flex; align-items: center; padding: 0 10px; justify-content: space-between; position: relative; overflow: hidden; }
+        .server-blade::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent); transform: translateX(-100%); animation: scan 3s infinite; }
+        @keyframes scan { 100% { transform: translateX(100%); } }
+        .blade-lights { display: flex; gap: 5px; }
+        .light { width: 5px; height: 5px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 5px currentColor; animation: blink 0.5s infinite alternate; }
         .light.green { background: #10b981; animation-duration: 0.3s; }
         .light.blue { background: #3b82f6; animation-duration: 0.7s; }
-        .blade-vent { flex: 1; margin-left: 10px; height: 10px; background: repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.1) 2px, rgba(255,255,255,0.1) 4px); }
-        @keyframes blink { from { opacity: 0.2; } to { opacity: 1; } }
-        .rack-base { width: 180px; height: 20px; background: #1e293b; transform: rotateX(80deg) translateZ(-40px); opacity: 0.5; filter: blur(10px); }
-        .infra-meter-card { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .blade-vent { flex: 1; margin-left: 12px; height: 12px; background: repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.05) 2px, rgba(255,255,255,0.05) 4px); }
+        @keyframes blink { from { opacity: 0.3; } to { opacity: 1; } }
+        .rack-base { width: 220px; height: 40px; background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.3) 0%, transparent 70%); transform: rotateX(80deg) translateZ(-60px); filter: blur(15px); }
+        .infra-meter-card { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; }
+        .infra-meter-card:hover { background: rgba(255,255,255,0.06); transform: scale(1.02); }
       `}</style>
     </div>
   );
@@ -674,6 +679,17 @@ export default function AdminLayout() {
                 placeholder="sk-..."
                 value={systemConfig.openaiApiKey || ''}
                 onChange={e => setSystemConfig({...systemConfig, openaiApiKey: e.target.value})}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, marginBottom: 4 }}>CHAVE TAVILY (WEB SEARCH ENGINE)</label>
+              <input 
+                type="password"
+                className="admin-select" 
+                style={{ width: '100%', fontFamily: 'monospace' }} 
+                placeholder="tvly-..."
+                value={systemConfig.tavilyApiKey || ''}
+                onChange={e => setSystemConfig({...systemConfig, tavilyApiKey: e.target.value})}
               />
             </div>
           </div>

@@ -24,7 +24,7 @@ export default async function handler(req, res) {
         return res.status(200).json({ users });
       }
       if (req.method === 'PUT') {
-        const { id, role, plan, bonus_tokens } = req.body;
+        const { id, role, plan, bonus_tokens, tokens_limit } = req.body;
         
         let updateQuery = 'UPDATE profiles SET updated_at = NOW()';
         let params = [];
@@ -32,8 +32,9 @@ export default async function handler(req, res) {
 
         if (role) { updateQuery += `, role = $${paramCount++}`; params.push(role); }
         if (plan) { updateQuery += `, plan = $${paramCount++}`; params.push(plan); }
+        if (tokens_limit !== undefined) { updateQuery += `, tokens_limit = $${paramCount++}`; params.push(Number(tokens_limit)); }
         if (bonus_tokens) { 
-          updateQuery += `, tokens_limit = tokens_limit + $${paramCount++}`; 
+          updateQuery += `, tokens_limit = COALESCE(tokens_limit, 0) + $${paramCount++}`; 
           params.push(Number(bonus_tokens)); 
         }
 

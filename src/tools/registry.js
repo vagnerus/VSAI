@@ -13,13 +13,15 @@ import { TaskStopTool } from './TaskStopTool.js';
 import { WindowsServiceTool } from './WindowsServiceTool.js';
 import { codeInterpreter } from './CodeInterpreter.js';
 import { pluginTool } from './PluginTool.js';
+import { SqlDatabaseTool } from './SqlDatabaseTool.js';
 
-// ─── Detectar ambiente ───────────────────────────────────────
-const isVercel = !!process.env.VERCEL;
-
-// ═══════════════════════════════════════════════════════════════
-// FERRAMENTAS QUE FUNCIONAM EM QUALQUER AMBIENTE
-// ═══════════════════════════════════════════════════════════════
+// ─── Helper para configurações ─────────────────────────────
+async function getSystemConfig() {
+  try {
+    const { rows } = await query('SELECT config FROM system_settings WHERE id = $1', ['main']).catch(() => ({ rows: [] }));
+    return rows[0]?.config || {};
+  } catch (e) { return {}; }
+}
 
 export const WebSearchTool = buildTool({
   name: 'web_search',
@@ -35,11 +37,13 @@ export const WebSearchTool = buildTool({
     required: ['query'],
   },
   async call(input) {
-    const apiKey = process.env.TAVILY_API_KEY;
+    const config = await getSystemConfig();
+    const apiKey = config.tavilyApiKey || process.env.TAVILY_API_KEY;
+    
     if (!apiKey) {
       return { 
         results: [], 
-        note: 'A busca em tempo real requer a configuração da TAVILY_API_KEY no arquivo .env. Usando modo offline.' 
+        note: 'A busca em tempo real requer a configuração da TAVILY_API_KEY. Peça ao administrador para configurar nas Opções Globais.' 
       };
     }
 
@@ -531,6 +535,7 @@ export function getAllTools() {
     RegexTool,
     codeInterpreter,
     pluginTool,
+    SqlDatabaseTool,
     // Agent tools (multi-agent orchestration)
     AgentTool,
     SendMessageTool,

@@ -449,7 +449,7 @@ function Sidebar({ currentPage, onNavigate, stats, agents = [], recentSessions =
 
   const navItems = [
     { id: 'dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-    { id: 'profile', icon: <User size={18} />, label: 'Meu Perfil' },
+    { id: 'account', icon: <User size={18} />, label: 'Minha Conta' },
     { id: 'teams', icon: <Users size={18} />, label: 'Equipes (B2B)' },
     { id: 'projects', icon: <FolderRoot size={18} />, label: 'Projetos' },
     { id: 'chat', icon: <MessageSquare size={18} />, label: 'Chat AI', badge: null },
@@ -1948,13 +1948,13 @@ function ProjectsPage({ onStartChat }) {
 // ═══════════════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════════════
-// Profile Page
+// Account / Profile Page (Updated)
 // ═══════════════════════════════════════════════════════════════
 
-function ProfilePage({ stats }) {
-  const [profile, setProfile] = useState({ custom_instructions: '', plan: 'free', tokens_used_month: 0, tokens_limit: 50000 });
-  const [loading, setLoading] = useState(true);
+function AccountPage() {
+  const [profile, setProfile] = useState({ full_name: '', email: '', bio: '', phone: '', avatar_url: '', custom_instructions: '', plan: 'free' });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api('/profile').then(data => {
@@ -1963,60 +1963,97 @@ function ProfilePage({ stats }) {
     });
   }, []);
 
-  const saveProfile = async () => {
-    setSaving(true);
-    try {
-      await api('/profile', { method: 'POST', body: { custom_instructions: profile.custom_instructions } });
-      alert('Perfil e instruções salvas com sucesso! As próximas conversas usarão esta configuração.');
-    } catch (e) {
-      alert('Erro ao salvar o perfil.');
+  const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfile({ ...profile, avatar_url: reader.result });
+      };
+      reader.readAsDataURL(file);
     }
-    setSaving(false);
   };
 
-  if (loading && !stats) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando VSAI - IA...</div>;
+  const saveProfile = async () => {
+    setSaving(true);
+    const res = await api('/profile', { method: 'POST', body: profile });
+    setSaving(false);
+    if (res.status === 'updated') alert('Perfil atualizado com sucesso!');
+  };
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center' }}>Carregando dados da conta...</div>;
 
   return (
-    <div className="animate-in" style={{ padding: 24, maxWidth: 800 }}>
-      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 24 }}>👤 Meu Perfil e Customização da IA</h2>
-
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header"><div className="card-title">Instruções Customizadas</div></div>
-        <div className="card-body">
-          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>
-            O que a IA deve saber sobre você para fornecer respostas melhores? Como você quer que a IA responda? 
-            Estas regras serão injetadas secretamente em todas as suas conversas.
-          </p>
-          <textarea
-            className="input-field"
-            rows={6}
-            placeholder="Ex: Sou um desenvolvedor sênior de React. Nunca me explique conceitos básicos. Sempre use arrow functions e retorne apenas o código direto."
-            value={profile.custom_instructions || ''}
-            onChange={(e) => setProfile({ ...profile, custom_instructions: e.target.value })}
-            style={{ fontFamily: 'var(--font-mono)', fontSize: 13 }}
-          />
-        </div>
-        <div className="card-footer" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>
-            {saving ? 'Salvando...' : 'Salvar Instruções'}
-          </button>
-        </div>
+    <div className="animate-in" style={{ padding: '24px 40px', maxWidth: 1000, margin: '0 auto' }}>
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 28, fontWeight: 900 }}>👤 Minha Conta</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>Gerencie sua identidade, bio e preferências de personalização no VSAI.</p>
       </div>
 
-      <div className="card">
-        <div className="card-header"><div className="card-title">Resumo do Plano</div></div>
-        <div className="card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Plano Atual</div>
-              <div style={{ fontSize: 18, fontWeight: 700, textTransform: 'capitalize' }}>{profile.plan || 'Free'}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 32 }}>
+        {/* Lado Esquerdo: Avatar e Plano */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div className="card" style={{ textAlign: 'center', padding: 32 }}>
+            <div className="profile-avatar-container" onClick={() => document.getElementById('avatar-input').click()}>
+              <img src={profile.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + profile.id} className="profile-avatar-preview" alt="Avatar" />
+              <div className="avatar-overlay">📸</div>
+              <input id="avatar-input" type="file" hidden accept="image/*" onChange={handleAvatarChange} />
             </div>
-            <div>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Consumo Mensal</div>
-              <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                {(profile.tokens_used_month || 0).toLocaleString()} / {(profile.tokens_limit || 50000).toLocaleString()}
-              </div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>{profile.full_name || 'Usuário VSAI'}</h3>
+            <p style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 16 }}>{profile.email}</p>
+            <div className="badge badge-purple" style={{ padding: '6px 16px', fontSize: 11 }}>PROXIMA ATUALIZAÇÃO: 01/06</div>
+          </div>
+
+          <div className="card" style={{ padding: 24, background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.05), rgba(139, 92, 246, 0.05))' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <span style={{ fontWeight: 800, fontSize: 13 }}>Status do Plano</span>
+              <span className="badge badge-purple" style={{ textTransform: 'uppercase' }}>{profile.plan || 'Free'}</span>
             </div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>Consumo de Tokens (Mês)</div>
+            <div style={{ fontSize: 20, fontWeight: 900, fontFamily: 'var(--font-mono)', marginBottom: 8 }}>
+              {(profile.tokens_used_month || 0).toLocaleString()} / {(profile.tokens_limit || 50000).toLocaleString()}
+            </div>
+            <div style={{ width: '100%', height: 6, background: 'var(--glass-border)', borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ width: `${Math.min(((profile.tokens_used_month || 0) / (profile.tokens_limit || 50000)) * 100, 100)}%`, height: '100%', background: 'var(--purple-main)' }}></div>
+            </div>
+            <button className="btn btn-secondary btn-sm" style={{ width: '100%', marginTop: 20 }}>Upgrade para Platinum</button>
+          </div>
+        </div>
+
+        {/* Lado Direito: Formulário */}
+        <div className="card" style={{ padding: 32 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div className="form-group">
+              <label className="form-label">Nome Completo</label>
+              <input className="form-input" value={profile.full_name || ''} onChange={e => setProfile({...profile, full_name: e.target.value})} placeholder="Seu nome" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">E-mail</label>
+              <input className="form-input" value={profile.email || ''} disabled style={{ opacity: 0.6 }} />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Telefone</label>
+            <input className="form-input" value={profile.phone || ''} onChange={e => setProfile({...profile, phone: e.target.value})} placeholder="+55 (11) 99999-9999" />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Biografia / Cargo</label>
+            <textarea className="form-input" style={{ minHeight: 80, resize: 'vertical' }} value={profile.bio || ''} onChange={e => setProfile({...profile, bio: e.target.value})} placeholder="Conte um pouco sobre você ou sua empresa..." />
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Instruções Customizadas (Persona da IA)</label>
+            <p style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 8 }}>Como você quer que a IA responda? (Ex: "Seja formal", "Sempre responda em português", "Sou desenvolvedor Python")</p>
+            <textarea className="form-input" style={{ minHeight: 120, resize: 'vertical' }} value={profile.custom_instructions || ''} onChange={e => setProfile({...profile, custom_instructions: e.target.value})} />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 12 }}>
+            <button className="btn btn-secondary" onClick={() => window.location.reload()}>Descartar</button>
+            <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>
+              {saving ? 'Salvando...' : '💾 Salvar Alterações'}
+            </button>
           </div>
         </div>
       </div>
@@ -2255,33 +2292,33 @@ function ToolsPage() {
       </p>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-        <div className="card" style={{ padding: 16 }}>
+        <div className="card" style={{ padding: 16, border: '1px solid var(--purple-main)' }}>
           <div style={{ fontSize: 24, marginBottom: 12 }}>🌐</div>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Web Search Engine</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Permite aos agentes buscar informações em tempo real na internet (Tavily/DuckDuckGo).</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Busca em tempo real via Tavily API. Requer TAVILY_API_KEY configurada para resultados precisos.</p>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>Ativo</span>
             <button className="btn btn-secondary btn-sm">Configurar</button>
           </div>
         </div>
 
-        <div className="card" style={{ padding: 16 }}>
+        <div className="card" style={{ padding: 16, border: '1px solid var(--purple-main)' }}>
           <div style={{ fontSize: 24, marginBottom: 12 }}>🐍</div>
-          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Python Code Interpreter</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Ambiente sandboxed para o agente rodar scripts de análise de dados e matemática.</p>
+          <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>Python Interpreter</h3>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Execução segura de scripts para cálculos complexos e manipulação de dados em sandbox.</p>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>Ativo</span>
             <button className="btn btn-secondary btn-sm">Configurar</button>
           </div>
         </div>
 
-        <div className="card" style={{ padding: 16 }}>
+        <div className="card" style={{ padding: 16, border: '1px solid var(--purple-main)' }}>
           <div style={{ fontSize: 24, marginBottom: 12 }}>🗄️</div>
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 4 }}>SQL Database Reader</h3>
-          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Acesso apenas de leitura para extrair métricas do banco de dados e gerar BI.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 12 }}>Acesso de leitura ao banco de dados interno para consultas de BI e relatórios automáticos.</p>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span className="badge" style={{ background: '#f1f5f9', color: '#64748b' }}>Inativo</span>
-            <button className="btn btn-primary btn-sm">Ativar</button>
+            <span className="badge" style={{ background: '#dcfce7', color: '#166534' }}>Ativo</span>
+            <button className="btn btn-secondary btn-sm">Métricas</button>
           </div>
         </div>
       </div>
@@ -2538,7 +2575,7 @@ function DashboardShell({ onSignOut, userProfile }) {
       case 'analytics': return <AnalyticsPage stats={dashboardData.stats} />;
       case 'plugins': return <PluginsPage />;
       case 'settings': return <SettingsPage />;
-      case 'profile': return <ProfilePage />;
+      case 'account': return <AccountPage />;
       case 'teams': return <TeamsPage />;
       case 'admin': return isAdmin ? <AdminLayout onNavigate={setCurrentPage} /> : <DashboardPage stats={dashboardData.stats} recentSessions={dashboardData.recentSessions} />;
       default: return <DashboardPage stats={dashboardData.stats} recentSessions={dashboardData.recentSessions} />;
