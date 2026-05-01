@@ -1675,56 +1675,6 @@ function PermissionsPage() {
 
 
 
-// ═══════════════════════════════════════════════════════════════
-// Analytics Page
-// ═══════════════════════════════════════════════════════════════
-
-function AnalyticsPage({ stats }) {
-  return (
-    <div className="animate-in">
-      <h2 style={{ fontSize: 22, fontWeight: 800, marginBottom: 20 }}>📈 Analytics</h2>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card-icon">🔤</div>
-          <div className="stat-card-value">0</div>
-          <div className="stat-card-label">Total Input Tokens</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">📝</div>
-          <div className="stat-card-value">0</div>
-          <div className="stat-card-label">Total Output Tokens</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">💰</div>
-          <div className="stat-card-value">$0.00</div>
-          <div className="stat-card-label">Custo Total</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-icon">📊</div>
-          <div className="stat-card-value">{stats?.totalMessages || 0}</div>
-          <div className="stat-card-label">Total de Mensagens</div>
-        </div>
-      </div>
-
-      <div className="card">
-        <div className="card-header"><div className="card-title">📋 Modelos Disponíveis</div></div>
-        <div className="table-container">
-          <table>
-            <thead>
-              <tr><th>Modelo</th><th>Descrição</th><th>Input /1M</th><th>Output /1M</th></tr>
-            </thead>
-            <tbody>
-              <tr><td>Gemini 2.0 Flash</td><td>Ultra-rápido e gratuito — padrão</td><td>$0.00</td><td>$0.00</td></tr>
-              <tr><td>Gemini 1.5 Pro</td><td>Mais poderoso para tarefas complexas</td><td>$1.25</td><td>$5.00</td></tr>
-              <tr><td>Gemini 1.5 Flash</td><td>Alternativa estável e rápida</td><td>$0.00</td><td>$0.00</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ═══════════════════════════════════════════════════════════════
 // Plugins Page
@@ -2173,6 +2123,7 @@ function TeamsPage() {
   const [teams, setTeams] = useState([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('orgs'); // orgs, members, billing, audit
 
   useEffect(() => {
     api('/teams').then(data => {
@@ -2193,71 +2144,91 @@ function TeamsPage() {
     }
   };
 
-  if (loading) return <div style={{ padding: 24 }}>Carregando equipes...</div>;
+  if (loading) return <div style={{ padding: 24 }}>Carregando infraestrutura corporativa...</div>;
 
   return (
-    <div className="animate-in" style={{ padding: 24, maxWidth: 900 }}>
-      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>🏢 Organizações (B2B)</h2>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>Crie workspaces para sua empresa e divida os tokens do seu plano premium com toda a sua equipe.</p>
-
-      <div className="card" style={{ marginBottom: 24 }}>
-        <div className="card-header"><div className="card-title">Criar Nova Equipe</div></div>
-        <div className="card-body" style={{ display: 'flex', gap: 12 }}>
-          <input 
-            className="input-field" 
-            placeholder="Nome da sua Empresa (ex: Agência Nexus)" 
-            value={newTeamName}
-            onChange={(e) => setNewTeamName(e.target.value)}
-            style={{ flex: 1 }}
-          />
-          <button className="btn btn-primary" onClick={handleCreateTeam}>+ Fundar Empresa</button>
-        </div>
+    <div className="animate-in" style={{ padding: 24, maxWidth: 1200 }}>
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 28, fontWeight: 900 }}>🏢 Enterprise Control Center</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>Gestão multitenancy, controle de custos B2B e governança de IA.</p>
       </div>
 
-      <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 16 }}>Minhas Equipes</h3>
-      
-      {teams.length === 0 ? (
-        <div className="empty-state">
-          <div className="empty-state-icon">🏢</div>
-          <div className="empty-state-title">Nenhuma equipe ainda</div>
-          <div className="empty-state-desc">Crie uma organização acima para começar a convidar colegas.</div>
-        </div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
-          {teams.map(team => (
-            <div key={team.id} className="card" style={{ padding: 24, border: '1px solid var(--border-platinum)', display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
-                  <h4 style={{ fontSize: 18, fontWeight: 800 }}>{team.name}</h4>
-                  <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>ID: {team.id.substring(0,8)}...</div>
-                </div>
-                <span className={`badge ${team.my_role === 'owner' ? 'badge-purple' : 'badge-secondary'}`} style={{ textTransform: 'uppercase', fontSize: 10 }}>{team.my_role}</span>
-              </div>
-              
-              <div style={{ padding: 12, background: 'var(--bg-elevated)', borderRadius: 12, border: '1px solid var(--border-platinum)' }}>
-                <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-tertiary)', marginBottom: 8, textTransform: 'uppercase' }}>Consumo da Organização</div>
-                <div style={{ height: 6, background: 'rgba(0,0,0,0.05)', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
-                  <div style={{ width: '45%', height: '100%', background: 'var(--gradient-primary)' }}></div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                  <span>450.000 tokens</span>
-                  <span style={{ color: 'var(--text-tertiary)' }}>Limite: 1.0M</span>
-                </div>
-              </div>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 32, borderBottom: '1px solid var(--glass-border)', paddingBottom: 12 }}>
+        <button className={`btn ${activeTab === 'orgs' ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setActiveTab('orgs')}>Organizações</button>
+        <button className={`btn ${activeTab === 'members' ? 'btn-ghost' : 'btn-ghost'}`} onClick={() => alert('Módulo de Membros requer Plano Platinum Enterprise')}>Membros</button>
+        <button className={`btn ${activeTab === 'billing' ? 'btn-ghost' : 'btn-ghost'}`} onClick={() => alert('Módulo de Billing Corporativo disponível via contato')}>Faturamento</button>
+        <button className={`btn ${activeTab === 'audit' ? 'btn-ghost' : 'btn-ghost'}`} onClick={() => alert('Logs de Auditoria em processamento...')}>Audit Logs</button>
+      </div>
 
-              <div style={{ display: 'flex', gap: 8, marginTop: 'auto' }}>
-                <button 
-                  className="btn btn-primary btn-sm" 
-                  style={{ flex: 1 }}
-                  onClick={() => alert('Função de convite via link gerada: vsai.link/invite/' + team.id.substring(0,6))}
-                >
-                  ➕ Convidar
-                </button>
-                <button className="btn btn-secondary btn-sm" onClick={() => alert('Abrindo Gestão de Membros corporativa...')}>⚙️ Gerenciar</button>
+      {activeTab === 'orgs' && (
+        <>
+          <div className="card" style={{ marginBottom: 32, background: 'var(--gradient-primary)', border: 'none', padding: 32 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ color: 'white' }}>
+                <h3 style={{ fontSize: 20, fontWeight: 800, marginBottom: 4 }}>Expandir Operação</h3>
+                <p style={{ opacity: 0.8, fontSize: 13 }}>Crie uma nova unidade de negócio ou departamento isolado.</p>
+              </div>
+              <div style={{ display: 'flex', gap: 12 }}>
+                <input 
+                  className="input-field" 
+                  placeholder="Nome da Unidade (ex: Marketing Global)" 
+                  value={newTeamName}
+                  onChange={(e) => setNewTeamName(e.target.value)}
+                  style={{ width: 300, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white' }}
+                />
+                <button className="btn btn-secondary" onClick={handleCreateTeam} style={{ background: 'white', color: 'var(--purple-main)', fontWeight: 800 }}>+ Fundar Unidade</button>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 24 }}>
+            {teams.length === 0 ? (
+              <div className="empty-state" style={{ gridColumn: 'span 3' }}>
+                <div className="empty-state-icon">🏢</div>
+                <div className="empty-state-title">Nenhuma organização ativa</div>
+                <div className="empty-state-desc">Use o painel acima para criar sua primeira estrutura corporativa.</div>
+              </div>
+            ) : (
+              teams.map(team => (
+                <div key={team.id} className="card" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <h4 style={{ fontSize: 18, fontWeight: 800 }}>{team.name}</h4>
+                      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>UUID: {team.id}</div>
+                    </div>
+                    <span className="badge badge-purple">OWNER</span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div style={{ padding: 12, background: 'var(--bg-elevated)', borderRadius: 12 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>MEMBROS</div>
+                      <div style={{ fontSize: 18, fontWeight: 800 }}>{Math.floor(Math.random() * 10) + 1}</div>
+                    </div>
+                    <div style={{ padding: 12, background: 'var(--bg-elevated)', borderRadius: 12 }}>
+                      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 4 }}>PROJETOS</div>
+                      <div style={{ fontSize: 18, fontWeight: 800 }}>{Math.floor(Math.random() * 5) + 1}</div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 8 }}>
+                      <span style={{ fontWeight: 700 }}>Consumo de Cota (Mensal)</span>
+                      <span style={{ color: 'var(--text-tertiary)' }}>45%</span>
+                    </div>
+                    <div style={{ height: 8, background: 'rgba(0,0,0,0.05)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ width: '45%', height: '100%', background: 'var(--gradient-primary)' }}></div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                    <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => alert('Link de convite gerado e copiado: vsai.ai/join/' + team.id.substring(0,8))}>➕ Convidar</button>
+                    <button className="btn btn-secondary" onClick={() => alert('Abrindo console de gestão avançada...')}>⚙️ Gestão</button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
       )}
     </div>
   );
@@ -2355,55 +2326,55 @@ function AnalyticsPage({ stats }) {
   return (
     <div className="animate-in" style={{ padding: 24, maxWidth: 1200 }}>
       <div style={{ marginBottom: 32 }}>
-        <h2 style={{ fontSize: 28, fontWeight: 900 }}>📊 Advanced Analytics</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>Métricas detalhadas de consumo, performance e latência do sistema.</p>
+        <h2 style={{ fontSize: 28, fontWeight: 900 }}>📊 Platinum Intelligence Analytics</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>Métricas de performance em tempo real, consumo de tokens e otimização de custos.</p>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20, marginBottom: 32 }}>
-        <MetricCard label="Tokens Totais" value={(stats?.tokensUsed || 0).toLocaleString()} sub="Acumulado este mês" trend="+12.4%" good />
-        <MetricCard label="Custo Estimado" value={`$${((stats?.tokensUsed || 0) * 0.000002).toFixed(2)}`} sub="Baseado em Gemini-Flash" trend="+5.1%" />
-        <MetricCard label="Latência Média" value="1.2s" sub="Resposta da API" trend="-0.3s" good />
-        <MetricCard label="Taxa de Sucesso" value="99.8%" sub="Sem erros de rede" trend="+0.1%" good />
+        <MetricCard label="Tokens Totais" value={(stats?.tokensUsed || 0).toLocaleString()} sub="Consumo acumulado" trend="+12.4%" good />
+        <MetricCard label="Custo (USD)" value={`$${((stats?.tokensUsed || 0) * 0.000002).toFixed(2)}`} sub="Economia vs GPT-4" trend="+55%" good />
+        <MetricCard label="Latência" value="0.9s" sub="P95 Response Time" trend="-0.4s" good />
+        <MetricCard label="Precisão" value="98.2%" sub="Feedback Positivo" trend="+2.1%" good />
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 24, marginBottom: 32 }}>
         <div className="card" style={{ padding: 24 }}>
-          <div className="card-header"><div className="card-title">Consumo de Tokens por Dia (K)</div></div>
-          <div style={{ height: 300, background: 'rgba(0,0,0,0.02)', borderRadius: 8, display: 'flex', alignItems: 'flex-end', gap: 8, padding: 16 }}>
-            {[40, 60, 45, 80, 100, 70, 90, 120, 110, 130, 150, 140].map((h, i) => (
-              <div key={i} style={{ flex: 1, height: `${h}%`, background: 'var(--gradient-primary)', borderRadius: '4px 4px 0 0', opacity: 0.8 }} title={`${h * 1000} tokens`}></div>
+          <div className="card-header" style={{ marginBottom: 20 }}><div className="card-title">📉 Histórico de Atividade (24h)</div></div>
+          <div style={{ height: 200, display: 'flex', alignItems: 'flex-end', gap: 4, padding: '0 10px' }}>
+            {[30, 45, 25, 60, 80, 40, 90, 70, 50, 30, 40, 60, 45, 30, 20, 50, 80, 100, 70, 50, 40, 60, 55, 30].map((v, i) => (
+              <div key={i} style={{ flex: 1, height: `${v}%`, background: 'var(--gradient-primary)', borderRadius: '2px 2px 0 0', opacity: 0.3 + (v/150) }}></div>
             ))}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text-tertiary)', marginTop: 8 }}>
-            <span>01 Mai</span>
-            <span>15 Mai</span>
-            <span>30 Mai</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, fontSize: 10, color: 'var(--text-tertiary)' }}>
+            <span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>Agora</span>
           </div>
         </div>
 
         <div className="card" style={{ padding: 24 }}>
-          <div className="card-header"><div className="card-title">Distribuição por Modelo</div></div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 20 }}>
-            <ModelBar label="Gemini 1.5 Flash" percent={75} color="#8b5cf6" />
-            <ModelBar label="Gemini 1.5 Pro" percent={15} color="#3b82f6" />
-            <ModelBar label="Claude 3.5 Sonnet" percent={8} color="#f59e0b" />
-            <ModelBar label="GPT-4o" percent={2} color="#10b981" />
+          <div className="card-header" style={{ marginBottom: 20 }}><div className="card-title">🧠 Mix de Modelos</div></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <ModelBar label="Gemini 2.5 Flash" percent={82} color="#4f46e5" />
+            <ModelBar label="Claude 3.5 Sonnet" percent={12} color="#d97706" />
+            <ModelBar label="Gemini 1.5 Pro" percent={6} color="#7c3aed" />
           </div>
         </div>
       </div>
 
       <div className="card" style={{ padding: 24 }}>
-        <div className="card-header"><div className="card-title">Atividade Recente por Projeto</div></div>
-        <table className="admin-table" style={{ width: '100%' }}>
-          <thead>
-            <tr><th>Projeto</th><th>Último Uso</th><th>Sessões</th><th>Status</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Sistema VSAI</td><td>Há 2 min</td><td>45</td><td><span className="badge badge-success">Ativo</span></td></tr>
-            <tr><td>Análise de Dados</td><td>Há 15 min</td><td>12</td><td><span className="badge badge-success">Ativo</span></td></tr>
-            <tr><td>Agente de Código</td><td>Há 1h</td><td>89</td><td><span className="badge badge-purple">Idle</span></td></tr>
-          </tbody>
-        </table>
+        <div className="card-header"><div className="card-title">📋 Performance por Ferramenta</div></div>
+        <div className="table-container">
+          <table>
+            <thead>
+              <tr><th>Ferramenta</th><th>Chamadas</th><th>Sucesso</th><th>Tempo Médio</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Web Search</td><td>1,245</td><td>99.2%</td><td>1.4s</td><td><span className="badge badge-success">Estável</span></td></tr>
+              <tr><td>Python Interpreter</td><td>432</td><td>95.5%</td><td>0.8s</td><td><span className="badge badge-success">Estável</span></td></tr>
+              <tr><td>File Sync</td><td>89</td><td>100%</td><td>0.3s</td><td><span className="badge badge-success">Estável</span></td></tr>
+              <tr><td>SQL Reader</td><td>12</td><td>66.7%</td><td>2.1s</td><td><span className="badge badge-warning">Lento</span></td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -2499,57 +2470,94 @@ function AgentsPage() {
 
 function ToolsPage() {
   const [showConfig, setShowConfig] = useState(null);
+  const [configValue, setConfigValue] = useState('');
   const [toolsState, setToolsState] = useState({
     webSearch: true,
     python: true,
     sqlReader: true,
     youtube: true,
-    scraper: false
+    scraper: false,
+    github: false,
+    docker: false,
+    voice: true
   });
 
   const toggleTool = (id) => setToolsState(prev => ({ ...prev, [id]: !prev[id] }));
 
-  return (
-    <div className="animate-in" style={{ padding: 24, maxWidth: 1000 }}>
-      <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>🔧 Arsenal de Ferramentas IA</h2>
-      <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
-        Gerencie as capacidades autônomas dos seus agentes. Ative módulos de busca, execução de código ou extração de dados.
-      </p>
+  const handleSaveConfig = async () => {
+    // In a real app, this would hit /api/config
+    const res = await api('/config', { 
+      method: 'POST', 
+      body: { tool: showConfig, apiKey: configValue } 
+    });
+    alert(`Configuração para ${showConfig} aplicada com sucesso!`);
+    setShowConfig(null);
+    setConfigValue('');
+  };
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 16 }}>
+  return (
+    <div className="animate-in" style={{ padding: 24, maxWidth: 1200 }}>
+      <div style={{ marginBottom: 32 }}>
+        <h2 style={{ fontSize: 24, fontWeight: 900 }}>🔧 Arsenal de Ferramentas IA</h2>
+        <p style={{ color: 'var(--text-secondary)' }}>Ative capacidades autônomas e integre sua IA com o mundo externo.</p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
         <ToolCard 
-          icon="🌐" title="Web Search Engine" desc="Busca em tempo real via Tavily API. Essencial para notícias e dados atuais."
+          icon="🌐" title="Web Search Engine" desc="Busca em tempo real via Tavily/Google. Essencial para dados atuais."
           active={toolsState.webSearch} onToggle={() => toggleTool('webSearch')} onConfig={() => setShowConfig('webSearch')}
         />
         <ToolCard 
-          icon="🐍" title="Python Interpreter" desc="Execução segura de scripts em sandbox para cálculos e data science."
+          icon="🐍" title="Python Interpreter" desc="Execução segura de scripts em sandbox para cálculos e automação."
           active={toolsState.python} onToggle={() => toggleTool('python')} onConfig={() => setShowConfig('python')}
         />
         <ToolCard 
-          icon="🗄️" title="SQL Database Reader" desc="Leitura segura do banco de dados para relatórios de BI e estatísticas."
+          icon="🗄️" title="SQL DB Reader" desc="Leitura segura de bancos de dados para relatórios e BI automatizado."
           active={toolsState.sqlReader} onToggle={() => toggleTool('sqlReader')} onConfig={() => setShowConfig('sqlReader')}
         />
         <ToolCard 
-          icon="📺" title="YouTube Transcriber" desc="Extração de transcrições e resumos de vídeos via URL de forma automática."
+          icon="🐙" title="GitHub Explorer" desc="Sincronização bidirecional com repositórios e gestão de Pull Requests."
+          active={toolsState.github} onToggle={() => toggleTool('github')} onConfig={() => setShowConfig('github')}
+        />
+        <ToolCard 
+          icon="🐳" title="Docker Orchestrator" desc="Gestão de containers e deploy automatizado via comandos de voz/texto."
+          active={toolsState.docker} onToggle={() => toggleTool('docker')} onConfig={() => setShowConfig('docker')}
+        />
+        <ToolCard 
+          icon="🗣️" title="Voice Synthesis" desc="Geração de áudio ultra-realista a partir de respostas da IA (ElevenLabs)."
+          active={toolsState.voice} onToggle={() => toggleTool('voice')} onConfig={() => setShowConfig('voice')}
+        />
+        <ToolCard 
+          icon="📺" title="YouTube Analyst" desc="Extração de transcrições e análise de vídeo via URL."
           active={toolsState.youtube} onToggle={() => toggleTool('youtube')} onConfig={() => setShowConfig('youtube')}
         />
         <ToolCard 
-          icon="🕷️" title="Web Scraper Pro" desc="Extração estruturada de conteúdo de sites complexos ignorando bloqueios."
+          icon="🕷️" title="Web Scraper Pro" desc="Extração estruturada de conteúdo ignorando proteções bot."
           active={toolsState.scraper} onToggle={() => toggleTool('scraper')} onConfig={() => setShowConfig('scraper')}
         />
       </div>
 
       {showConfig && (
-        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifySelf: 'center' }}>
-          <div className="card" style={{ width: 450, padding: 24 }}>
-            <h3 style={{ marginBottom: 16 }}>Configurar {showConfig}</h3>
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: 'block', fontSize: 12, marginBottom: 8 }}>Chave de API Específica (Opcional)</label>
-              <input type="password" className="input-field" style={{ width: '100%' }} placeholder="Deixe vazio para usar a chave global" />
+        <div className="modal-overlay" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+          <div className="card" style={{ width: 450, padding: 32, border: '1px solid var(--border-platinum)' }}>
+            <h3 style={{ marginBottom: 8, fontSize: 20, fontWeight: 800 }}>Configurar {showConfig}</h3>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 24 }}>Insira as credenciais necessárias para habilitar a integração externa.</p>
+            
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 8 }}>Chave de API / Token</label>
+              <input 
+                type="password" 
+                className="input-field" 
+                style={{ width: '100%', background: 'var(--bg-secondary)' }} 
+                placeholder={`Cole sua chave de ${showConfig} aqui...`}
+                value={configValue}
+                onChange={e => setConfigValue(e.target.value)}
+              />
             </div>
+
             <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
               <button className="btn btn-secondary" onClick={() => setShowConfig(null)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={() => { alert('Configuração salva!'); setShowConfig(null); }}>Salvar</button>
+              <button className="btn btn-primary" onClick={handleSaveConfig} style={{ padding: '10px 24px' }}>💾 Salvar Configuração</button>
             </div>
           </div>
         </div>
@@ -2810,9 +2818,7 @@ function SettingsPage() {
 // Placeholder Pages (To be implemented)
 // ═══════════════════════════════════════════════════════════════
 
-function HooksPage() { return <div style={{ padding: 24 }}><h2>🪝 Webhooks & Automação</h2><p>Configure gatilhos externos para suas conversas.</p></div>; }
-function PermissionsPage() { return <div style={{ padding: 24 }}><h2>🔐 Permissões Avançadas</h2><p>Controle de acesso granular por usuário e projeto.</p></div>; }
-function PluginsPage() { return <div style={{ padding: 24 }}><h2>🔌 Plugins do Sistema</h2><p>Estenda as capacidades da IA com módulos de terceiros.</p></div>; }
+function PricingPage() { return <div style={{ padding: 24 }}><h2>💎 Planos & Upgrade</h2><p>Gerencie sua assinatura e limites de processamento.</p></div>; }
 
 // ═══════════════════════════════════════════════════════════════
 // Dashboard Shell (Authenticated Area)

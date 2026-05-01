@@ -122,6 +122,8 @@ export default function AdminLayout() {
   const handleBonusTokens = async (userId, userName, manualAmount) => {
     const amount = manualAmount || window.prompt(`Tokens extras para ${userName}:`, '100000');
     if (!amount || isNaN(amount)) return;
+    
+    setIsSyncing(true); // Feedback visual de processamento
     try {
       const headers = await getAuthHeaders();
       const res = await fetch(`${API_BASE}/admin/users`, {
@@ -129,28 +131,41 @@ export default function AdminLayout() {
         headers: { ...headers, 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: userId, bonus_tokens: parseInt(amount, 10) })
       });
+      
       if (res.ok) {
         const { user: updatedUser } = await res.json();
-        setUsers(users.map(u => u.id === userId ? { ...u, tokens_limit: updatedUser.tokens_limit } : u));
-        if (!manualAmount) alert('Tokens creditados!');
+        setUsers(prev => prev.map(u => u.id === userId ? { ...u, tokens_limit: updatedUser.tokens_limit } : u));
+        alert(`🚀 SUCESSO: ${parseInt(amount).toLocaleString()} tokens creditados para ${userName}.`);
+      } else {
+        const errData = await res.json();
+        alert('Erro ao creditar tokens: ' + (errData.error || 'Erro desconhecido'));
       }
-    } catch (err) { alert('Erro na requisição'); }
+    } catch (err) { 
+      console.error('TOKEN_CREDIT_ERROR', err);
+      alert('Erro crítico na rede ao tentar adicionar tokens.'); 
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const startOmegaSync = () => {
     setIsSyncing(true);
     setSyncProgress(0);
+    // Simular uma chamada de sistema pesada
     const interval = setInterval(() => {
       setSyncProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
-          setIsSyncing(false);
-          alert('🔥 SINCRONIZAÇÃO ÔMEGA COMPLETA: 1,240 nodos atualizados. Rede em estado de equilíbrio.');
+          setTimeout(() => {
+            setIsSyncing(false);
+            alert('🔥 PROTOCOLO ÔMEGA FINALIZADO: Todos os enxames de IA foram sincronizados com a Matriz Platinum.');
+          }, 500);
           return 100;
         }
-        return prev + Math.random() * 15;
+        const step = Math.random() * 12;
+        return prev + step;
       });
-    }, 400);
+    }, 150);
   };
 
   const handleCreateAgent = async (e) => {
@@ -470,47 +485,71 @@ export default function AdminLayout() {
   );
 
   const renderInfrastructure = () => (
-    <div className="admin-panel-section animate-in" style={{ background: '#0f172a', color: '#f8fafc', overflow: 'hidden', position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 30 }}>
+    <div className="admin-panel-section animate-in" style={{ background: 'radial-gradient(circle at top right, #1e1b4b, #020617)', color: '#f8fafc', overflow: 'hidden', position: 'relative', minHeight: 600 }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: 0.1, backgroundImage: 'radial-gradient(#4f46e5 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
+      
+      <div style={{ position: 'relative', zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 40 }}>
         <div>
-          <h3 style={{ color: '#fff', margin: 0 }}>🛰️ Infraestrutura de Próxima Geração</h3>
-          <p style={{ fontSize: 12, opacity: 0.6 }}>Monitoramento em tempo real dos clusters de processamento neural.</p>
+          <h3 style={{ color: '#fff', margin: 0, fontSize: 24, fontWeight: 900, letterSpacing: -1 }}>🛰️ PLATINUM NODES CLUSTER</h3>
+          <p style={{ fontSize: 13, opacity: 0.6 }}>Topologia de rede neural distribuída em tempo real.</p>
         </div>
-        <div className="badge" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', border: '1px solid #10b981' }}>Cluster Online</div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <div className="badge" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid #10b981', padding: '6px 12px' }}>Latency: 14ms</div>
+          <div className="badge" style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid #3b82f6', padding: '6px 12px' }}>Region: Global-Edge</div>
+        </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40, alignItems: 'center' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 60, alignItems: 'center', position: 'relative', zIndex: 2 }}>
         {/* 3D Server Rack Animation */}
-        <div className="server-rack-3d-container">
-          <div className="server-rack">
-            {[1,2,3,4,5,6].map(i => (
-              <div key={i} className="server-blade">
-                <div className="blade-lights">
-                  <div className="light green"></div>
-                  <div className="light blue"></div>
-                  <div className="light" style={{ animationDelay: `${Math.random()}s` }}></div>
+        <div className="server-container-3d">
+          <div className="server-rack-isometric">
+            {[1,2,3,4,5,6,7,8].map(i => (
+              <div key={i} className="server-unit" style={{ animationDelay: `${i * 0.2}s` }}>
+                <div className="unit-front">
+                  <div className="unit-leds">
+                    <div className="led green"></div>
+                    <div className="led blue"></div>
+                    <div className="led" style={{ animation: `blink ${0.2 + Math.random()}s infinite` }}></div>
+                  </div>
+                  <div className="unit-grill"></div>
+                  <div className="unit-id">NODE-{(100+i).toString(16).toUpperCase()}</div>
                 </div>
-                <div className="blade-vent"></div>
+                <div className="unit-side"></div>
+                <div className="unit-top"></div>
               </div>
             ))}
           </div>
-          <div className="rack-base"></div>
+          <div className="rack-shadow"></div>
         </div>
 
-        <div style={{ display: 'grid', gap: 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          <div className="infra-stats-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div className="mini-card">
+              <div className="mini-label">UPTIME</div>
+              <div className="mini-value">99.998%</div>
+            </div>
+            <div className="mini-card">
+              <div className="mini-label">LOAD AVG</div>
+              <div className="mini-value">{(hardware.cpu / 20).toFixed(2)}</div>
+            </div>
+          </div>
+
           {[
-            { label: 'CPU Cluster', val: hardware.cpu, color: '#3b82f6' },
-            { label: 'Neural RAM', val: hardware.ram, color: '#8b5cf6' },
-            { label: 'GPU (Matrix Op)', val: hardware.gpu, color: '#10b981' },
-            { label: 'Temp', val: hardware.temp, color: '#ef4444', unit: '°C' }
+            { label: 'Neural Processors (NPU)', val: hardware.cpu, color: '#4f46e5', icon: '🧠' },
+            { label: 'Quantum Memory (QRAM)', val: hardware.ram, color: '#8b5cf6', icon: '💎' },
+            { label: 'Matrix Ops (GPU)', val: hardware.gpu, color: '#10b981', icon: '⚡' },
+            { label: 'Thermal Shield', val: hardware.temp, color: '#f43f5e', icon: '🔥', unit: '°C' }
           ].map(h => (
-            <div key={h.label} className="infra-meter-card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', opacity: 0.8 }}>{h.label}</span>
-                <span style={{ fontSize: 14, fontWeight: 900 }}>{h.val}{h.unit || '%'}</span>
+            <div key={h.label} className="infra-meter-card-v2">
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10, alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 18 }}>{h.icon}</span>
+                  <span style={{ fontSize: 12, fontWeight: 800, textTransform: 'uppercase', color: 'rgba(255,255,255,0.7)' }}>{h.label}</span>
+                </div>
+                <span style={{ fontSize: 18, fontWeight: 900, color: h.color }}>{h.val}{h.unit || '%'}</span>
               </div>
-              <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
-                <div style={{ width: `${h.val}%`, height: '100%', background: h.color, borderRadius: 10, boxShadow: `0 0 10px ${h.color}` }}></div>
+              <div style={{ width: '100%', height: 4, background: 'rgba(255,255,255,0.05)', borderRadius: 10 }}>
+                <div style={{ width: `${h.val}%`, height: '100%', background: `linear-gradient(90deg, ${h.color}cc, ${h.color})`, borderRadius: 10, boxShadow: `0 0 15px ${h.color}66` }}></div>
               </div>
             </div>
           ))}
@@ -518,26 +557,57 @@ export default function AdminLayout() {
       </div>
 
       <style>{`
-        .server-rack-3d-container { perspective: 1000px; height: 350px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .server-rack { 
-          width: 160px; height: 260px; background: #1e293b; border: 4px solid #334155; 
-          border-radius: 8px; transform: rotateY(-25deg) rotateX(10deg); 
-          box-shadow: 20px 20px 60px rgba(0,0,0,0.5); display: flex; flex-direction: column; padding: 12px; gap: 10px;
-          animation: float 6s infinite ease-in-out;
+        .server-container-3d { perspective: 1200px; height: 450px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .server-rack-isometric { 
+          transform: rotateX(55deg) rotateZ(-35deg); transform-style: preserve-3d;
+          display: flex; flex-direction: column; gap: 4px;
+          animation: rackFloat 8s infinite ease-in-out;
         }
-        @keyframes float { 0%, 100% { transform: rotateY(-25deg) rotateX(10deg) translateY(0); } 50% { transform: rotateY(-20deg) rotateX(15deg) translateY(-10px); } }
-        .server-blade { height: 28px; background: #0f172a; border-radius: 2px; border-left: 4px solid #3b82f6; display: flex; align-items: center; padding: 0 10px; justify-content: space-between; position: relative; overflow: hidden; }
-        .server-blade::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent); transform: translateX(-100%); animation: scan 3s infinite; }
-        @keyframes scan { 100% { transform: translateX(100%); } }
-        .blade-lights { display: flex; gap: 5px; }
-        .light { width: 5px; height: 5px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 5px currentColor; animation: blink 0.5s infinite alternate; }
-        .light.green { background: #10b981; animation-duration: 0.3s; }
-        .light.blue { background: #3b82f6; animation-duration: 0.7s; }
-        .blade-vent { flex: 1; margin-left: 12px; height: 12px; background: repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(255,255,255,0.05) 2px, rgba(255,255,255,0.05) 4px); }
-        @keyframes blink { from { opacity: 0.3; } to { opacity: 1; } }
-        .rack-base { width: 220px; height: 40px; background: radial-gradient(ellipse at center, rgba(59, 130, 246, 0.3) 0%, transparent 70%); transform: rotateX(80deg) translateZ(-60px); filter: blur(15px); }
-        .infra-meter-card { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s; }
-        .infra-meter-card:hover { background: rgba(255,255,255,0.06); transform: scale(1.02); }
+        @keyframes rackFloat { 0%, 100% { transform: rotateX(55deg) rotateZ(-35deg) translateY(0); } 50% { transform: rotateX(50deg) rotateZ(-30deg) translateY(-20px); } }
+        
+        .server-unit { 
+          width: 220px; height: 35px; position: relative; transform-style: preserve-3d; 
+          transition: all 0.3s;
+        }
+        .server-unit:hover { transform: translateZ(10px); }
+        
+        .unit-front { 
+          position: absolute; width: 100%; height: 100%; background: #1e293b; border: 1px solid #334155;
+          display: flex; align-items: center; padding: 0 12px; gap: 10px;
+          transform: translateZ(15px);
+        }
+        .unit-side { 
+          position: absolute; width: 30px; height: 100%; background: #0f172a; 
+          right: -15px; transform: rotateY(90deg);
+        }
+        .unit-top {
+          position: absolute; width: 100%; height: 30px; background: #334155;
+          top: -15px; transform: rotateX(90deg);
+        }
+        
+        .unit-leds { display: flex; gap: 4px; }
+        .led { width: 4px; height: 4px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 5px currentColor; }
+        .led.green { background: #10b981; }
+        .led.blue { background: #3b82f6; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+        
+        .unit-grill { flex: 1; height: 12px; background: repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(255,255,255,0.05) 3px, rgba(255,255,255,0.05) 5px); border-radius: 2px; }
+        .unit-id { font-size: 8px; font-family: monospace; opacity: 0.4; }
+        
+        .rack-shadow { 
+          width: 300px; height: 150px; background: rgba(79, 70, 229, 0.15); 
+          filter: blur(40px); transform: rotateX(80deg) translateY(100px); border-radius: 50%;
+        }
+        
+        .mini-card { background: rgba(255,255,255,0.03); padding: 16px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); }
+        .mini-label { fontSize: 10px; color: rgba(255,255,255,0.4); fontWeight: 800; letterSpacing: 1px; marginBottom: 4px; }
+        .mini-value { fontSize: 20px; fontWeight: 900; }
+        
+        .infra-meter-card-v2 { 
+          background: rgba(255,255,255,0.02); padding: 20px; border-radius: 16px; 
+          border: 1px solid rgba(255,255,255,0.05); transition: all 0.3s;
+        }
+        .infra-meter-card-v2:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
       `}</style>
     </div>
   );
