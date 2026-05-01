@@ -159,8 +159,16 @@ export async function getApiClient(requestedProvider, userId = null) {
   const primaryKey = requestedProvider || cfg.defaultProvider;
   const primary = clients[primaryKey] || clients.gemini;
   
-  // Escolhe um fallback diferente do primário que esteja configurado
-  const fallbackKey = Object.keys(clients).find(k => k !== primaryKey && clients[k].isConfigured());
+  // Only use fallback if it's a DIFFERENT provider that's properly configured
+  // Skip Anthropic/OpenAI fallback when they have no real credits (avoids billing errors)
+  const fallbackKey = Object.keys(clients).find(k => {
+    if (k === primaryKey) return false;
+    if (k === 'local') return clients[k].isConfigured(); // Ollama is always safe
+    // For paid providers (anthropic/openai), only use as fallback if explicitly configured via env
+    if (k === 'anthropic' && !process.env.ANTHROPIC_API_KEY) return false;
+    if (k === 'openai' && !process.env.OPENAI_API_KEY) return false;
+    return clients[k].isConfigured();
+  });
   const fallback = fallbackKey ? clients[fallbackKey] : null;
 
   return new GatewayClient(primary, fallback);
