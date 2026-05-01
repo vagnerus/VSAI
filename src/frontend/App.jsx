@@ -481,6 +481,7 @@ function Sidebar({ currentPage, onNavigate, stats, agents = [], recentSessions =
         {navItems.slice(0, 5).map(item => (
           <div
             key={item.id}
+            id={item.id}
             className={`sidebar-item ${currentPage === item.id ? 'active' : ''}`}
             onClick={() => onNavigate(item.id)}
           >
@@ -494,6 +495,7 @@ function Sidebar({ currentPage, onNavigate, stats, agents = [], recentSessions =
         {navItems.slice(5).map(item => (
           <div
             key={item.id}
+            id={item.id}
             className={`sidebar-item ${currentPage === item.id ? 'active' : ''}`}
             onClick={() => onNavigate(item.id)}
           >

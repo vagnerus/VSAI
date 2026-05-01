@@ -3,40 +3,119 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/api/health", "destination": "/api/system?route=health" },
-    { "source": "/api/dashboard", "destination": "/api/system?route=dashboard" },
-    { "source": "/api/config", "destination": "/api/system?route=config" },
-    { "source": "/api/settings", "destination": "/api/system?route=settings" },
-    { "source": "/api/models", "destination": "/api/system?route=models" },
-    { "source": "/api/tools", "destination": "/api/system?route=tools" },
-    { "source": "/api/hooks", "destination": "/api/system?route=hooks" },
-    { "source": "/api/permissions/mode", "destination": "/api/system?route=permissions-mode" },
-    { "source": "/api/permissions", "destination": "/api/system?route=permissions" },
-    { "source": "/api/projects/:id/:sub*", "destination": "/api/projects?id=:id&route=:sub" },
-    { "source": "/api/projects", "destination": "/api/projects" },
-    { "source": "/api/sessions/:id", "destination": "/api/sessions?id=:id" },
-    { "source": "/api/sessions", "destination": "/api/sessions" },
-    { "source": "/api/agents/:id", "destination": "/api/agents?id=:id" },
-    { "source": "/api/agents", "destination": "/api/agents" },
-    { "source": "/api/admin/:action", "destination": "/api/admin?action=:action" },
-    { "source": "/api/admin", "destination": "/api/admin" },
-    { "source": "/api/test-debug", "destination": "/api/test-debug" },
-    { "source": "/api/(.*)", "destination": "/api/system?route=$1" },
-    { "source": "/painel", "destination": "/painel.html" },
-    { "source": "/auth/callback", "destination": "/api/auth/callback" },
-    { "source": "/((?!api|assets|painel).*)", "destination": "/index.html" }
+    {
+      "source": "/api/health",
+      "destination": "/api/system?route=health"
+    },
+    {
+      "source": "/api/dashboard",
+      "destination": "/api/system?route=dashboard"
+    },
+    {
+      "source": "/api/config",
+      "destination": "/api/system?route=config"
+    },
+    {
+      "source": "/api/settings",
+      "destination": "/api/system?route=settings"
+    },
+    {
+      "source": "/api/models",
+      "destination": "/api/system?route=models"
+    },
+    {
+      "source": "/api/tools",
+      "destination": "/api/system?route=tools"
+    },
+    {
+      "source": "/api/hooks",
+      "destination": "/api/system?route=hooks"
+    },
+    {
+      "source": "/api/permissions/mode",
+      "destination": "/api/system?route=permissions-mode"
+    },
+    {
+      "source": "/api/permissions",
+      "destination": "/api/system?route=permissions"
+    },
+    {
+      "source": "/api/projects/:id/:sub*",
+      "destination": "/api/projects?id=:id&route=:sub"
+    },
+    {
+      "source": "/api/projects",
+      "destination": "/api/projects"
+    },
+    {
+      "source": "/api/sessions/:id",
+      "destination": "/api/sessions?id=:id"
+    },
+    {
+      "source": "/api/sessions",
+      "destination": "/api/sessions"
+    },
+    {
+      "source": "/api/agents/:id",
+      "destination": "/api/agents?id=:id"
+    },
+    {
+      "source": "/api/agents",
+      "destination": "/api/agents"
+    },
+    {
+      "source": "/api/admin/:action",
+      "destination": "/api/admin?action=:action"
+    },
+    {
+      "source": "/api/admin",
+      "destination": "/api/admin"
+    },
+    {
+      "source": "/api/test-debug",
+      "destination": "/api/test-debug"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/system?route=$1"
+    },
+    {
+      "source": "/painel",
+      "destination": "/painel.html"
+    },
+    {
+      "source": "/auth/callback",
+      "destination": "/api/auth/callback"
+    },
+    {
+      "source": "/((?!api|assets|painel).*)",
+      "destination": "/index.html"
+    }
   ],
   "functions": {
-    "api/chat.js": { "maxDuration": 60 },
-    "api/**/*.js": { "maxDuration": 10 }
+    "api/chat.js": {
+      "maxDuration": 60
+    },
+    "api/**/*.js": {
+      "maxDuration": 10
+    }
   },
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET,POST,PUT,DELETE,OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        }
       ]
     }
   ]

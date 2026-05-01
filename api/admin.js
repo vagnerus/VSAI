@@ -19,6 +19,11 @@ export default async function handler(req, res) {
 
   try {
     if (action === 'users') {
+      // Ensure columns exist for admin dashboard
+      await query('ALTER TABLE profiles ADD COLUMN IF NOT EXISTS plan VARCHAR(50) DEFAULT \'free\'').catch(() => {});
+      await query('ALTER TABLE profiles ADD COLUMN IF NOT EXISTS tokens_used_month INTEGER DEFAULT 0').catch(() => {});
+      await query('ALTER TABLE profiles ADD COLUMN IF NOT EXISTS tokens_limit INTEGER DEFAULT 50000').catch(() => {});
+
       if (req.method === 'GET') {
         const { rows: users } = await query('SELECT id, email, full_name, role, plan, tokens_used_month, tokens_limit, created_at FROM profiles ORDER BY created_at DESC');
         return res.status(200).json({ users });

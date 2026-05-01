@@ -71,7 +71,7 @@ function ThreeAvatar({ config, isDragging }) {
 }
 
 // ─── Widget Principal do Avatar ────────────────────────────
-export function AvatarWidget({ profile, onUpdateProfile }) {
+export function AvatarWidget({ profile, onUpdateProfile, onNavigate }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [showStudio, setShowStudio] = useState(false);
@@ -159,7 +159,7 @@ export function AvatarWidget({ profile, onUpdateProfile }) {
                 className="avatar-menu glass-panel"
                 onClick={(e) => e.stopPropagation()}
               >
-                <button onClick={() => { window.location.href = '#chat'; setIsOpen(false); }}>💬 Falar com IA</button>
+                <button onClick={() => { if(onNavigate) onNavigate('chat'); setIsOpen(false); }}>💬 Falar com IA</button>
                 <button onClick={() => setShowStudio(true)}>🎨 Personalizar</button>
                 <button onClick={startTour}>🎮 Brincar (Tour)</button>
                 <button onClick={() => window.open('mailto:suporte@vsai.ia')}>🎧 Suporte</button>
@@ -196,6 +196,7 @@ function AvatarStudio({ config, onClose, onSave }) {
       animate={{ opacity: 1 }} 
       exit={{ opacity: 0 }}
       className="avatar-studio-overlay"
+      style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 99999, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
     >
       <motion.div 
         initial={{ y: 50 }} 
