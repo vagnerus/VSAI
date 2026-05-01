@@ -2449,7 +2449,9 @@ function SettingsPage() {
     defaultProvider: 'gemini',
     googleModel: 'gemini-1.5-flash',
     anthropicModel: 'claude-sonnet-4-20250514',
-    showOtherModels: false
+    showOtherModels: false,
+    ollamaHost: 'http://localhost:11434',
+    ollamaModel: 'llama3:8b'
   });
   const [loading, setLoading] = useState(true);
 
@@ -2838,3 +2840,14 @@ function MainApp() {
       return <LandingPage onNavigate={navigate} />;
   }
 }
+// ═══════════════════════════════════════════════════════════════
+// Placeholder Pages (Stubs)
+// ═══════════════════════════════════════════════════════════════
+
+function HooksPage() { return <div style={{ padding: 24 }}><h3>🪝 Webhooks</h3><p>Configure integrações externas via webhooks.</p></div>; }
+function PermissionsPage() { return <div style={{ padding: 24 }}><h3>🔐 Permissões</h3><p>Gerencie o acesso granular dos usuários.</p></div>; }
+function AnalyticsPage({ stats }) { return <div style={{ padding: 24 }}><h3>📊 Analytics Avançado</h3><p>Métricas detalhadas de uso e performance.</p></div>; }
+function PluginsPage() { return <div style={{ padding: 24 }}><h3>🔌 Marketplace de Plugins</h3><p>Expanda as capacidades do VSAI com plugins.</p></div>; }
+function ProfilePage() { return <div style={{ padding: 24 }}><h3>👤 Perfil do Usuário</h3><p>Gerencie suas informações pessoais e segurança.</p></div>; }
+function TeamsPage() { return <div style={{ padding: 24 }}><h3>👥 Gestão de Equipe</h3><p>Convide colaboradores e organize workspaces.</p></div>; }
+function ProjectsPage({ onStartChat }) { return <div style={{ padding: 24 }}><h3>📁 Projetos</h3><p>Selecione um projeto para começar a trabalhar.</p></div>; }
